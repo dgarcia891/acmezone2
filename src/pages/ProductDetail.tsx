@@ -66,10 +66,12 @@ const ProductDetail = () => {
             {product.priceLabel && (
               <div className="mt-2 text-sm">Pricing: {product.priceLabel}</div>
             )}
-            <section className="prose prose-sm mt-6 max-w-none dark:prose-invert">
-              {product.description.split("\n\n").map((para, idx) => (
-                <p key={idx}>{para}</p>
-              ))}
+            <section className="mt-6">
+              <div className="space-y-4 leading-relaxed text-base">
+                {product.description.split("\n\n").map((para, idx) => (
+                  <p key={idx}>{para}</p>
+                ))}
+              </div>
             </section>
             <section className="mt-6">
               <h2 className="text-lg font-medium">Key Features</h2>
