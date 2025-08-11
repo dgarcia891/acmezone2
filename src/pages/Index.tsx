@@ -22,7 +22,10 @@ const Index = () => {
       </Helmet>
       <Header />
       <main className="min-h-[60vh]">
-        <section className="container mx-auto flex flex-col items-center gap-6 py-20 text-center animate-fade-in bg-gradient-to-b from-background to-muted/40 rounded-2xl">
+        <section className="container mx-auto relative overflow-hidden flex flex-col items-center gap-6 py-24 text-center animate-fade-in rounded-2xl ring-1 ring-border bg-gradient-to-b from-background to-muted/40">
+          <div aria-hidden="true" className="pointer-events-none absolute -top-24 inset-x-0 flex justify-center">
+            <span className="h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          </div>
           <h1 className="font-display text-5xl sm:text-6xl tracking-tight text-gradient-primary">Build, Buy, and Ship Better Software</h1>
           <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">A curated collection of modern tools and extensions—fast, reliable, and designed for clarity.</p>
           <div className="flex gap-3">
@@ -34,7 +37,7 @@ const Index = () => {
           <h2 className="font-display text-3xl tracking-tight">Featured</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
             {featured.map((p) => (
-              <Card key={p.id} className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg">
+              <Card key={p.id} className="overflow-hidden elevated hover-scale">
                 <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover" />
                 <CardHeader>
                   <CardTitle className="text-xl">{p.name}</CardTitle>
