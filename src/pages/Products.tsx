@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import { products } from "@/data/products";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import ogImage from "@/assets/og-default.jpg";
 
 const Products = () => {
   return (
@@ -13,6 +14,15 @@ const Products = () => {
         <title>Products | Custom Software Products</title>
         <meta name="description" content="Explore software products including InsightReel and more. Clean, modern, and fast." />
         <link rel="canonical" href="https://acme.zone/products" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Products | Custom Software Products" />
+        <meta property="og:description" content="Explore software products including InsightReel and more." />
+        <meta property="og:url" content="https://acme.zone/products" />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Products | Custom Software Products" />
+        <meta name="twitter:description" content="Explore software products including InsightReel and more." />
+        <meta name="twitter:image" content={ogImage} />
       </Helmet>
       <Header />
       <main className="container mx-auto py-12">

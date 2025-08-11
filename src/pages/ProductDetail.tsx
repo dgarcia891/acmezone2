@@ -42,12 +42,28 @@ const ProductDetail = () => {
     },
   };
 
+  const pageUrl = `https://acme.zone/products/${product.slug}`;
+  const imageUrl = product.image.startsWith("http") ? product.image : `https://acme.zone${product.image}`;
+  const title = product.seoTitle || `${product.name} | Acme Zone`;
+  const description = product.seoDescription || product.summary;
+
   return (
     <>
       <Helmet>
-        <title>{product.seoTitle || `${product.name} | Acme Zone`}</title>
-        <meta name="description" content={product.seoDescription || product.summary} />
-        <link rel="canonical" href={`https://acme.zone/products/${product.slug}`} />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={pageUrl} />
+        {/* Open Graph */}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:image" content={imageUrl} />
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={imageUrl} />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
       <Header />
