@@ -21,20 +21,20 @@ const Index = () => {
         <link rel="canonical" href="https://acme.zone/" />
       </Helmet>
       <Header />
-      <main className="min-h-[60vh] bg-background">
-        <section className="container mx-auto flex flex-col items-center gap-6 py-16 text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Build, Buy, and Ship Better Software</h1>
-          <p className="max-w-2xl text-lg text-muted-foreground">A curated collection of modern tools and extensions—fast, reliable, and designed for clarity.</p>
+      <main className="min-h-[60vh]">
+        <section className="container mx-auto flex flex-col items-center gap-6 py-20 text-center animate-fade-in bg-gradient-to-b from-background to-muted/40 rounded-2xl">
+          <h1 className="font-display text-5xl sm:text-6xl tracking-tight text-gradient-primary">Build, Buy, and Ship Better Software</h1>
+          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">A curated collection of modern tools and extensions—fast, reliable, and designed for clarity.</p>
           <div className="flex gap-3">
-            <Button asChild><Link to="/products">Browse Products</Link></Button>
-            <Button variant="outline" asChild><Link to="/contact">Contact Us</Link></Button>
+            <Button variant="hero" size="lg" asChild><Link to="/products">Browse Products</Link></Button>
+            <Button variant="outline" size="lg" asChild><Link to="/contact">Contact Us</Link></Button>
           </div>
         </section>
-        <section className="container mx-auto pb-16">
-          <h2 className="text-2xl font-semibold tracking-tight">Featured</h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="container mx-auto pb-16 mt-12">
+          <h2 className="font-display text-3xl tracking-tight">Featured</h2>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
             {featured.map((p) => (
-              <Card key={p.id} className="overflow-hidden">
+              <Card key={p.id} className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg">
                 <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover" />
                 <CardHeader>
                   <CardTitle className="text-xl">{p.name}</CardTitle>

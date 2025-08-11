@@ -6,21 +6,21 @@ const Footer = () => {
       <div className="container mx-auto py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
-            <div className="font-semibold">Acme Zone</div>
+            <div className="font-display font-semibold">Acme Zone</div>
             <p className="mt-2 text-sm text-muted-foreground">Custom software products and tools.</p>
           </div>
           <div>
             <div className="text-sm font-medium">Company</div>
             <ul className="mt-3 space-y-2 text-sm">
-              <li><Link to="#" className="text-muted-foreground hover:text-foreground">About</Link></li>
-              <li><Link to="#" className="text-muted-foreground hover:text-foreground">Careers</Link></li>
+              <li><Link to="#" className="text-muted-foreground hover:text-foreground story-link">About</Link></li>
+              <li><Link to="#" className="text-muted-foreground hover:text-foreground story-link">Careers</Link></li>
             </ul>
           </div>
           <div>
             <div className="text-sm font-medium">Legal</div>
             <ul className="mt-3 space-y-2 text-sm">
-              <li><Link to="#" className="text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
-              <li><Link to="#" className="text-muted-foreground hover:text-foreground">Terms of Service</Link></li>
+              <li><Link to="#" className="text-muted-foreground hover:text-foreground story-link">Privacy Policy</Link></li>
+              <li><Link to="#" className="text-muted-foreground hover:text-foreground story-link">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

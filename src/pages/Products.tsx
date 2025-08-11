@@ -27,12 +27,12 @@ const Products = () => {
       <Header />
       <main className="container mx-auto py-12">
         <section>
-          <h1 className="text-3xl font-semibold tracking-tight">Products</h1>
-          <p className="mt-2 text-muted-foreground">Discover tools and extensions built for speed and clarity.</p>
+          <h1 className="font-display text-4xl tracking-tight text-gradient-primary">Products</h1>
+          <p className="mt-2 text-muted-foreground leading-relaxed">Discover tools and extensions built for speed and clarity.</p>
         </section>
-        <section className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
           {products.map((p) => (
-            <Card key={p.id} className="overflow-hidden">
+            <Card key={p.id} className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg">
               <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover" />
               <CardHeader>
                 <CardTitle className="text-xl">{p.name}</CardTitle>
