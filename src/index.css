@@ -61,6 +61,16 @@ All colors MUST be HSL.
     --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.25);
     --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.35);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Background system */
+    --grid-size: 28px;
+    --pattern-grid:
+      repeating-linear-gradient(0deg, hsl(var(--border) / 0.28) 0 1px, transparent 1px var(--grid-size)),
+      repeating-linear-gradient(90deg, hsl(var(--border) / 0.28) 0 1px, transparent 1px var(--grid-size));
+    --gradient-page:
+      radial-gradient(80% 60% at 10% -10%, hsl(var(--primary) / 0.12), transparent),
+      radial-gradient(60% 50% at 90% 0%, hsl(var(--primary-glow) / 0.10), transparent),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background) / 0.9) 30%, hsl(var(--muted) / 0.6) 100%);
   }
 
   .dark {
@@ -107,6 +117,16 @@ All colors MUST be HSL.
     --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.25);
     --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.35);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Background system (dark) */
+    --grid-size: 28px;
+    --pattern-grid:
+      repeating-linear-gradient(0deg, hsl(var(--border) / 0.18) 0 1px, transparent 1px var(--grid-size)),
+      repeating-linear-gradient(90deg, hsl(var(--border) / 0.18) 0 1px, transparent 1px var(--grid-size));
+    --gradient-page:
+      radial-gradient(80% 60% at 10% -10%, hsl(var(--primary-glow) / 0.14), transparent),
+      radial-gradient(60% 50% at 90% 0%, hsl(var(--primary) / 0.10), transparent),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background) / 0.9) 30%, hsl(var(--muted) / 0.2) 100%);
   }
 }
 
@@ -117,11 +137,10 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(60% 40% at 10% 10%, hsl(var(--primary) / 0.06), transparent),
-      radial-gradient(50% 35% at 90% 30%, hsl(var(--primary-glow) / 0.08), transparent),
-      radial-gradient(70% 50% at 50% 100%, hsl(var(--muted-foreground) / 0.06), transparent);
-    background-attachment: fixed;
+    background-image: var(--pattern-grid), var(--gradient-page);
+    background-attachment: fixed, fixed;
+    background-size: auto, auto;
+    background-position: center, center;
   }
 }
 
