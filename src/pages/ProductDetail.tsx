@@ -98,9 +98,11 @@ const ProductDetail = () => {
               </ul>
             </section>
             <div className="mt-8 flex gap-3">
-              <Button asChild>
-                <a href="https://chromewebstore.google.com/" target="_blank" rel="noopener noreferrer">Get the Extension</a>
-              </Button>
+              {product.link && (
+                <Button asChild>
+                  <a href={product.link} target="_blank" rel="noopener noreferrer">Get the Extension</a>
+                </Button>
+              )}
               <Button variant="outline" asChild>
                 <Link to="/products">Back to Products</Link>
               </Button>

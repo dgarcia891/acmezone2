@@ -12,6 +12,7 @@ export type Product = {
   seoTitle?: string;
   seoDescription?: string;
   type?: string;
+  link?: string;
 };
 
 export const products: Product[] = [
@@ -38,6 +39,7 @@ export const products: Product[] = [
     seoDescription:
       "Analyze YouTube tutorials and news with AI. Scores, summaries, workflows, and webhook export with InsightReel.",
     type: "Chrome Extension",
+    link: "https://chrome.google.com/webstore/detail/ijjmnphgdcidmeolmgijnohocebdhfhg",
   },
   {
     id: "placeholder-app-1",
