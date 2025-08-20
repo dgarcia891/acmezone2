@@ -38,7 +38,7 @@ const Index = () => {
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
             {featured.map((p) => (
               <Card key={p.id} className="overflow-hidden elevated hover-scale">
-                <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover" />
+                <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover object-top" />
                 <CardHeader>
                   <CardTitle className="text-xl">{p.name}</CardTitle>
                   <CardDescription>{p.summary}</CardDescription>
