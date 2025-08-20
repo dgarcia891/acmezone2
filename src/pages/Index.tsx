@@ -8,7 +8,7 @@ import ogImage from "@/assets/og-default.jpg";
 
 const Index = () => {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Helmet>
         <title>Pre-Apply AI | Chrome Extension Credit System</title>
         <meta name="description" content="Purchase credits for Pre-Apply AI Chrome extension. Get company insights, red-flag detection, and spam analysis for job applications." />
@@ -19,33 +19,36 @@ const Index = () => {
         <link rel="canonical" href="https://pre-apply.ai/" />
       </Helmet>
       <Header />
-      <main className="min-h-screen">
-        <section className="container mx-auto relative flex flex-col items-center gap-8 py-32 px-4 text-center animate-fade-in">
-          <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">
-            <span className="h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
-          </div>
-          <div className="relative z-10 max-w-4xl mx-auto">
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl tracking-tight text-gradient-primary mb-6">
-              Pre-Apply AI Credit System
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto">
-              Purchase credits for job analysis with our Chrome extension. Get company insights, red-flag detection, and spam analysis for smarter job applications.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="hover-scale">
-                <Link to="/auth">Get Started</Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild className="hover-scale">
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
+      <main className="flex-1">
+        <section className="relative py-20 md:py-32">
+          <div className="container mx-auto px-4">
+            <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">
+              <span className="h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+            </div>
+            <div className="relative z-10 max-w-4xl mx-auto text-center animate-fade-in">
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl tracking-tight text-gradient-primary mb-6">
+                Pre-Apply AI Credit System
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto">
+                Purchase credits for job analysis with our Chrome extension. Get company insights, red-flag detection, and spam analysis for smarter job applications.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button size="lg" asChild className="hover-scale">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+                <Button variant="outline" size="lg" asChild className="hover-scale">
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
-        <section className="container mx-auto pb-24 px-4">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-3xl lg:text-4xl tracking-tight mb-4">Credit Packages</h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Choose the perfect package for your job search analysis needs</p>
-          </div>
+        <section className="py-16 md:py-24">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="font-display text-3xl lg:text-4xl tracking-tight mb-4">Credit Packages</h2>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Choose the perfect package for your job search analysis needs</p>
+            </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="elevated hover-scale">
               <CardHeader>
@@ -103,10 +106,11 @@ const Index = () => {
               </CardContent>
             </Card>
           </div>
+          </div>
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 
