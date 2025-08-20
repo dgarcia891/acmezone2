@@ -19,25 +19,33 @@ const Index = () => {
         <link rel="canonical" href="https://pre-apply.ai/" />
       </Helmet>
       <Header />
-      <main className="min-h-[60vh]">
-        <section className="container mx-auto relative overflow-hidden flex flex-col items-center gap-6 py-24 text-center animate-fade-in rounded-2xl ring-1 ring-border bg-gradient-to-b from-background to-muted/40">
-          <div aria-hidden="true" className="pointer-events-none absolute -top-24 inset-x-0 flex justify-center">
-            <span className="h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+      <main className="min-h-screen">
+        <section className="container mx-auto relative flex flex-col items-center gap-8 py-32 px-4 text-center animate-fade-in">
+          <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">
+            <span className="h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
           </div>
-          <h1 className="font-display text-5xl sm:text-6xl tracking-tight text-gradient-primary">Pre-Apply AI Credit System</h1>
-          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">Purchase credits for job analysis with our Chrome extension. Get company insights, red-flag detection, and spam analysis.</p>
-          <div className="flex gap-3">
-            <Button size="lg" asChild className="hover-scale">
-              <Link to="/auth">Get Started</Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild className="hover-scale">
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
+          <div className="relative z-10 max-w-4xl mx-auto">
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl tracking-tight text-gradient-primary mb-6">
+              Pre-Apply AI Credit System
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto">
+              Purchase credits for job analysis with our Chrome extension. Get company insights, red-flag detection, and spam analysis for smarter job applications.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" asChild className="hover-scale">
+                <Link to="/auth">Get Started</Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild className="hover-scale">
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            </div>
           </div>
         </section>
-        <section className="container mx-auto pb-16 mt-12">
-          <h2 className="font-display text-3xl tracking-tight">Credit Packages</h2>
-          <p className="text-muted-foreground mt-2 mb-6">Choose the perfect package for your job search analysis needs</p>
+        <section className="container mx-auto pb-24 px-4">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-3xl lg:text-4xl tracking-tight mb-4">Credit Packages</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Choose the perfect package for your job search analysis needs</p>
+          </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="elevated hover-scale">
               <CardHeader>
