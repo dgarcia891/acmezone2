@@ -1,6 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { createHash } from "https://deno.land/std@0.190.0/hash/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,10 +12,14 @@ const logStep = (step: string, details?: any) => {
   console.log(`[ANALYZE] ${step}${detailsStr}`);
 };
 
-// Generate cache key from request data
-const generateCacheKey = (company: string, jobTitle: string, provider: string): string => {
+// Generate cache key from request data using Web Crypto API
+const generateCacheKey = async (company: string, jobTitle: string, provider: string): Promise<string> => {
   const input = `${company}|${jobTitle}|${provider}|v1.0`;
-  return createHash("sha256").update(input).toString();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 // Call OpenAI API
@@ -162,7 +165,7 @@ serve(async (req) => {
     }
 
     // Generate cache key
-    const cacheKey = generateCacheKey(company, jobTitle, actualProvider);
+    const cacheKey = await generateCacheKey(company, jobTitle, actualProvider);
     logStep("Cache key generated", { cacheKey });
 
     // Check cache first
