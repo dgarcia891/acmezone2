@@ -229,6 +229,7 @@ export type Database = {
           time_slot: string | null
           total_price: number
           updated_at: string
+          user_id: string | null
           yard_size: string
           zip_code: string
         }
@@ -265,6 +266,7 @@ export type Database = {
           time_slot?: string | null
           total_price: number
           updated_at?: string
+          user_id?: string | null
           yard_size: string
           zip_code: string
         }
@@ -301,8 +303,129 @@ export type Database = {
           time_slot?: string | null
           total_price?: number
           updated_at?: string
+          user_id?: string | null
           yard_size?: string
           zip_code?: string
+        }
+        Relationships: []
+      }
+      pa_analysis_cache: {
+        Row: {
+          cache_key: string
+          result: string
+          updated_at: string | null
+        }
+        Insert: {
+          cache_key: string
+          result: string
+          updated_at?: string | null
+        }
+        Update: {
+          cache_key?: string
+          result?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      pa_credits: {
+        Row: {
+          created_at: string | null
+          delta: number
+          id: number
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delta: number
+          id?: number
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delta?: number
+          id?: number
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pa_profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pa_stripe_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          payload: Json | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          payload?: Json | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      pa_usage_logs: {
+        Row: {
+          cached: boolean | null
+          company: string | null
+          cost_cents: number | null
+          created_at: string | null
+          id: number
+          job_title: string | null
+          provider: string
+          tokens_in: number | null
+          tokens_out: number | null
+          user_id: string
+        }
+        Insert: {
+          cached?: boolean | null
+          company?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          id?: number
+          job_title?: string | null
+          provider: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id: string
+        }
+        Update: {
+          cached?: boolean | null
+          company?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          id?: number
+          job_title?: string | null
+          provider?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -677,7 +800,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pa_credit_balance: {
+        Row: {
+          balance: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_duplicate_order: {
@@ -713,6 +842,10 @@ export type Database = {
       has_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean
+      }
+      pa_get_my_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
     }
     Enums: {
