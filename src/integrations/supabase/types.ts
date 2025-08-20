@@ -800,13 +800,7 @@ export type Database = {
       }
     }
     Views: {
-      pa_credit_balance: {
-        Row: {
-          balance: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_duplicate_order: {
