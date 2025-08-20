@@ -38,25 +38,30 @@ export const UsageHistory = () => {
       try {
         setLoading(true);
         
-        // Fetch usage logs
-        const { data: usage, error: usageError } = await supabase
-          .from('pa_usage_logs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(20);
+        // Try to fetch from existing PA tables first, then fallback to empty arrays
+        try {
+          const { data: usage } = await supabase
+            .from('pa_usage_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+          setUsageHistory(usage || []);
+        } catch (error) {
+          console.log('No usage logs available yet');
+          setUsageHistory([]);
+        }
 
-        if (usageError) throw usageError;
-        setUsageHistory(usage || []);
-
-        // Fetch credit transactions
-        const { data: credits, error: creditsError } = await supabase
-          .from('pa_credits')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (creditsError) throw creditsError;
-        setCreditHistory(credits || []);
+        try {
+          const { data: credits } = await supabase
+            .from('pa_credits')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+          setCreditHistory(credits || []);
+        } catch (error) {
+          console.log('No credit history available yet');
+          setCreditHistory([]);
+        }
       } catch (error) {
         console.error('Error fetching history:', error);
       } finally {
@@ -143,6 +148,14 @@ export const UsageHistory = () => {
             <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>No activity yet</p>
             <p className="text-sm">Your usage history will appear here</p>
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg text-left">
+              <p className="text-sm font-medium mb-2">Next steps:</p>
+              <ul className="text-xs space-y-1">
+                <li>• Purchase credits above to get started</li>
+                <li>• Use your Chrome extension for job analyses</li>
+                <li>• Track your usage and balance here</li>
+              </ul>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

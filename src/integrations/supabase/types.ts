@@ -104,6 +104,108 @@ export type Database = {
         }
         Relationships: []
       }
+      az_credits: {
+        Row: {
+          created_at: string | null
+          delta: number
+          id: number
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delta: number
+          id?: number
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delta?: number
+          id?: number
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_stripe_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          payload: Json | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          payload?: Json | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      az_usage_logs: {
+        Row: {
+          cached: boolean | null
+          company: string | null
+          cost_cents: number | null
+          created_at: string | null
+          id: number
+          job_title: string | null
+          provider: string
+          tokens_in: number | null
+          tokens_out: number | null
+          user_id: string
+        }
+        Insert: {
+          cached?: boolean | null
+          company?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          id?: number
+          job_title?: string | null
+          provider: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id: string
+        }
+        Update: {
+          cached?: boolean | null
+          company?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          id?: number
+          job_title?: string | null
+          provider?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_bookings: {
         Row: {
           availability_slot_id: string
@@ -803,6 +905,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      az_get_my_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       check_duplicate_order: {
         Args: {
           p_email: string
