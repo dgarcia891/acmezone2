@@ -4,21 +4,19 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { products } from "@/data/products";
 import ogImage from "@/assets/og-default.jpg";
 
 const Index = () => {
-  const featured = products.slice(0, 3);
   return (
     <>
       <Helmet>
-        <title>Acme Zone | Custom Software Products</title>
-        <meta name="description" content="Discover and buy custom software products like InsightReel. Clean, fast, and professional." />
-        <meta property="og:title" content="Acme Zone | Custom Software Products" />
-        <meta property="og:description" content="Discover and buy custom software products like InsightReel." />
+        <title>Pre-Apply AI | Chrome Extension Credit System</title>
+        <meta name="description" content="Purchase credits for Pre-Apply AI Chrome extension. Get company insights, red-flag detection, and spam analysis for job applications." />
+        <meta property="og:title" content="Pre-Apply AI | Chrome Extension Credit System" />
+        <meta property="og:description" content="Purchase credits for job analysis with our Chrome extension." />
         <meta property="og:image" content={ogImage} />
         <meta name="twitter:card" content="summary_large_image" />
-        <link rel="canonical" href="https://acme.zone/" />
+        <link rel="canonical" href="https://pre-apply.ai/" />
       </Helmet>
       <Header />
       <main className="min-h-[60vh]">
@@ -26,36 +24,76 @@ const Index = () => {
           <div aria-hidden="true" className="pointer-events-none absolute -top-24 inset-x-0 flex justify-center">
             <span className="h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
           </div>
-          <h1 className="font-display text-5xl sm:text-6xl tracking-tight text-gradient-primary">Build, Buy, and Ship Better Software</h1>
-          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">A curated collection of modern tools and extensions—fast, reliable, and designed for clarity.</p>
+          <h1 className="font-display text-5xl sm:text-6xl tracking-tight text-gradient-primary">Pre-Apply AI Credit System</h1>
+          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">Purchase credits for job analysis with our Chrome extension. Get company insights, red-flag detection, and spam analysis.</p>
           <div className="flex gap-3">
-            <Button variant="hero" size="lg" asChild><Link to="/products">Browse Products</Link></Button>
-            <Button variant="outline" size="lg" asChild><Link to="/contact">Contact Us</Link></Button>
+            <Button size="lg" asChild className="hover-scale">
+              <Link to="/auth">Get Started</Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild className="hover-scale">
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
           </div>
         </section>
         <section className="container mx-auto pb-16 mt-12">
-          <h2 className="font-display text-3xl tracking-tight">Featured</h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
-            {featured.map((p) => (
-              <Card key={p.id} className="overflow-hidden elevated hover-scale">
-                <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover object-top" />
-                <CardHeader>
-                  <CardTitle className="text-xl">{p.name}</CardTitle>
-                  <CardDescription>{p.summary}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{p.category}</span>
-                    {p.priceLabel && <span>{p.priceLabel}</span>}
-                  </div>
-                  <div className="mt-4">
-                    <Button asChild>
-                      <Link to={`/products/${p.slug}`}>View details</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <h2 className="font-display text-3xl tracking-tight">Credit Packages</h2>
+          <p className="text-muted-foreground mt-2 mb-6">Choose the perfect package for your job search analysis needs</p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="elevated hover-scale">
+              <CardHeader>
+                <CardTitle>Starter Pack</CardTitle>
+                <CardDescription>Perfect for light usage</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold mb-2">$10</div>
+                <div className="text-sm text-muted-foreground mb-4">1,000 credits • 10 analyses</div>
+                <Button asChild className="w-full">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="elevated hover-scale ring-2 ring-primary">
+              <CardHeader>
+                <CardTitle>Professional</CardTitle>
+                <CardDescription>Most popular choice</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold mb-2">$40</div>
+                <div className="text-sm text-muted-foreground mb-4">5,000 credits • 50 analyses</div>
+                <Button asChild className="w-full">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="elevated hover-scale">
+              <CardHeader>
+                <CardTitle>Enterprise</CardTitle>
+                <CardDescription>For heavy users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold mb-2">$99</div>
+                <div className="text-sm text-muted-foreground mb-4">15,000 credits • 150 analyses</div>
+                <Button asChild className="w-full">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="elevated hover-scale">
+              <CardHeader>
+                <CardTitle>Professional+</CardTitle>
+                <CardDescription>Maximum value</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold mb-2">$299</div>
+                <div className="text-sm text-muted-foreground mb-4">50,000 credits • 500 analyses</div>
+                <Button asChild className="w-full">
+                  <Link to="/auth">Get Started</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </section>
       </main>
