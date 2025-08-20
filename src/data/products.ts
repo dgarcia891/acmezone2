@@ -34,7 +34,7 @@ export const products: Product[] = [
     tags: ["chrome-extension", "ai", "youtube", "analysis"],
     category: "Extensions",
     priceLabel: "Free trial",
-    image: "https://cdn.zappy.app/3d3c7dd4d829158c6c13062a4be70d01.png",
+    image: "https://cdn.zappy.app/e2a1dca18003b3529eb8ef58629649a6.png",
     seoTitle: "InsightReel – AI YouTube Video Analysis Chrome Extension",
     seoDescription:
       "Analyze YouTube tutorials and news with AI. Scores, summaries, workflows, and webhook export with InsightReel.",
