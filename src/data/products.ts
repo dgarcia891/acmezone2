@@ -17,6 +17,28 @@ export type Product = {
 
 export const products: Product[] = [
   {
+    id: "pre-apply-ai",
+    name: "Pre-Apply AI",
+    slug: "pre-apply-ai",
+    summary: "Chrome extension credit system for job analysis with AI-powered insights.",
+    description: "Pre-Apply AI is a comprehensive Chrome extension credit system that provides AI-powered job analysis. Get company insights, red-flag detection, and spam analysis to make smarter job application decisions. Purchase credits to analyze job postings and companies before applying.\n\nThe system includes detailed company analysis, detection of potential red flags in job postings, spam job identification, and comprehensive insights to help job seekers make informed decisions. Perfect for job seekers who want to research companies and positions before applying.",
+    features: [
+      "AI-powered job analysis",
+      "Company insights and research", 
+      "Red-flag detection in job postings",
+      "Spam job identification",
+      "Credit-based usage system",
+      "Chrome extension integration"
+    ],
+    tags: ["chrome-extension", "ai", "job-search", "analysis"],
+    category: "Extensions",
+    priceLabel: "From $10",
+    image: "/placeholder.svg",
+    seoTitle: "Pre-Apply AI – Chrome Extension for Job Analysis",
+    seoDescription: "AI-powered job analysis Chrome extension. Get company insights and red-flag detection for smarter job applications.",
+    type: "Chrome Extension + Credit System"
+  },
+  {
     id: "insightreel",
     name: "InsightReel",
     slug: "insightreel",
