@@ -80,7 +80,10 @@ export const PurchaseCredits = () => {
           packageId: pkg.id,
           credits: pkg.credits,
           amount: pkg.price * 100, // Convert to cents
-        }
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
       });
 
       if (error) {

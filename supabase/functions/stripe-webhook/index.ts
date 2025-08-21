@@ -84,7 +84,7 @@ serve(async (req) => {
 
     // Check if we've already processed this event (idempotency)
     const { data: existingEvent } = await supabaseService
-      .from("pa_stripe_events")
+      .from("az_stripe_events")
       .select("id")
       .eq("id", event.id)
       .single();
@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     // Store the event for audit/idempotency
-    await supabaseService.from("pa_stripe_events").insert({
+    await supabaseService.from("az_stripe_events").insert({
       id: event.id,
       type: event.type,
       payload: event,
@@ -148,7 +148,7 @@ serve(async (req) => {
         logStep("Adding credits", { userId, priceId, creditsPerItem, quantity, totalCredits });
 
         // Add credits to user account
-        await supabaseService.from("pa_credits").insert({
+        await supabaseService.from("az_credits").insert({
           user_id: userId,
           delta: totalCredits,
           reason: `stripe:${priceId}`,
