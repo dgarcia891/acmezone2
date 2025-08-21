@@ -87,6 +87,11 @@ serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       client_reference_id: user.id, // This is crucial for the webhook to identify the user
+      metadata: {
+        credits: credits.toString(),
+        packageId: packageId,
+        userId: user.id
+      },
       line_items: [
         {
           price_data: {

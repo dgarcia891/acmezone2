@@ -25,23 +25,10 @@ serve(async (req) => {
     // Get environment variables
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    const priceToCreditsJson = Deno.env.get("STRIPE_PRICE_TO_CREDITS") || "{}";
     
     if (!stripeSecretKey || !webhookSecret) {
       logStep("Missing environment variables");
       return new Response(JSON.stringify({ error: "Configuration error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
-    // Parse price to credits mapping
-    let priceToCredits;
-    try {
-      priceToCredits = JSON.parse(priceToCreditsJson);
-    } catch (error) {
-      logStep("Invalid STRIPE_PRICE_TO_CREDITS JSON", { error: error.message });
-      return new Response(JSON.stringify({ error: "Invalid price mapping configuration" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -119,42 +106,43 @@ serve(async (req) => {
         });
       }
 
-      // Get line items to determine what was purchased
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ['data.price'] });
-      
-      if (!lineItems.data.length) {
-        logStep("No line items found");
-        return new Response(JSON.stringify({ error: "No line items found" }), {
+      // Get credit information from session metadata
+      const credits = session.metadata?.credits;
+      const packageId = session.metadata?.packageId;
+
+      if (!credits || !packageId) {
+        logStep("Missing credit information in session metadata", { 
+          metadata: session.metadata 
+        });
+        return new Response(JSON.stringify({ error: "Missing credit information" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
 
-      // Process each line item
-      for (const item of lineItems.data) {
-        const priceId = item.price?.id;
-        const quantity = item.quantity || 1;
-        
-        if (!priceId) continue;
-
-        // Get credits for this price ID
-        const creditsPerItem = priceToCredits[priceId];
-        if (!creditsPerItem) {
-          logStep("Unknown price ID", { priceId });
-          continue;
-        }
-
-        const totalCredits = creditsPerItem * quantity;
-        logStep("Adding credits", { userId, priceId, creditsPerItem, quantity, totalCredits });
-
-        // Add credits to user account
-        await supabaseService.from("az_credits").insert({
-          user_id: userId,
-          delta: totalCredits,
-          reason: `stripe:${priceId}`,
-          created_at: new Date().toISOString()
+      const creditsAmount = parseInt(credits);
+      if (isNaN(creditsAmount) || creditsAmount <= 0) {
+        logStep("Invalid credits amount", { credits });
+        return new Response(JSON.stringify({ error: "Invalid credits amount" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
+
+      logStep("Adding credits from metadata", { 
+        userId, 
+        creditsAmount, 
+        packageId,
+        sessionId: session.id 
+      });
+
+      // Add credits to user account
+      await supabaseService.from("az_credits").insert({
+        user_id: userId,
+        delta: creditsAmount,
+        reason: `stripe_purchase:${packageId}`,
+        created_at: new Date().toISOString()
+      });
 
       logStep("Checkout session processed successfully");
     } else {
