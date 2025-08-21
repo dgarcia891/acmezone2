@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, CreditCard, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CreditPackage {
   id: string;
@@ -59,8 +60,18 @@ const creditPackages: CreditPackage[] = [
 export const PurchaseCredits = () => {
   const [loadingPackage, setLoadingPackage] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, session } = useAuth();
 
   const handlePurchase = async (pkg: CreditPackage) => {
+    if (!user || !session) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to purchase credits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoadingPackage(pkg.id);
       
@@ -134,12 +145,14 @@ export const PurchaseCredits = () => {
             <CardContent className="space-y-4">
               <Button
                 onClick={() => handlePurchase(pkg)}
-                disabled={loadingPackage === pkg.id}
+                disabled={loadingPackage === pkg.id || !user}
                 className="w-full"
                 variant={pkg.popular ? "default" : "outline"}
               >
                 {loadingPackage === pkg.id ? (
                   'Processing...'
+                ) : !user ? (
+                  'Login Required'
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4 mr-2" />
