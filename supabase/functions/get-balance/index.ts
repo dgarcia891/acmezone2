@@ -26,7 +26,7 @@ serve(async (req) => {
     }
 
     // Call the RPC function to get user's credit balance
-    const resp = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/pa_get_my_balance`, {
+    const resp = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/az_get_my_balance`, {
       method: 'POST',
       headers: {
         'Authorization': auth,
