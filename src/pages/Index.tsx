@@ -26,7 +26,7 @@ const Index = () => {
               <span className="h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
             </div>
             <div className="relative z-10 max-w-4xl mx-auto text-center animate-fade-in">
-              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl tracking-tight text-gradient-primary mb-6">
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl tracking-tight text-gradient-primary mb-8 leading-tight py-2">
                 Pre-Apply AI Credit System
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto">
