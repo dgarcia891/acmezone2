@@ -58,7 +58,7 @@ const Index = () => {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
               {products.map((p) => (
                 <Card key={p.id} className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg elevated">
-                  <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover" />
+                  <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover object-top" />
                   <CardHeader>
                     <CardTitle className="text-xl">{p.name}</CardTitle>
                     <CardDescription>{p.summary}</CardDescription>
