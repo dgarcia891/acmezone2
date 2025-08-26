@@ -9,6 +9,7 @@ export type Product = {
   category: string;
   priceLabel?: string;
   image: string; // path to image (can use public placeholder)
+  images?: string[]; // additional images for carousel
   seoTitle?: string;
   seoDescription?: string;
   type?: string;
@@ -117,6 +118,10 @@ export const products: Product[] = [
     category: "Extensions",
     priceLabel: "From $12",
     image: "/lovable-uploads/ff84c184-f45b-4bef-ae67-83422faff51b.png",
+    images: [
+      "/lovable-uploads/ff84c184-f45b-4bef-ae67-83422faff51b.png",
+      "/lovable-uploads/0bc8bf7c-eee5-4bbc-a87d-684fa5ca0f00.png"
+    ],
     seoTitle: "TrelloBridge – Chrome Extension for Trello Integration & Web Organization",
     seoDescription: "Bridge web browsing and Trello! Auto-find existing cards, create new ones instantly, and organize web content seamlessly in Trello boards.",
     type: "Chrome Extension"

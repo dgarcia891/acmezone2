@@ -4,6 +4,13 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { products } from "@/data/products";
 import { Button } from "@/components/ui/button";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -70,7 +77,25 @@ const ProductDetail = () => {
       <main className="container mx-auto py-12">
         <article className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <img src={product.image} alt={`${product.name} cover image`} className="w-full rounded-md border" />
+            {product.images && product.images.length > 1 ? (
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {product.images.map((image, index) => (
+                    <CarouselItem key={index}>
+                      <img 
+                        src={image} 
+                        alt={`${product.name} screenshot ${index + 1}`} 
+                        className="w-full rounded-md border"
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+            ) : (
+              <img src={product.image} alt={`${product.name} cover image`} className="w-full rounded-md border" />
+            )}
           </div>
           <div className="lg:col-span-7">
             <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
