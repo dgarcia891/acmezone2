@@ -18,24 +18,28 @@ export type Product = {
 export const products: Product[] = [
   {
     id: "pre-apply-ai",
-    name: "Pre-Apply AI",
+    name: "JobGuard Pro (Pre-Apply AI)",
     slug: "pre-apply-ai",
-    summary: "Chrome extension credit system for job analysis with AI-powered insights.",
-    description: "Pre-Apply AI is a comprehensive Chrome extension credit system that provides AI-powered job analysis. Get company insights, red-flag detection, and spam analysis to make smarter job application decisions. Purchase credits to analyze job postings and companies before applying.\n\nThe system includes detailed company analysis, detection of potential red flags in job postings, spam job identification, and comprehensive insights to help job seekers make informed decisions. Perfect for job seekers who want to research companies and positions before applying.",
+    summary: "Your LinkedIn Job Application Guardian - Stop wasting time on bad job postings before you even apply!",
+    description: "JobGuard Pro automatically analyzes LinkedIn job listings in real-time, giving you instant insights into job quality, compensation, and potential red flags. Make smarter career decisions with data-driven job evaluation.\n\n🔍 **Instant Job Analysis**: Automatically scans LinkedIn job postings as you browse with real-time quality assessment and color-coded flags.\n\n🚩 **Smart Red Flag Detection**: Freshness check for stale jobs (30+ days), location flexibility analysis, compensation insights, job description analysis for commission-only/1099 contractor/AI-generated content, and company health indicators.\n\n💡 **Pro Benefits**: Save hours by skipping low-quality jobs, focus on competitive salaries, quickly identify remote opportunities, get one-click access to company reviews and news, and prioritize applications based on quality scores.\n\n🎯 **Perfect For**: Job seekers maximizing success rates, career changers seeking quality opportunities, remote workers, salary negotiators, and busy professionals who can't afford to waste time on bad job posts.\n\n🔒 **Privacy & Security**: 100% client-side analysis with no data collection, works exclusively on LinkedIn, minimal permissions required.",
     features: [
-      "AI-powered job analysis",
-      "Company insights and research", 
-      "Red-flag detection in job postings",
-      "Spam job identification",
-      "Credit-based usage system",
-      "Chrome extension integration"
+      "Real-time LinkedIn job quality analysis",
+      "Smart red flag detection (stale jobs, compensation, location)",
+      "Company health insights and Glassdoor integration", 
+      "AI-generated content detection in job posts",
+      "Color-coded quality indicators",
+      "One-click company research and news",
+      "Remote job identification",
+      "Salary range analysis and compensation insights",
+      "100% client-side processing for privacy",
+      "Credit-based premium analysis system"
     ],
-    tags: ["chrome-extension", "ai", "job-search", "analysis"],
+    tags: ["chrome-extension", "linkedin", "job-search", "analysis", "remote-work", "salary-checker"],
     category: "Extensions",
     priceLabel: "From $10",
     image: "/placeholder.svg",
-    seoTitle: "Pre-Apply AI – Chrome Extension for Job Analysis",
-    seoDescription: "AI-powered job analysis Chrome extension. Get company insights and red-flag detection for smarter job applications.",
+    seoTitle: "JobGuard Pro – LinkedIn Job Quality Analyzer Chrome Extension",
+    seoDescription: "Stop wasting time on bad LinkedIn jobs! Real-time analysis, red flag detection, salary insights, and company research. Make smarter job applications.",
     type: "Chrome Extension + Credit System"
   },
   {
