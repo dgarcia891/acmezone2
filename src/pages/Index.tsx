@@ -1,11 +1,80 @@
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { products } from "@/data/products";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import ogImage from "@/assets/og-default.jpg";
+
+const ProductCard = ({ product }: { product: typeof products[0] }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const hasMultipleImages = product.images && product.images.length > 1;
+  const displayImages = product.images || [product.image];
+
+  return (
+    <Card className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg elevated flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl font-bold leading-tight">{product.name}</CardTitle>
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{product.category}</span>
+          {product.priceLabel && <span className="font-medium">{product.priceLabel}</span>}
+        </div>
+      </CardHeader>
+      
+      <div className="px-6 pb-4">
+        <div className="relative h-32 bg-muted/20 rounded-lg overflow-hidden">
+          {hasMultipleImages ? (
+            <Carousel 
+              className="w-full h-full"
+              opts={{ loop: true }}
+            >
+              <CarouselContent className="h-full">
+                {displayImages.map((image, index) => (
+                  <CarouselItem key={index} className="h-full">
+                    <img 
+                      src={image} 
+                      alt={`${product.name} screenshot ${index + 1}`} 
+                      loading="lazy"
+                      className="w-full h-full object-contain"
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
+              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
+            </Carousel>
+          ) : (
+            <img 
+              src={product.image} 
+              alt={`${product.name} product image`} 
+              loading="lazy"
+              className="w-full h-full object-contain"
+            />
+          )}
+        </div>
+      </div>
+
+      <CardContent className="pt-0 flex-1 flex flex-col">
+        <CardDescription className="flex-1 text-sm leading-relaxed line-clamp-3">
+          {product.summary}
+        </CardDescription>
+        <Button asChild className="w-full mt-4">
+          <Link to={`/products/${product.slug}`}>View Details</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Index = () => {
   return (
@@ -57,22 +126,7 @@ const Index = () => {
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
               {products.map((p) => (
-                <Card key={p.id} className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg elevated">
-                  <img src={p.image} alt={`${p.name} product image`} loading="lazy" className="h-40 w-full object-cover object-top" />
-                  <CardHeader>
-                    <CardTitle className="text-xl">{p.name}</CardTitle>
-                    <CardDescription>{p.summary}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                      <span>{p.category}</span>
-                      {p.priceLabel && <span>{p.priceLabel}</span>}
-                    </div>
-                    <Button asChild className="w-full">
-                      <Link to={`/products/${p.slug}`}>View Details</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>
