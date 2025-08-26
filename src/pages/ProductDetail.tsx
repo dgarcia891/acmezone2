@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { products } from "@/data/products";
@@ -10,11 +11,22 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi
 } from "@/components/ui/carousel";
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const product = products.find((p) => p.slug === slug);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+
+  useEffect(() => {
+    if (!carouselApi) return;
+
+    carouselApi.on("select", () => {
+      setCurrentImageIndex(carouselApi.selectedScrollSnap());
+    });
+  }, [carouselApi]);
 
   if (!product) {
     return (
@@ -78,23 +90,51 @@ const ProductDetail = () => {
         <article className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             {product.images && product.images.length > 1 ? (
-              <Carousel className="w-full">
-                <CarouselContent>
-                  {product.images.map((image, index) => (
-                    <CarouselItem key={index}>
-                      <img 
-                        src={image} 
-                        alt={`${product.name} screenshot ${index + 1}`} 
-                        className="w-full rounded-md border"
-                      />
-                    </CarouselItem>
+              <div className="relative">
+                <Carousel 
+                  className="w-full"
+                  setApi={setCarouselApi}
+                >
+                  <CarouselContent>
+                    {product.images.map((image, index) => (
+                      <CarouselItem key={index}>
+                        <div className="relative aspect-video">
+                          <img 
+                            src={image} 
+                            alt={`${product.name} screenshot ${index + 1}`} 
+                            className="w-full h-full object-cover rounded-lg border shadow-md"
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  
+                  {/* Custom positioned arrows */}
+                  <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border shadow-lg" />
+                  <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border shadow-lg" />
+                </Carousel>
+                
+                {/* Dots indicator */}
+                <div className="flex justify-center mt-4 gap-2">
+                  {product.images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        carouselApi?.scrollTo(index);
+                        setCurrentImageIndex(index);
+                      }}
+                      className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                        index === currentImageIndex 
+                          ? 'bg-primary scale-125' 
+                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                      aria-label={`Go to image ${index + 1}`}
+                    />
                   ))}
-                </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
-              </Carousel>
+                </div>
+              </div>
             ) : (
-              <img src={product.image} alt={`${product.name} cover image`} className="w-full rounded-md border" />
+              <img src={product.image} alt={`${product.name} cover image`} className="w-full rounded-lg border shadow-md" />
             )}
           </div>
           <div className="lg:col-span-7">
