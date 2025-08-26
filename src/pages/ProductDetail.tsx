@@ -98,11 +98,11 @@ const ProductDetail = () => {
                   <CarouselContent>
                     {product.images.map((image, index) => (
                       <CarouselItem key={index}>
-                        <div className="relative aspect-video">
+                        <div className="relative">
                           <img 
                             src={image} 
                             alt={`${product.name} screenshot ${index + 1}`} 
-                            className="w-full h-full object-cover rounded-lg border shadow-md"
+                            className="w-full h-auto object-contain rounded-lg border shadow-md"
                           />
                         </div>
                       </CarouselItem>
