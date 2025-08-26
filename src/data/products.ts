@@ -43,6 +43,32 @@ export const products: Product[] = [
     type: "Chrome Extension + Credit System"
   },
   {
+    id: "linkedin-job-scanner",
+    name: "LinkedIn Job Scanner",
+    slug: "linkedin-job-scanner",
+    summary: "Advanced LinkedIn job search and analysis tool with automated scanning capabilities.",
+    description: "LinkedIn Job Scanner is a powerful Chrome extension that automatically scans and analyzes LinkedIn job postings to help you find the perfect opportunities faster. With advanced filtering, real-time notifications, and comprehensive job analysis, make your job search more efficient and targeted.\n\n🔍 **Advanced Scanning**: Automatically scan LinkedIn for new job postings matching your criteria with customizable filters for location, salary, experience level, and company size.\n\n⚡ **Real-time Alerts**: Get instant notifications when new jobs matching your preferences are posted, giving you a competitive advantage in applying early.\n\n📊 **Job Analytics**: Track application success rates, analyze job market trends, and get insights into the most promising opportunities in your field.\n\n🎯 **Smart Filtering**: Advanced search capabilities beyond LinkedIn's native filters, including company culture keywords, benefits analysis, and role progression potential.\n\n🤖 **Automated Actions**: Set up automated job applications for roles that meet your exact criteria, with customizable application templates and follow-up reminders.",
+    features: [
+      "Automated LinkedIn job scanning and monitoring",
+      "Real-time job posting notifications",
+      "Advanced filtering beyond LinkedIn's native options",
+      "Job market analytics and trend analysis",
+      "Application tracking and success rate monitoring",
+      "Automated application submission with templates",
+      "Company culture and benefits analysis",
+      "Salary range detection and comparison",
+      "Role progression and career path insights",
+      "Custom alert configurations and preferences"
+    ],
+    tags: ["chrome-extension", "linkedin", "job-search", "automation", "analytics", "notifications"],
+    category: "Extensions",
+    priceLabel: "From $15",
+    image: "/placeholder.svg",
+    seoTitle: "LinkedIn Job Scanner – Automated Job Search Chrome Extension",
+    seoDescription: "Automate your LinkedIn job search with advanced scanning, real-time alerts, and job analytics. Find opportunities faster with smart filtering.",
+    type: "Chrome Extension"
+  },
+  {
     id: "insightreel",
     name: "InsightReel",
     slug: "insightreel",
