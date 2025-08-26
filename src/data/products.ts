@@ -116,7 +116,7 @@ export const products: Product[] = [
     tags: ["chrome-extension", "trello", "productivity", "project-management", "organization", "workflow", "automation", "task-management"],
     category: "Extensions",
     priceLabel: "From $12",
-    image: "/placeholder.svg",
+    image: "/lovable-uploads/ff84c184-f45b-4bef-ae67-83422faff51b.png",
     seoTitle: "TrelloBridge – Chrome Extension for Trello Integration & Web Organization",
     seoDescription: "Bridge web browsing and Trello! Auto-find existing cards, create new ones instantly, and organize web content seamlessly in Trello boards.",
     type: "Chrome Extension"
