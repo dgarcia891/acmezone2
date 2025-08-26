@@ -94,6 +94,7 @@ const ProductDetail = () => {
                 <Carousel 
                   className="w-full"
                   setApi={setCarouselApi}
+                  opts={{ loop: true }}
                 >
                   <CarouselContent>
                     {product.images.map((image, index) => (
