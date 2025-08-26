@@ -110,8 +110,8 @@ const ProductDetail = () => {
                   </CarouselContent>
                   
                   {/* Custom positioned arrows */}
-                  <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border shadow-lg" />
-                  <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background border shadow-lg" />
+                  <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background hover:bg-accent border-2 shadow-xl w-10 h-10 text-foreground hover:text-accent-foreground" />
+                  <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background hover:bg-accent border-2 shadow-xl w-10 h-10 text-foreground hover:text-accent-foreground" />
                 </Carousel>
                 
                 {/* Dots indicator */}
