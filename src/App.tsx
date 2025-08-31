@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
+import Support from "./pages/Support";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
                 <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/support" element={<Support />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
