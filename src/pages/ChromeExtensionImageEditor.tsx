@@ -194,7 +194,12 @@ const ChromeExtensionImageEditor: React.FC = () => {
       img.onload = () => {
         console.log(`Resizing to ${targetSize}x${targetSize}, original: ${img.width}x${img.height}`);
         
-        // Use a much simpler, cleaner approach
+        // Special handling for 16x16 icons
+        if (targetSize === 16) {
+          return create16pxIcon(img).then(resolve).catch(reject);
+        }
+        
+        // Use a simple approach for other sizes
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
@@ -206,7 +211,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
         canvas.width = targetSize;
         canvas.height = targetSize;
         
-        // For small icons, disable anti-aliasing to get crisp edges
+        // For small icons (32px), disable anti-aliasing to get crisp edges
         if (targetSize <= 32) {
           ctx.imageSmoothingEnabled = false;
         } else {
@@ -220,7 +225,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
         const sourceX = (img.width - sourceSize) / 2;
         const sourceY = (img.height - sourceSize) / 2;
         
-        // Draw the image cleanly without any post-processing
+        // Draw the image cleanly
         ctx.drawImage(
           img,
           sourceX, sourceY, sourceSize, sourceSize,  // source
@@ -243,6 +248,165 @@ const ChromeExtensionImageEditor: React.FC = () => {
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
     });
+  };
+
+  const create16pxIcon = (img: HTMLImageElement): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      console.log('Creating specialized 16px icon...');
+      
+      // Step 1: Create a 64px intermediate version (4x the target size)
+      const intermediateSize = 64;
+      const intermediateCanvas = document.createElement('canvas');
+      const intermediateCtx = intermediateCanvas.getContext('2d');
+      
+      if (!intermediateCtx) {
+        reject(new Error('Could not get intermediate canvas context'));
+        return;
+      }
+      
+      intermediateCanvas.width = intermediateSize;
+      intermediateCanvas.height = intermediateSize;
+      
+      // Use high-quality scaling to create intermediate
+      intermediateCtx.imageSmoothingEnabled = true;
+      intermediateCtx.imageSmoothingQuality = 'high';
+      
+      const sourceSize = Math.min(img.width, img.height);
+      const sourceX = (img.width - sourceSize) / 2;
+      const sourceY = (img.height - sourceSize) / 2;
+      
+      intermediateCtx.drawImage(
+        img,
+        sourceX, sourceY, sourceSize, sourceSize,
+        0, 0, intermediateSize, intermediateSize
+      );
+      
+      // Step 2: Apply edge enhancement to the intermediate image
+      const intermediateImageData = intermediateCtx.getImageData(0, 0, intermediateSize, intermediateSize);
+      const enhancedData = enhanceForSmallIcon(intermediateImageData);
+      intermediateCtx.putImageData(enhancedData, 0, 0);
+      
+      // Step 3: Create final 16px canvas
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d');
+      
+      if (!finalCtx) {
+        reject(new Error('Could not get final canvas context'));
+        return;
+      }
+      
+      finalCanvas.width = 16;
+      finalCanvas.height = 16;
+      
+      // Use nearest-neighbor scaling for the final step to preserve sharp edges
+      finalCtx.imageSmoothingEnabled = false;
+      
+      // Scale down from 64px to 16px (1:4 ratio)
+      finalCtx.drawImage(intermediateCanvas, 0, 0, intermediateSize, intermediateSize, 0, 0, 16, 16);
+      
+      // Step 4: Apply final touch-ups for 16px
+      const finalImageData = finalCtx.getImageData(0, 0, 16, 16);
+      const optimizedData = optimize16pxIcon(finalImageData);
+      finalCtx.putImageData(optimizedData, 0, 0);
+      
+      console.log('16px icon creation completed');
+      
+      finalCanvas.toBlob(
+        (blob) => {
+          if (blob) {
+            console.log(`Specialized 16px icon blob size: ${blob.size} bytes`);
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create 16px icon'));
+          }
+        },
+        'image/png',
+        1.0
+      );
+    });
+  };
+
+  const enhanceForSmallIcon = (imageData: ImageData): ImageData => {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const newData = new Uint8ClampedArray(data);
+    
+    // Edge detection and enhancement kernel
+    const edgeKernel = [
+      -1, -1, -1,
+      -1,  8, -1,
+      -1, -1, -1
+    ];
+    
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        for (let c = 0; c < 3; c++) { // RGB channels only
+          let edgeSum = 0;
+          let originalValue = data[(y * width + x) * 4 + c];
+          
+          // Apply edge detection
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+              edgeSum += data[idx] * edgeKernel[(ky + 1) * 3 + (kx + 1)];
+            }
+          }
+          
+          // Combine original with edge enhancement
+          const enhanced = originalValue + (edgeSum * 0.3);
+          const idx = (y * width + x) * 4 + c;
+          newData[idx] = Math.max(0, Math.min(255, enhanced));
+        }
+      }
+    }
+    
+    return new ImageData(newData, width, height);
+  };
+
+  const optimize16pxIcon = (imageData: ImageData): ImageData => {
+    const data = imageData.data;
+    const newData = new Uint8ClampedArray(data);
+    
+    // Increase contrast and saturation for better visibility at 16px
+    const contrast = 1.4;
+    const saturation = 1.2;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const alpha = data[i + 3];
+      
+      // Skip transparent pixels
+      if (alpha === 0) {
+        newData[i] = r;
+        newData[i + 1] = g;
+        newData[i + 2] = b;
+        newData[i + 3] = alpha;
+        continue;
+      }
+      
+      // Apply contrast
+      const contrastFactor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
+      let newR = contrastFactor * (r - 128) + 128;
+      let newG = contrastFactor * (g - 128) + 128;
+      let newB = contrastFactor * (b - 128) + 128;
+      
+      // Apply saturation
+      const gray = 0.299 * newR + 0.587 * newG + 0.114 * newB;
+      newR = gray + saturation * (newR - gray);
+      newG = gray + saturation * (newG - gray);
+      newB = gray + saturation * (newB - gray);
+      
+      // Clamp values
+      newData[i] = Math.max(0, Math.min(255, newR));
+      newData[i + 1] = Math.max(0, Math.min(255, newG));
+      newData[i + 2] = Math.max(0, Math.min(255, newB));
+      newData[i + 3] = alpha;
+    }
+    
+    return new ImageData(newData, imageData.width, imageData.height);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
