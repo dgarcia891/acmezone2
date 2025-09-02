@@ -12,7 +12,7 @@ import { pipeline, env } from '@huggingface/transformers';
 env.allowLocalModels = false;
 env.useBrowserCache = false;
 
-const ICON_SIZES = [16, 48, 128] as const;
+const ICON_SIZES = [16, 32, 48, 128] as const;
 
 interface ProcessedImage {
   size: number;
