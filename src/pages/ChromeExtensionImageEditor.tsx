@@ -337,7 +337,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const downloadImage = (processedImage: ProcessedImage) => {
     const link = document.createElement('a');
     link.href = processedImage.url;
-    link.download = `icon-${processedImage.size}x${processedImage.size}.png`;
+    link.download = `icon${processedImage.size}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
