@@ -251,7 +251,20 @@ const ChromeExtensionImageEditor: React.FC = () => {
     }
 
     try {
+      // Clear previous state and free memory
+      if (originalImage) {
+        URL.revokeObjectURL(originalImage);
+      }
+      processedImages.forEach(img => {
+        URL.revokeObjectURL(img.url);
+      });
+      
+      // Reset all state to initial values
+      setOriginalImage(null);
+      setProcessedImages([]);
       setIsProcessing(true);
+      
+      // Set new original image
       setOriginalImage(URL.createObjectURL(file));
       
       // Load the original image
