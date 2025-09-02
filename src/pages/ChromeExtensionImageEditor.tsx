@@ -194,176 +194,55 @@ const ChromeExtensionImageEditor: React.FC = () => {
       img.onload = () => {
         console.log(`Resizing to ${targetSize}x${targetSize}, original: ${img.width}x${img.height}`);
         
-        // For small icons, use a high-quality supersampling approach
-        if (targetSize <= 48) {
-          // Create a very high resolution intermediate (8x target size minimum)
-          const supersampleFactor = Math.max(8, Math.ceil(512 / targetSize));
-          const supersampleSize = targetSize * supersampleFactor;
-          
-          console.log(`Using supersampling factor ${supersampleFactor} for ${targetSize}px icon`);
-          
-          // Step 1: Create high-resolution version
-          const supersampleCanvas = document.createElement('canvas');
-          const supersampleCtx = supersampleCanvas.getContext('2d');
-          
-          if (!supersampleCtx) {
-            reject(new Error('Could not get supersample canvas context'));
-            return;
-          }
-          
-          supersampleCanvas.width = supersampleSize;
-          supersampleCanvas.height = supersampleSize;
-          
-          // Use highest quality settings for supersampling
-          supersampleCtx.imageSmoothingEnabled = true;
-          supersampleCtx.imageSmoothingQuality = 'high';
-          
-          // Draw at very high resolution, maintaining aspect ratio
-          const size = Math.min(img.width, img.height);
-          const offsetX = (img.width - size) / 2;
-          const offsetY = (img.height - size) / 2;
-          
-          supersampleCtx.drawImage(img, offsetX, offsetY, size, size, 0, 0, supersampleSize, supersampleSize);
-          
-          // Step 2: Apply sharpening at high resolution
-          const supersampleImageData = supersampleCtx.getImageData(0, 0, supersampleSize, supersampleSize);
-          const sharpenedData = applyAdvancedSharpening(supersampleImageData);
-          supersampleCtx.putImageData(sharpenedData, 0, 0);
-          
-          // Step 3: Create final canvas and downsample with high quality
-          const finalCanvas = document.createElement('canvas');
-          const finalCtx = finalCanvas.getContext('2d');
-          
-          if (!finalCtx) {
-            reject(new Error('Could not get final canvas context'));
-            return;
-          }
-          
-          finalCanvas.width = targetSize;
-          finalCanvas.height = targetSize;
-          
-          // Use high-quality downsampling
-          finalCtx.imageSmoothingEnabled = true;
-          finalCtx.imageSmoothingQuality = 'high';
-          
-          // Downsample from high-res to final size
-          finalCtx.drawImage(supersampleCanvas, 0, 0, supersampleSize, supersampleSize, 0, 0, targetSize, targetSize);
-          
-          // Step 4: Apply final small-icon optimizations
-          const finalImageData = finalCtx.getImageData(0, 0, targetSize, targetSize);
-          const optimizedData = optimizeSmallIcon(finalImageData, targetSize);
-          finalCtx.putImageData(optimizedData, 0, 0);
-          
-          finalCanvas.toBlob(
-            (blob) => {
-              if (blob) {
-                console.log(`High-quality small icon (${targetSize}px) blob size: ${blob.size} bytes`);
-                resolve(blob);
-              } else {
-                reject(new Error('Failed to create high-quality small icon'));
-              }
-            },
-            'image/png',
-            1.0
-          );
+        // Use a much simpler, cleaner approach
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        
+        // For small icons, disable anti-aliasing to get crisp edges
+        if (targetSize <= 32) {
+          ctx.imageSmoothingEnabled = false;
         } else {
-          // For larger icons (128px), use standard high-quality approach
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) {
-            reject(new Error('Could not get canvas context'));
-            return;
-          }
-          
-          canvas.width = targetSize;
-          canvas.height = targetSize;
-          
-          // Use high-quality scaling for larger icons
+          // For larger icons, use the best quality smoothing
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
-          
-          // Center the image and maintain aspect ratio
-          const size = Math.min(img.width, img.height);
-          const offsetX = (img.width - size) / 2;
-          const offsetY = (img.height - size) / 2;
-          
-          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
-          
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                console.log(`Large icon (${targetSize}px) blob size: ${blob.size} bytes`);
-                resolve(blob);
-              } else {
-                reject(new Error('Failed to resize large image'));
-              }
-            },
-            'image/png',
-            1.0
-          );
         }
+        
+        // Calculate dimensions to maintain aspect ratio and center the image
+        const sourceSize = Math.min(img.width, img.height);
+        const sourceX = (img.width - sourceSize) / 2;
+        const sourceY = (img.height - sourceSize) / 2;
+        
+        // Draw the image cleanly without any post-processing
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceSize, sourceSize,  // source
+          0, 0, targetSize, targetSize               // destination
+        );
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              console.log(`Clean resize (${targetSize}px) blob size: ${blob.size} bytes`);
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to resize image cleanly'));
+            }
+          },
+          'image/png',
+          1.0
+        );
       };
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
     });
-  };
-
-  const applyAdvancedSharpening = (imageData: ImageData): ImageData => {
-    const data = imageData.data;
-    const width = imageData.width;
-    const height = imageData.height;
-    const newData = new Uint8ClampedArray(data);
-    
-    // Advanced unsharp mask kernel
-    const kernel = [
-      -1, -1, -1,
-      -1,  9, -1,
-      -1, -1, -1
-    ];
-    const kernelWeight = 1;
-    
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        for (let c = 0; c < 3; c++) { // RGB channels only, preserve alpha
-          let sum = 0;
-          for (let ky = -1; ky <= 1; ky++) {
-            for (let kx = -1; kx <= 1; kx++) {
-              const idx = ((y + ky) * width + (x + kx)) * 4 + c;
-              sum += data[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
-            }
-          }
-          const idx = (y * width + x) * 4 + c;
-          newData[idx] = Math.max(0, Math.min(255, sum / kernelWeight));
-        }
-      }
-    }
-    
-    return new ImageData(newData, width, height);
-  };
-
-  const optimizeSmallIcon = (imageData: ImageData, size: number): ImageData => {
-    const data = imageData.data;
-    const newData = new Uint8ClampedArray(data);
-    
-    // For very small icons, enhance contrast and clarity
-    if (size <= 32) {
-      // Apply contrast enhancement
-      const contrast = 1.2; // Increase contrast slightly
-      const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
-      
-      for (let i = 0; i < data.length; i += 4) {
-        // Apply contrast to RGB channels
-        for (let c = 0; c < 3; c++) {
-          const value = data[i + c];
-          newData[i + c] = Math.max(0, Math.min(255, factor * (value - 128) + 128));
-        }
-        // Preserve alpha channel
-        newData[i + 3] = data[i + 3];
-      }
-    }
-    
-    return new ImageData(newData, imageData.width, imageData.height);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
