@@ -42,33 +42,54 @@ const ChromeExtensionImageEditor: React.FC = () => {
         device: 'webgpu',
       });
       
-      // Convert HTMLImageElement to canvas
+      // Work with original high resolution for better quality
+      const originalWidth = imageElement.naturalWidth;
+      const originalHeight = imageElement.naturalHeight;
+      
+      // Create canvas at original resolution
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
       if (!ctx) throw new Error('Could not get canvas context');
       
-      // Resize image if needed for processing (max 1024px)
-      let width = imageElement.naturalWidth;
-      let height = imageElement.naturalHeight;
-      const maxDimension = 1024;
+      canvas.width = originalWidth;
+      canvas.height = originalHeight;
       
-      if (width > maxDimension || height > maxDimension) {
-        if (width > height) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
+      // Enable high-quality rendering
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(imageElement, 0, 0);
+      
+      // For AI processing, we might need to resize, but we'll keep a high-res version
+      let processCanvas = canvas;
+      let processCtx = ctx;
+      const maxDimension = 512; // Lower for AI processing but still reasonable quality
+      
+      if (originalWidth > maxDimension || originalHeight > maxDimension) {
+        processCanvas = document.createElement('canvas');
+        processCtx = processCanvas.getContext('2d');
+        if (!processCtx) throw new Error('Could not get process canvas context');
+        
+        let processWidth = originalWidth;
+        let processHeight = originalHeight;
+        
+        if (originalWidth > originalHeight) {
+          processHeight = Math.round((originalHeight * maxDimension) / originalWidth);
+          processWidth = maxDimension;
         } else {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
+          processWidth = Math.round((originalWidth * maxDimension) / originalHeight);
+          processHeight = maxDimension;
         }
+        
+        processCanvas.width = processWidth;
+        processCanvas.height = processHeight;
+        processCtx.imageSmoothingEnabled = true;
+        processCtx.imageSmoothingQuality = 'high';
+        processCtx.drawImage(imageElement, 0, 0, processWidth, processHeight);
       }
       
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(imageElement, 0, 0, width, height);
-      
-      // Get image data as base64
-      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      // Get image data as base64 from process canvas
+      const imageData = processCanvas.toDataURL('image/png', 1.0); // Use PNG for better quality
       console.log('Processing with segmentation model...');
       
       // Process the image with the segmentation model
@@ -78,24 +99,69 @@ const ChromeExtensionImageEditor: React.FC = () => {
         throw new Error('Invalid segmentation result');
       }
       
-      // Create a new canvas for the masked image
+      // Create output canvas at original resolution for best quality
       const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = canvas.width;
-      outputCanvas.height = canvas.height;
+      outputCanvas.width = originalWidth;
+      outputCanvas.height = originalHeight;
       const outputCtx = outputCanvas.getContext('2d');
       
       if (!outputCtx) throw new Error('Could not get output canvas context');
       
-      // Draw original image
-      outputCtx.drawImage(canvas, 0, 0);
+      // Enable high-quality rendering
+      outputCtx.imageSmoothingEnabled = true;
+      outputCtx.imageSmoothingQuality = 'high';
       
-      // Apply the mask
-      const outputImageData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+      // Draw original high-res image
+      outputCtx.drawImage(imageElement, 0, 0);
+      
+      // Scale the mask back to original resolution if needed
+      let maskValues: number[];
+      if (processCanvas !== canvas) {
+        // We need to upscale the mask
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = processCanvas.width;
+        maskCanvas.height = processCanvas.height;
+        const maskCtx = maskCanvas.getContext('2d');
+        if (!maskCtx) throw new Error('Could not get mask canvas context');
+        
+        const maskImageData = maskCtx.createImageData(processCanvas.width, processCanvas.height);
+        for (let i = 0; i < result[0].mask.data.length; i++) {
+          const value = Math.round(result[0].mask.data[i] * 255);
+          maskImageData.data[i * 4] = value;     // R
+          maskImageData.data[i * 4 + 1] = value; // G
+          maskImageData.data[i * 4 + 2] = value; // B
+          maskImageData.data[i * 4 + 3] = 255;   // A
+        }
+        maskCtx.putImageData(maskImageData, 0, 0);
+        
+        // Scale up the mask
+        const scaledMaskCanvas = document.createElement('canvas');
+        scaledMaskCanvas.width = originalWidth;
+        scaledMaskCanvas.height = originalHeight;
+        const scaledMaskCtx = scaledMaskCanvas.getContext('2d');
+        if (!scaledMaskCtx) throw new Error('Could not get scaled mask canvas context');
+        
+        scaledMaskCtx.imageSmoothingEnabled = true;
+        scaledMaskCtx.imageSmoothingQuality = 'high';
+        scaledMaskCtx.drawImage(maskCanvas, 0, 0, originalWidth, originalHeight);
+        
+        const scaledMaskData = scaledMaskCtx.getImageData(0, 0, originalWidth, originalHeight);
+        maskValues = new Array(originalWidth * originalHeight);
+        for (let i = 0; i < maskValues.length; i++) {
+          maskValues[i] = scaledMaskData.data[i * 4] / 255;
+        }
+      } else {
+        // Convert the mask data to a regular array
+        maskValues = Array.from(result[0].mask.data);
+      }
+      
+      // Apply the mask to original resolution image
+      const outputImageData = outputCtx.getImageData(0, 0, originalWidth, originalHeight);
       const data = outputImageData.data;
       
-      // Apply inverted mask to alpha channel
-      for (let i = 0; i < result[0].mask.data.length; i++) {
-        const alpha = Math.round((1 - result[0].mask.data[i]) * 255);
+      // Apply inverted mask to alpha channel with some smoothing
+      for (let i = 0; i < maskValues.length; i++) {
+        const alpha = Math.round((1 - maskValues[i]) * 255);
         data[i * 4 + 3] = alpha;
       }
       
@@ -126,25 +192,59 @@ const ChromeExtensionImageEditor: React.FC = () => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        // Create a high-resolution canvas for better quality
+        const scaleFactor = Math.max(2, 512 / targetSize); // Use higher resolution for small icons
+        const highResCanvas = document.createElement('canvas');
+        const highResCtx = highResCanvas.getContext('2d');
         
-        if (!ctx) {
+        if (!highResCtx) {
           reject(new Error('Could not get canvas context'));
           return;
         }
         
-        canvas.width = targetSize;
-        canvas.height = targetSize;
+        // Set high-res dimensions
+        const highResSize = targetSize * scaleFactor;
+        highResCanvas.width = highResSize;
+        highResCanvas.height = highResSize;
         
-        // Draw image centered and scaled to fit
+        // Enable high-quality rendering
+        highResCtx.imageSmoothingEnabled = true;
+        highResCtx.imageSmoothingQuality = 'high';
+        
+        // Draw image centered and scaled to fit at high resolution
         const size = Math.min(img.width, img.height);
         const offsetX = (img.width - size) / 2;
         const offsetY = (img.height - size) / 2;
         
-        ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
+        highResCtx.drawImage(img, offsetX, offsetY, size, size, 0, 0, highResSize, highResSize);
         
-        canvas.toBlob(
+        // Create final canvas at target size
+        const finalCanvas = document.createElement('canvas');
+        const finalCtx = finalCanvas.getContext('2d');
+        
+        if (!finalCtx) {
+          reject(new Error('Could not get final canvas context'));
+          return;
+        }
+        
+        finalCanvas.width = targetSize;
+        finalCanvas.height = targetSize;
+        
+        // Enable high-quality downsampling
+        finalCtx.imageSmoothingEnabled = true;
+        finalCtx.imageSmoothingQuality = 'high';
+        
+        // Draw the high-res image onto the final canvas (downsampling)
+        finalCtx.drawImage(highResCanvas, 0, 0, highResSize, highResSize, 0, 0, targetSize, targetSize);
+        
+        // Apply sharpening filter for small icons
+        if (targetSize <= 48) {
+          const imageData = finalCtx.getImageData(0, 0, targetSize, targetSize);
+          const sharpened = applySharpenFilter(imageData);
+          finalCtx.putImageData(sharpened, 0, 0);
+        }
+        
+        finalCanvas.toBlob(
           (blob) => {
             if (blob) {
               resolve(blob);
@@ -159,6 +259,38 @@ const ChromeExtensionImageEditor: React.FC = () => {
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
     });
+  };
+
+  const applySharpenFilter = (imageData: ImageData): ImageData => {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const newData = new Uint8ClampedArray(data);
+    
+    // Sharpening kernel
+    const kernel = [
+      0, -1, 0,
+      -1, 5, -1,
+      0, -1, 0
+    ];
+    
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        for (let c = 0; c < 3; c++) { // RGB channels only
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+              sum += data[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
+            }
+          }
+          const idx = (y * width + x) * 4 + c;
+          newData[idx] = Math.max(0, Math.min(255, sum));
+        }
+      }
+    }
+    
+    return new ImageData(newData, width, height);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
