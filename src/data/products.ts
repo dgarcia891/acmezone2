@@ -125,5 +125,31 @@ export const products: Product[] = [
     seoTitle: "TrelloBridge – Chrome Extension for Trello Integration & Web Organization",
     seoDescription: "Bridge web browsing and Trello! Auto-find existing cards, create new ones instantly, and organize web content seamlessly in Trello boards.",
     type: "Chrome Extension"
+  },
+  {
+    id: "chrome-extension-image-editor",
+    name: "Chrome Extension Image Editor",
+    slug: "chrome-extension-image-editor",
+    summary: "Professional icon formatter for Chrome extension submissions with automatic background removal.",
+    description: "Chrome Extension Image Editor is a powerful web app designed specifically for Chrome extension developers. Upload any image and automatically format it to meet Chrome Web Store requirements with professional background removal and multiple size outputs.\n\n🎨 **Automatic Formatting**: Instantly converts images to required Chrome extension icon sizes (16x16, 48x48, 128x128 pixels) with perfect PNG formatting and transparent backgrounds.\n\n✨ **AI Background Removal**: Advanced AI technology removes backgrounds automatically while preserving image quality and fine details for professional-looking icons.\n\n📦 **Multiple Size Export**: Download all required icon sizes in one click, properly formatted for Chrome extension manifest files with consistent quality across all sizes.\n\n🎯 **Developer-Focused**: Built specifically for Chrome extension developers who need compliant icons fast, with automatic optimization and quality preservation.\n\n⚡ **Instant Processing**: Upload and process images in seconds with no quality loss, saving developers hours of manual image editing and formatting.",
+    features: [
+      "Automatic Chrome extension icon formatting",
+      "AI-powered background removal",
+      "Multiple size outputs (16x16, 48x48, 128x128)",
+      "PNG format with transparency",
+      "Quality preservation during conversion",
+      "One-click download of all sizes",
+      "Chrome Web Store compliance",
+      "No manual editing required",
+      "Instant processing",
+      "Professional results"
+    ],
+    tags: ["web-app", "chrome-extension", "image-processing", "ai", "developer-tools", "icons"],
+    category: "Tools",
+    priceLabel: "Free",
+    image: "/placeholder.svg",
+    seoTitle: "Chrome Extension Image Editor – Automatic Icon Formatter with Background Removal",
+    seoDescription: "Format images for Chrome extension icons with AI background removal. Get all required sizes instantly with perfect transparency.",
+    type: "Web App"
   }
 ];
