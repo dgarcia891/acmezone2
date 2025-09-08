@@ -268,7 +268,10 @@ const ChromeExtensionImageEditor: React.FC = () => {
         ctx.imageSmoothingQuality = 'high';
         
         // Calculate available space after margin
-        const marginPixels = (settings.margin / 100) * targetSize;
+        // For small sizes like 16x16, ensure integer pixel values to prevent scaling issues
+        const marginPixels = targetSize <= 32 ? 
+          Math.round((settings.margin / 100) * targetSize) : 
+          (settings.margin / 100) * targetSize;
         const availableSize = targetSize - (marginPixels * 2);
         
         let scale, scaledWidth, scaledHeight, offsetX, offsetY;
