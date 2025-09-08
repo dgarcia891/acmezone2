@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
+import { supabase } from '@/integrations/supabase/client';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -41,7 +42,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
 
   // Daily conversion limit functions
   const DAILY_LIMIT = 10;
-  const UNLOCK_CODE = '24202';
 
   const getTodayKey = () => {
     return new Date().toDateString();
@@ -64,18 +64,33 @@ const ChromeExtensionImageEditor: React.FC = () => {
     return count >= DAILY_LIMIT && !isCodeValid;
   };
 
-  const validateCode = (code: string) => {
-    return code === UNLOCK_CODE;
+  const validateCode = async (code: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-unlock-code', {
+        body: { code }
+      });
+      
+      if (error) {
+        console.error('Error validating unlock code:', error);
+        return false;
+      }
+      
+      return data?.valid === true;
+    } catch (error) {
+      console.error('Error validating unlock code:', error);
+      return false;
+    }
   };
 
-  const handleCodeSubmit = () => {
-    if (validateCode(codeInput)) {
+  const handleCodeSubmit = async () => {
+    const isValid = await validateCode(codeInput);
+    if (isValid) {
       setIsCodeValid(true);
       setShowCodeDialog(false);
       setCodeInput('');
       toast.success('Code accepted! You can now continue processing images.');
     } else {
-      toast.error('Invalid code. Please try again.');
+      toast.error('Invalid unlock code. Please try again.');
     }
   };
 

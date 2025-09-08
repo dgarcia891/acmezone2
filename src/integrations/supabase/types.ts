@@ -568,7 +568,6 @@ export type Database = {
           cuisine_type: string
           data_source: string | null
           description: string | null
-          email: string | null
           featured_items: string[] | null
           hours: Json | null
           id: string
@@ -577,7 +576,6 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string
-          phone: string | null
           photos: string[] | null
           price_range: number | null
           rating: number | null
@@ -593,7 +591,6 @@ export type Database = {
           cuisine_type: string
           data_source?: string | null
           description?: string | null
-          email?: string | null
           featured_items?: string[] | null
           hours?: Json | null
           id?: string
@@ -602,7 +599,6 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name: string
-          phone?: string | null
           photos?: string[] | null
           price_range?: number | null
           rating?: number | null
@@ -618,7 +614,6 @@ export type Database = {
           cuisine_type?: string
           data_source?: string | null
           description?: string | null
-          email?: string | null
           featured_items?: string[] | null
           hours?: Json | null
           id?: string
@@ -627,7 +622,6 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string
-          phone?: string | null
           photos?: string[] | null
           price_range?: number | null
           rating?: number | null
