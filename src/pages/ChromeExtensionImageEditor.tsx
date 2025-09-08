@@ -255,8 +255,13 @@ const ChromeExtensionImageEditor: React.FC = () => {
           return;
         }
         
+        // Ensure exact pixel dimensions - this is critical for small sizes like 16x16
         canvas.width = targetSize;
         canvas.height = targetSize;
+        
+        // Disable any CSS scaling that might interfere
+        canvas.style.width = `${targetSize}px`;
+        canvas.style.height = `${targetSize}px`;
         
         // Always use high-quality smoothing
         ctx.imageSmoothingEnabled = true;
@@ -300,7 +305,30 @@ const ChromeExtensionImageEditor: React.FC = () => {
             offsetX, offsetY, scaledWidth, scaledHeight // destination
           );
           
-          canvas.toBlob(resolve, 'image/png', 1.0);
+          // Add debugging for 16x16 specifically
+          if (targetSize === 16) {
+            console.log(`16x16 canvas final dimensions (crop mode): ${canvas.width}x${canvas.height}`);
+            console.log(`16x16 canvas style dimensions (crop mode): ${canvas.style.width}x${canvas.style.height}`);
+          }
+          
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create blob'));
+              return;
+            }
+            
+            // Additional verification for 16x16
+            if (targetSize === 16) {
+              const img = new Image();
+              img.onload = () => {
+                console.log(`16x16 final blob created image dimensions (crop mode): ${img.naturalWidth}x${img.naturalHeight}`);
+                resolve(blob);
+              };
+              img.src = URL.createObjectURL(blob);
+            } else {
+              resolve(blob);
+            }
+          }, 'image/png', 1.0);
           return;
         }
         
@@ -311,7 +339,30 @@ const ChromeExtensionImageEditor: React.FC = () => {
           offsetX, offsetY, scaledWidth, scaledHeight // destination
         );
         
-        canvas.toBlob(resolve, 'image/png', 1.0);
+        // Add debugging for 16x16 specifically
+        if (targetSize === 16) {
+          console.log(`16x16 canvas final dimensions: ${canvas.width}x${canvas.height}`);
+          console.log(`16x16 canvas style dimensions: ${canvas.style.width}x${canvas.style.height}`);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create blob'));
+            return;
+          }
+          
+          // Additional verification for 16x16
+          if (targetSize === 16) {
+            const img = new Image();
+            img.onload = () => {
+              console.log(`16x16 final blob created image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
+              resolve(blob);
+            };
+            img.src = URL.createObjectURL(blob);
+          } else {
+            resolve(blob);
+          }
+        }, 'image/png', 1.0);
       };
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
