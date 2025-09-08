@@ -4,7 +4,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Download, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
 
@@ -209,16 +209,20 @@ const ChromeExtensionImageEditor: React.FC = () => {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         
-        // Calculate dimensions to maintain aspect ratio and center the image
-        const sourceSize = Math.min(img.width, img.height);
-        const sourceX = (img.width - sourceSize) / 2;
-        const sourceY = (img.height - sourceSize) / 2;
+        // Calculate dimensions to maintain aspect ratio and fill the canvas
+        const scale = Math.max(targetSize / img.width, targetSize / img.height);
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
         
-        // Simple, clean draw - let the browser handle the scaling
+        // Center the scaled image
+        const offsetX = (targetSize - scaledWidth) / 2;
+        const offsetY = (targetSize - scaledHeight) / 2;
+        
+        // Draw the image to fill the canvas without cutting off parts
         ctx.drawImage(
           img,
-          sourceX, sourceY, sourceSize, sourceSize,  // source
-          0, 0, targetSize, targetSize               // destination
+          0, 0, img.width, img.height,              // source (full image)
+          offsetX, offsetY, scaledWidth, scaledHeight // destination (scaled and centered)
         );
         
         console.log(`Simple resize completed for ${targetSize}x${targetSize}`);
@@ -331,6 +335,28 @@ const ChromeExtensionImageEditor: React.FC = () => {
     toast.success('All icons downloaded!');
   };
 
+  const resetEditor = () => {
+    // Revoke URLs to prevent memory leaks
+    if (originalImage) {
+      URL.revokeObjectURL(originalImage);
+    }
+    processedImages.forEach(img => {
+      URL.revokeObjectURL(img.url);
+    });
+    
+    // Reset all state
+    setOriginalImage(null);
+    setProcessedImages([]);
+    setIsProcessing(false);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    toast.success('Editor reset successfully!');
+  };
+
   return (
     <>
       <Helmet>
@@ -384,6 +410,19 @@ const ChromeExtensionImageEditor: React.FC = () => {
                     onChange={handleFileUpload}
                     className="hidden"
                   />
+                  
+                  {(originalImage || processedImages.length > 0) && (
+                    <div className="mt-4 pt-4 border-t">
+                      <Button 
+                        onClick={resetEditor}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset Editor
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
