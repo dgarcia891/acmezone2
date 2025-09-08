@@ -48,3 +48,6 @@ verify_jwt = false
 
 [functions.get-balance]
 verify_jwt = false
+
+[functions.validate-unlock-code]
+verify_jwt = false
