@@ -4,7 +4,9 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
 
@@ -24,6 +26,12 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewSettings, setPreviewSettings] = useState({
+    margin: 10,
+    scaleMode: 'fit' as 'fit' | 'fill' | 'crop'
+  });
+  const [originalImageElement, setOriginalImageElement] = useState<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadImage = (file: Blob): Promise<HTMLImageElement> => {
@@ -188,7 +196,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
     }
   };
 
-  const resizeImage = (imageBlob: Blob, targetSize: number): Promise<Blob> => {
+  const resizeImageWithSettings = (imageBlob: Blob, targetSize: number, settings = previewSettings): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -205,40 +213,60 @@ const ChromeExtensionImageEditor: React.FC = () => {
         canvas.width = targetSize;
         canvas.height = targetSize;
         
-        // Always use high-quality smoothing - the browser's built-in scaling is better than our custom processing
+        // Always use high-quality smoothing
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         
-        // Calculate dimensions to maintain aspect ratio and fill the canvas
-        const scale = Math.max(targetSize / img.width, targetSize / img.height);
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
+        // Calculate available space after margin
+        const marginPixels = (settings.margin / 100) * targetSize;
+        const availableSize = targetSize - (marginPixels * 2);
         
-        // Center the scaled image
-        const offsetX = (targetSize - scaledWidth) / 2;
-        const offsetY = (targetSize - scaledHeight) / 2;
+        let scale, scaledWidth, scaledHeight, offsetX, offsetY;
         
-        // Draw the image to fill the canvas without cutting off parts
+        if (settings.scaleMode === 'fit') {
+          // Fit entire image within available space
+          scale = Math.min(availableSize / img.width, availableSize / img.height);
+          scaledWidth = img.width * scale;
+          scaledHeight = img.height * scale;
+          offsetX = (targetSize - scaledWidth) / 2;
+          offsetY = (targetSize - scaledHeight) / 2;
+        } else if (settings.scaleMode === 'fill') {
+          // Fill available space, may crop image
+          scale = Math.max(availableSize / img.width, availableSize / img.height);
+          scaledWidth = img.width * scale;
+          scaledHeight = img.height * scale;
+          offsetX = (targetSize - scaledWidth) / 2;
+          offsetY = (targetSize - scaledHeight) / 2;
+        } else { // crop
+          // Use largest square crop from center of image
+          const minDimension = Math.min(img.width, img.height);
+          const cropX = (img.width - minDimension) / 2;
+          const cropY = (img.height - minDimension) / 2;
+          
+          scaledWidth = availableSize;
+          scaledHeight = availableSize;
+          offsetX = marginPixels;
+          offsetY = marginPixels;
+          
+          // Draw cropped image
+          ctx.drawImage(
+            img,
+            cropX, cropY, minDimension, minDimension,  // source (cropped square)
+            offsetX, offsetY, scaledWidth, scaledHeight // destination
+          );
+          
+          canvas.toBlob(resolve, 'image/png', 1.0);
+          return;
+        }
+        
+        // Draw the image with calculated dimensions
         ctx.drawImage(
           img,
           0, 0, img.width, img.height,              // source (full image)
-          offsetX, offsetY, scaledWidth, scaledHeight // destination (scaled and centered)
+          offsetX, offsetY, scaledWidth, scaledHeight // destination
         );
         
-        console.log(`Simple resize completed for ${targetSize}x${targetSize}`);
-        
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              console.log(`Simple resize (${targetSize}px) blob size: ${blob.size} bytes`);
-              resolve(blob);
-            } else {
-              reject(new Error('Failed to resize image'));
-            }
-          },
-          'image/png',
-          1.0
-        );
+        canvas.toBlob(resolve, 'image/png', 1.0);
       };
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
@@ -271,46 +299,13 @@ const ChromeExtensionImageEditor: React.FC = () => {
       // Set new original image
       setOriginalImage(URL.createObjectURL(file));
       
-      // Load the original image
+      // Load the original image and store it for preview
       const imageElement = await loadImage(file);
+      setOriginalImageElement(imageElement);
       
-      // Remove background
-      toast.info('Removing background...');
-      const backgroundRemovedBlob = await removeBackground(imageElement);
-      
-      // Create different sizes
-      toast.info('Creating icon sizes...');
-      
-      // First, let's test without background removal to isolate the quality issue
-      console.log('Testing resize quality without background removal...');
-      const testProcessedImages = ICON_SIZES.map(async (size) => {
-        console.log(`Creating test size: ${size}x${size}`);
-        const resizedBlob = await resizeImage(new Blob([file], { type: file.type }), size);
-        return {
-          size,
-          url: URL.createObjectURL(resizedBlob),
-          blob: resizedBlob
-        };
-      });
-      
-      const testProcessed = await Promise.all(testProcessedImages);
-      console.log('Test resize results:', testProcessed.map(p => ({ size: p.size, blobSize: p.blob.size })));
-      
-      // Now try with background removal
-      const processedImagesPromises = ICON_SIZES.map(async (size) => {
-        console.log(`Creating final size: ${size}x${size}`);
-        const resizedBlob = await resizeImage(backgroundRemovedBlob, size);
-        return {
-          size,
-          url: URL.createObjectURL(resizedBlob),
-          blob: resizedBlob
-        };
-      });
-      
-      const processed = await Promise.all(processedImagesPromises);
-      setProcessedImages(processed);
-      
-      toast.success('Images processed successfully!');
+      // Show preview instead of immediately processing
+      setShowPreview(true);
+      toast.info('Image loaded! Adjust settings and click process.');
     } catch (error) {
       console.error('Processing error:', error);
       toast.error('Failed to process image. Please try again.');
@@ -335,6 +330,43 @@ const ChromeExtensionImageEditor: React.FC = () => {
     toast.success('All icons downloaded!');
   };
 
+  const processImages = async () => {
+    if (!originalImageElement) return;
+    
+    setIsProcessing(true);
+    setShowPreview(false);
+    
+    try {
+      // Remove background
+      toast.info('Removing background...');
+      const backgroundRemovedBlob = await removeBackground(originalImageElement);
+      
+      // Create different sizes with current settings
+      toast.info('Creating icon sizes...');
+      
+      const processedImagesPromises = ICON_SIZES.map(async (size) => {
+        console.log(`Creating final size: ${size}x${size}`);
+        const resizedBlob = await resizeImageWithSettings(backgroundRemovedBlob, size);
+        return {
+          size,
+          url: URL.createObjectURL(resizedBlob),
+          blob: resizedBlob
+        };
+      });
+      
+      const processed = await Promise.all(processedImagesPromises);
+      setProcessedImages(processed);
+      
+      toast.success('Images processed successfully!');
+    } catch (error) {
+      console.error('Processing error:', error);
+      toast.error('Failed to process image. Please try again.');
+      setShowPreview(true); // Show preview again on error
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const resetEditor = () => {
     // Revoke URLs to prevent memory leaks
     if (originalImage) {
@@ -347,7 +379,10 @@ const ChromeExtensionImageEditor: React.FC = () => {
     // Reset all state
     setOriginalImage(null);
     setProcessedImages([]);
+    setOriginalImageElement(null);
+    setShowPreview(false);
     setIsProcessing(false);
+    setPreviewSettings({ margin: 10, scaleMode: 'fit' });
     
     // Reset file input
     if (fileInputRef.current) {
@@ -438,8 +473,96 @@ const ChromeExtensionImageEditor: React.FC = () => {
                 </Card>
               )}
 
+              {/* Preview Settings */}
+              {showPreview && originalImage && originalImageElement && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Adjust Settings
+                    </CardTitle>
+                    <CardDescription>
+                      Preview how your icons will look and adjust margins and scaling before processing
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Settings Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Margin Control */}
+                      <div className="space-y-3">
+                        <Label htmlFor="margin-slider">
+                          Margin: {previewSettings.margin}%
+                        </Label>
+                        <Slider
+                          id="margin-slider"
+                          min={0}
+                          max={30}
+                          step={1}
+                          value={[previewSettings.margin]}
+                          onValueChange={([value]) => 
+                            setPreviewSettings(prev => ({ ...prev, margin: value }))
+                          }
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Scale Mode Control */}
+                      <div className="space-y-3">
+                        <Label>Scale Mode</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { value: 'fit', label: 'Fit All' },
+                            { value: 'fill', label: 'Fill' },
+                            { value: 'crop', label: 'Crop' }
+                          ].map(({ value, label }) => (
+                            <Button
+                              key={value}
+                              variant={previewSettings.scaleMode === value ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => 
+                                setPreviewSettings(prev => ({ ...prev, scaleMode: value as any }))
+                              }
+                            >
+                              {label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview Grid */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Preview (Background will be removed)</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {ICON_SIZES.map((size) => (
+                          <div key={size} className="text-center">
+                            <div className="bg-checkered p-2 rounded-lg mb-2 inline-block">
+                              <PreviewIcon 
+                                originalImage={originalImageElement}
+                                size={size}
+                                settings={previewSettings}
+                              />
+                            </div>
+                            <p className="text-sm font-medium">{size}×{size}px</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Process Button */}
+                    <Button 
+                      onClick={processImages}
+                      className="w-full"
+                      size="lg"
+                    >
+                      Process Images with Background Removal
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Original Image Preview */}
-              {originalImage && (
+              {originalImage && !showPreview && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Original Image</CardTitle>
@@ -548,6 +671,90 @@ const ChromeExtensionImageEditor: React.FC = () => {
         }
       `}</style>
     </>
+  );
+};
+
+// Preview component to show how icons will look
+const PreviewIcon: React.FC<{
+  originalImage: HTMLImageElement;
+  size: number;
+  settings: { margin: number; scaleMode: 'fit' | 'fill' | 'crop' };
+}> = ({ originalImage, size, settings }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = size;
+    canvas.height = size;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, size, size);
+    
+    // Enable high-quality rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Calculate available space after margin
+    const marginPixels = (settings.margin / 100) * size;
+    const availableSize = size - (marginPixels * 2);
+
+    let scale, scaledWidth, scaledHeight, offsetX, offsetY;
+
+    if (settings.scaleMode === 'fit') {
+      // Fit entire image within available space
+      scale = Math.min(availableSize / originalImage.width, availableSize / originalImage.height);
+      scaledWidth = originalImage.width * scale;
+      scaledHeight = originalImage.height * scale;
+      offsetX = (size - scaledWidth) / 2;
+      offsetY = (size - scaledHeight) / 2;
+    } else if (settings.scaleMode === 'fill') {
+      // Fill available space, may crop image
+      scale = Math.max(availableSize / originalImage.width, availableSize / originalImage.height);
+      scaledWidth = originalImage.width * scale;
+      scaledHeight = originalImage.height * scale;
+      offsetX = (size - scaledWidth) / 2;
+      offsetY = (size - scaledHeight) / 2;
+    } else { // crop
+      // Use largest square crop from center of image
+      const minDimension = Math.min(originalImage.width, originalImage.height);
+      const cropX = (originalImage.width - minDimension) / 2;
+      const cropY = (originalImage.height - minDimension) / 2;
+
+      scaledWidth = availableSize;
+      scaledHeight = availableSize;
+      offsetX = marginPixels;
+      offsetY = marginPixels;
+
+      // Draw cropped image
+      ctx.drawImage(
+        originalImage,
+        cropX, cropY, minDimension, minDimension,  // source (cropped square)
+        offsetX, offsetY, scaledWidth, scaledHeight // destination
+      );
+      return;
+    }
+
+    // Draw the image with calculated dimensions
+    ctx.drawImage(
+      originalImage,
+      0, 0, originalImage.width, originalImage.height,    // source (full image)
+      offsetX, offsetY, scaledWidth, scaledHeight         // destination
+    );
+  }, [originalImage, size, settings]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={size} 
+      height={size}
+      style={{ width: size, height: size }}
+      className="border rounded"
+    />
   );
 };
 
