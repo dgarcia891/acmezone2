@@ -519,14 +519,14 @@ const ChromeExtensionImageEditor: React.FC = () => {
 
               {/* Preview Settings */}
               {showPreview && originalImage && originalImageElement && (
-                <Card>
+                <Card className="border-2 border-primary/50 bg-primary/5">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-primary">
                       <Settings className="h-5 w-5" />
-                      Adjust Settings
+                      🎯 Adjust Settings Before Processing
                     </CardTitle>
-                    <CardDescription>
-                      Preview how your icons will look and adjust margins and scaling before processing
+                    <CardDescription className="text-lg font-medium">
+                      Preview how your icons will look and adjust margins and scaling, then click "Process Images" below
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -594,13 +594,18 @@ const ChromeExtensionImageEditor: React.FC = () => {
                     </div>
 
                     {/* Process Button */}
-                    <Button 
-                      onClick={processImages}
-                      className="w-full"
-                      size="lg"
-                    >
-                      Process Images with Background Removal
-                    </Button>
+                    <div className="pt-4 border-t">
+                      <Button 
+                        onClick={processImages}
+                        className="w-full h-12 text-lg font-semibold"
+                        size="lg"
+                      >
+                        🚀 Process Images with Background Removal
+                      </Button>
+                      <p className="text-sm text-muted-foreground text-center mt-2">
+                        This will remove the background and create all icon sizes
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               )}
