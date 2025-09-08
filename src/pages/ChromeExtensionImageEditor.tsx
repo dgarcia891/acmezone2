@@ -38,10 +38,26 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [codeInput, setCodeInput] = useState('');
   const [isCodeValid, setIsCodeValid] = useState(false);
+  const [cropMode, setCropMode] = useState(false);
+  const [cropSelection, setCropSelection] = useState<{
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+  } | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Daily conversion limit functions
   const DAILY_LIMIT = 10;
+
+  // Redraw canvas when crop mode or selection changes
+  React.useEffect(() => {
+    if (originalImageElement) {
+      drawImageWithCropOverlay();
+    }
+  }, [cropMode, cropSelection, originalImageElement]);
 
   const getTodayKey = () => {
     return new Date().toDateString();
@@ -91,6 +107,137 @@ const ChromeExtensionImageEditor: React.FC = () => {
       toast.success('Code accepted! You can now continue processing images.');
     } else {
       toast.error('Invalid unlock code. Please try again.');
+    }
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!cropMode || !imageCanvasRef.current) return;
+    
+    const canvas = imageCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const startX = (e.clientX - rect.left) * scaleX;
+    const startY = (e.clientY - rect.top) * scaleY;
+    
+    setCropSelection({ startX, startY, endX: startX, endY: startY });
+    setIsSelecting(true);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!cropMode || !isSelecting || !cropSelection || !imageCanvasRef.current) return;
+    
+    const canvas = imageCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const endX = (e.clientX - rect.left) * scaleX;
+    const endY = (e.clientY - rect.top) * scaleY;
+    
+    setCropSelection({ ...cropSelection, endX, endY });
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!cropMode) return;
+    setIsSelecting(false);
+  };
+
+  const applyCrop = () => {
+    if (!cropSelection || !originalImageElement) return;
+    
+    const { startX, startY, endX, endY } = cropSelection;
+    const cropX = Math.min(startX, endX);
+    const cropY = Math.min(startY, endY);
+    const cropWidth = Math.abs(endX - startX);
+    const cropHeight = Math.abs(endY - startY);
+    
+    if (cropWidth < 10 || cropHeight < 10) {
+      toast.error('Crop area too small. Please select a larger area.');
+      return;
+    }
+    
+    // Create a new canvas for the cropped image
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+    
+    // Draw the cropped portion
+    ctx.drawImage(
+      originalImageElement,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+    
+    // Convert to blob and update the original image
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          setOriginalImage(url);
+          setOriginalImageElement(img);
+          setCropMode(false);
+          setCropSelection(null);
+          toast.success('Image cropped successfully!');
+        };
+        img.src = url;
+      }
+    }, 'image/png');
+  };
+
+  const cancelCrop = () => {
+    setCropMode(false);
+    setCropSelection(null);
+    setIsSelecting(false);
+  };
+
+  const drawImageWithCropOverlay = () => {
+    if (!originalImageElement || !imageCanvasRef.current) return;
+    
+    const canvas = imageCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas size to match image
+    canvas.width = originalImageElement.naturalWidth;
+    canvas.height = originalImageElement.naturalHeight;
+    
+    // Draw the original image
+    ctx.drawImage(originalImageElement, 0, 0);
+    
+    // Draw crop selection overlay if in crop mode
+    if (cropMode && cropSelection) {
+      const { startX, startY, endX, endY } = cropSelection;
+      const cropX = Math.min(startX, endX);
+      const cropY = Math.min(startY, endY);
+      const cropWidth = Math.abs(endX - startX);
+      const cropHeight = Math.abs(endY - startY);
+      
+      // Darken everything outside the selection
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Clear the selection area
+      ctx.clearRect(cropX, cropY, cropWidth, cropHeight);
+      
+      // Redraw the image in the selection area
+      ctx.drawImage(
+        originalImageElement,
+        cropX, cropY, cropWidth, cropHeight,
+        cropX, cropY, cropWidth, cropHeight
+      );
+      
+      // Draw selection border
+      ctx.strokeStyle = '#0066cc';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(cropX, cropY, cropWidth, cropHeight);
+      ctx.setLineDash([]);
     }
   };
 
@@ -419,6 +566,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
       
       // Show preview instead of immediately processing
       setShowPreview(true);
+      drawImageWithCropOverlay();
       toast.info('Image loaded! Adjust settings and click process.');
     } catch (error) {
       console.error('Processing error:', error);
@@ -595,12 +743,138 @@ const ChromeExtensionImageEditor: React.FC = () => {
                       🎯 Adjust Settings Before Processing
                     </CardTitle>
                     <CardDescription className="text-lg font-medium">
-                      Preview how your icons will look and adjust margins and scaling, then click "Process Images" below
+                      {cropMode ? 'Drag to select the area you want to crop' : 'Preview how your icons will look and adjust margins and scaling, then click "Process Images" below'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {/* Settings Controls */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Crop Mode Controls */}
+                    {!cropMode ? (
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => setCropMode(true)}
+                          variant="outline"
+                          className="flex items-center gap-2"
+                        >
+                          ✂️ Crop Image
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 items-center p-4 bg-blue-50 rounded-lg border">
+                        <p className="text-sm text-blue-700 flex-1">
+                          Click and drag on the image below to select the crop area
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={applyCrop}
+                            size="sm"
+                            disabled={!cropSelection}
+                          >
+                            Apply Crop
+                          </Button>
+                          <Button 
+                            onClick={cancelCrop}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image Display */}
+                    <div className="border rounded-lg overflow-hidden bg-gray-50">
+                      <canvas
+                        ref={imageCanvasRef}
+                        className="max-w-full h-auto cursor-crosshair"
+                        style={{ display: 'block', margin: '0 auto' }}
+                        onMouseDown={handleCanvasMouseDown}
+                        onMouseMove={handleCanvasMouseMove}
+                        onMouseUp={handleCanvasMouseUp}
+                        onMouseLeave={handleCanvasMouseUp}
+                      />
+                    </div>
+
+                    {!cropMode && (
+                      <>
+                        {/* Settings Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Margin Control */}
+                          <div className="space-y-3">
+                            <Label htmlFor="margin-slider">
+                              Margin: {previewSettings.margin}%
+                            </Label>
+                            <Slider
+                              id="margin-slider"
+                              min={0}
+                              max={30}
+                              step={1}
+                              value={[previewSettings.margin]}
+                              onValueChange={([value]) => 
+                                setPreviewSettings(prev => ({ ...prev, margin: value }))
+                              }
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Scale Mode Control */}
+                          <div className="space-y-3">
+                            <Label>Scale Mode</Label>
+                            <div className="flex gap-2">
+                              {[
+                                { value: 'fit', label: 'Fit' },
+                                { value: 'fill', label: 'Fill' },
+                                { value: 'crop', label: 'Crop' }
+                              ].map(({ value, label }) => (
+                                <Button
+                                  key={value}
+                                  variant={previewSettings.scaleMode === value ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => 
+                                    setPreviewSettings(prev => ({ ...prev, scaleMode: value as any }))
+                                  }
+                                >
+                                  {label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Icon Previews */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Icon Previews</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[16, 32, 48, 128].map(size => (
+                              <div key={size} className="text-center space-y-2">
+                                <div className="border rounded p-2 bg-white inline-block">
+                                  <PreviewIcon 
+                                    originalImage={originalImageElement}
+                                    size={size}
+                                    settings={previewSettings}
+                                  />
+                                </div>
+                                <p className="text-sm font-medium">{size}×{size}px</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Process Button */}
+                        <div className="pt-4 border-t">
+                          <Button 
+                            onClick={processImages}
+                            className="w-full h-12 text-lg font-semibold"
+                            size="lg"
+                          >
+                            🚀 Process Images with Background Removal
+                          </Button>
+                          <p className="text-sm text-muted-foreground text-center mt-2">
+                            This will remove the background and create all icon sizes
+                          </p>
+                        </div>
+                      </>
+                    )}
                       {/* Margin Control */}
                       <div className="space-y-3">
                         <Label htmlFor="margin-slider">
@@ -685,6 +959,17 @@ const ChromeExtensionImageEditor: React.FC = () => {
                   <CardHeader>
                     <CardTitle>Original Image</CardTitle>
                   </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-center">
+                      <img 
+                        src={originalImage} 
+                        alt="Original" 
+                        className="max-w-full h-auto border rounded"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
                   <CardContent>
                     <div className="flex justify-center">
                       <img 
