@@ -241,30 +241,18 @@ const ChromeExtensionImageEditor: React.FC = () => {
     }
   };
 
-  const loadImage = (file: Blob): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const removeBackground = async (imageElement: HTMLImageElement): Promise<Blob> => {
     try {
       console.log('Starting background removal process...');
       
-      // Try a different, higher quality model
       const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b2-finetuned-ade-512-512', {
         device: 'webgpu',
       });
       
-      // Work at higher resolution for better quality
       const originalWidth = imageElement.naturalWidth;
       const originalHeight = imageElement.naturalHeight;
       console.log(`Original image dimensions: ${originalWidth}x${originalHeight}`);
       
-      // Create canvas at original resolution
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
@@ -273,12 +261,10 @@ const ChromeExtensionImageEditor: React.FC = () => {
       canvas.width = originalWidth;
       canvas.height = originalHeight;
       
-      // Enable high-quality rendering
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(imageElement, 0, 0);
       
-      // For AI processing, limit to 1024px max dimension for quality vs performance balance
       let processCanvas = canvas;
       let processCtx = ctx;
       const maxDimension = 1024;
@@ -308,11 +294,9 @@ const ChromeExtensionImageEditor: React.FC = () => {
         processCtx.drawImage(imageElement, 0, 0, processWidth, processHeight);
       }
       
-      // Get image data as high-quality PNG
       const imageData = processCanvas.toDataURL('image/png', 1.0);
       console.log('Processing with segmentation model...');
       
-      // Process the image with the segmentation model
       const result = await segmenter(imageData);
       console.log('Segmentation result:', result);
       
@@ -320,7 +304,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
         throw new Error('Invalid segmentation result');
       }
       
-      // Create output canvas at original resolution for best quality
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = originalWidth;
       outputCanvas.height = originalHeight;
@@ -328,19 +311,15 @@ const ChromeExtensionImageEditor: React.FC = () => {
       
       if (!outputCtx) throw new Error('Could not get output canvas context');
       
-      // Enable high-quality rendering
       outputCtx.imageSmoothingEnabled = true;
       outputCtx.imageSmoothingQuality = 'high';
       
-      // Draw original high-res image
       outputCtx.drawImage(imageElement, 0, 0);
       
-      // Handle mask scaling
       const maskWidth = processCanvas.width;
       const maskHeight = processCanvas.height;
       console.log(`Mask dimensions: ${maskWidth}x${maskHeight}`);
       
-      // Create mask canvas for visualization/debugging
       const maskCanvas = document.createElement('canvas');
       maskCanvas.width = maskWidth;
       maskCanvas.height = maskHeight;
@@ -349,17 +328,15 @@ const ChromeExtensionImageEditor: React.FC = () => {
       
       const maskImageData = maskCtx.createImageData(maskWidth, maskHeight);
       for (let i = 0; i < result[0].mask.data.length; i++) {
-        const value = Math.round((1 - result[0].mask.data[i]) * 255); // Invert here
-        maskImageData.data[i * 4] = value;     // R
-        maskImageData.data[i * 4 + 1] = value; // G
-        maskImageData.data[i * 4 + 2] = value; // B
-        maskImageData.data[i * 4 + 3] = 255;   // A
+        const value = Math.round((1 - result[0].mask.data[i]) * 255);
+        maskImageData.data[i * 4] = value;
+        maskImageData.data[i * 4 + 1] = value;
+        maskImageData.data[i * 4 + 2] = value;
+        maskImageData.data[i * 4 + 3] = 255;
       }
       maskCtx.putImageData(maskImageData, 0, 0);
       
-      // Apply mask using destination-in composite operation for cleaner results
       if (maskWidth !== originalWidth || maskHeight !== originalHeight) {
-        // Scale mask to match original image
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = originalWidth;
         tempCanvas.height = originalHeight;
@@ -370,19 +347,16 @@ const ChromeExtensionImageEditor: React.FC = () => {
         tempCtx.imageSmoothingQuality = 'high';
         tempCtx.drawImage(maskCanvas, 0, 0, originalWidth, originalHeight);
         
-        // Use the scaled mask
         outputCtx.globalCompositeOperation = 'destination-in';
         outputCtx.drawImage(tempCanvas, 0, 0);
       } else {
-        // Use mask directly
         outputCtx.globalCompositeOperation = 'destination-in';
         outputCtx.drawImage(maskCanvas, 0, 0);
       }
       
-      outputCtx.globalCompositeOperation = 'source-over'; // Reset
+      outputCtx.globalCompositeOperation = 'source-over';
       console.log('Background removal completed');
       
-      // Convert canvas to blob
       return new Promise((resolve, reject) => {
         outputCanvas.toBlob(
           (blob) => {
@@ -417,20 +391,15 @@ const ChromeExtensionImageEditor: React.FC = () => {
           return;
         }
         
-        // Ensure exact pixel dimensions - this is critical for small sizes like 16x16
         canvas.width = targetSize;
         canvas.height = targetSize;
         
-        // Disable any CSS scaling that might interfere
         canvas.style.width = `${targetSize}px`;
         canvas.style.height = `${targetSize}px`;
         
-        // Always use high-quality smoothing
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         
-        // Calculate available space after margin
-        // For small sizes like 16x16, ensure integer pixel values to prevent scaling issues
         const marginPixels = targetSize <= 32 ? 
           Math.round((settings.margin / 100) * targetSize) : 
           (settings.margin / 100) * targetSize;
@@ -439,21 +408,18 @@ const ChromeExtensionImageEditor: React.FC = () => {
         let scale, scaledWidth, scaledHeight, offsetX, offsetY;
         
         if (settings.scaleMode === 'fit') {
-          // Fit entire image within available space
           scale = Math.min(availableSize / img.width, availableSize / img.height);
           scaledWidth = img.width * scale;
           scaledHeight = img.height * scale;
           offsetX = (targetSize - scaledWidth) / 2;
           offsetY = (targetSize - scaledHeight) / 2;
         } else if (settings.scaleMode === 'fill') {
-          // Fill available space, may crop image
           scale = Math.max(availableSize / img.width, availableSize / img.height);
           scaledWidth = img.width * scale;
           scaledHeight = img.height * scale;
           offsetX = (targetSize - scaledWidth) / 2;
           offsetY = (targetSize - scaledHeight) / 2;
-        } else { // crop
-          // Use largest square crop from center of image
+        } else {
           const minDimension = Math.min(img.width, img.height);
           const cropX = (img.width - minDimension) / 2;
           const cropY = (img.height - minDimension) / 2;
@@ -463,123 +429,111 @@ const ChromeExtensionImageEditor: React.FC = () => {
           offsetX = marginPixels;
           offsetY = marginPixels;
           
-          // Draw cropped image
           ctx.drawImage(
             img,
-            cropX, cropY, minDimension, minDimension,  // source (cropped square)
-            offsetX, offsetY, scaledWidth, scaledHeight // destination
+            cropX, cropY, minDimension, minDimension,
+            offsetX, offsetY, scaledWidth, scaledHeight
           );
           
-          // Add debugging for 16x16 specifically
-          if (targetSize === 16) {
-            console.log(`16x16 canvas final dimensions (crop mode): ${canvas.width}x${canvas.height}`);
-            console.log(`16x16 canvas style dimensions (crop mode): ${canvas.style.width}x${canvas.style.height}`);
-          }
-          
           canvas.toBlob((blob) => {
-            if (!blob) {
-              reject(new Error('Failed to create blob'));
-              return;
-            }
-            
-            // Additional verification for 16x16
-            if (targetSize === 16) {
-              const img = new Image();
-              img.onload = () => {
-                console.log(`16x16 final blob created image dimensions (crop mode): ${img.naturalWidth}x${img.naturalHeight}`);
-                resolve(blob);
-              };
-              img.src = URL.createObjectURL(blob);
-            } else {
-              resolve(blob);
-            }
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to create blob'));
           }, 'image/png', 1.0);
+          
           return;
         }
         
-        // Draw the image with calculated dimensions
-        ctx.drawImage(
-          img,
-          0, 0, img.width, img.height,              // source (full image)
-          offsetX, offsetY, scaledWidth, scaledHeight // destination
-        );
-        
-        // Add debugging for 16x16 specifically
-        if (targetSize === 16) {
-          console.log(`16x16 canvas final dimensions: ${canvas.width}x${canvas.height}`);
-          console.log(`16x16 canvas style dimensions: ${canvas.style.width}x${canvas.style.height}`);
-        }
+        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
         
         canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Failed to create blob'));
-            return;
-          }
-          
-          // Additional verification for 16x16
-          if (targetSize === 16) {
-            const img = new Image();
-            img.onload = () => {
-              console.log(`16x16 final blob created image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
-              resolve(blob);
-            };
-            img.src = URL.createObjectURL(blob);
-          } else {
-            resolve(blob);
-          }
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to create blob'));
         }, 'image/png', 1.0);
       };
+      
       img.onerror = reject;
       img.src = URL.createObjectURL(imageBlob);
     });
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const loadImage = (file: Blob): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select a valid image file');
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files[0]) {
+      const file = files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file.');
+        return;
+      }
+      
+      const url = URL.createObjectURL(file);
+      setOriginalImage(url);
+      setShowPreview(true);
+      setProcessedImages([]);
+      
+      const img = new Image();
+      img.onload = () => {
+        setOriginalImageElement(img);
+        drawImageWithCropOverlay();
+      };
+      img.src = url;
+    }
+  };
+
+  const processImages = async () => {
+    if (!originalImageElement) return;
+    
+    if (checkDailyLimit()) {
+      setShowCodeDialog(true);
       return;
     }
-
+    
+    setIsProcessing(true);
+    
     try {
-      // Clear previous state and free memory
-      if (originalImage) {
-        URL.revokeObjectURL(originalImage);
+      console.log('Processing image...');
+      
+      const processedBlob = await removeBackground(originalImageElement);
+      console.log('Background removed, creating sizes...');
+      
+      const newProcessedImages: ProcessedImage[] = [];
+      
+      for (const size of ICON_SIZES) {
+        console.log(`Creating ${size}x${size} version...`);
+        const resizedBlob = await resizeImageWithSettings(processedBlob, size);
+        
+        newProcessedImages.push({
+          size,
+          url: URL.createObjectURL(resizedBlob),
+          blob: resizedBlob
+        });
       }
-      processedImages.forEach(img => {
-        URL.revokeObjectURL(img.url);
-      });
       
-      // Reset all state to initial values
-      setOriginalImage(null);
-      setProcessedImages([]);
-      setIsProcessing(true);
+      setProcessedImages(newProcessedImages);
+      incrementConversionCount();
       
-      // Set new original image
-      setOriginalImage(URL.createObjectURL(file));
-      
-      // Load the original image and store it for preview
-      const imageElement = await loadImage(file);
-      setOriginalImageElement(imageElement);
-      
-      // Show preview instead of immediately processing
-      setShowPreview(true);
-      drawImageWithCropOverlay();
-      toast.info('Image loaded! Adjust settings and click process.');
+      toast.success(`Successfully processed ${ICON_SIZES.length} icon sizes!`);
     } catch (error) {
-      console.error('Processing error:', error);
-      toast.error('Failed to process image. Please try again.');
+      console.error('Error processing images:', error);
+      toast.error('Error processing images. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const downloadImage = (processedImage: ProcessedImage) => {
+  const downloadImage = (img: ProcessedImage) => {
     const link = document.createElement('a');
-    link.href = processedImage.url;
-    link.download = `icon${processedImage.size}.png`;
+    link.href = img.url;
+    link.download = `chrome-icon-${img.size}x${img.size}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -587,96 +541,38 @@ const ChromeExtensionImageEditor: React.FC = () => {
 
   const downloadAll = () => {
     processedImages.forEach(img => {
-      setTimeout(() => downloadImage(img), 100);
+      setTimeout(() => downloadImage(img), 100 * processedImages.indexOf(img));
     });
-    toast.success('All icons downloaded!');
-  };
-
-  const processImages = async () => {
-    if (!originalImageElement) return;
-    
-    // Check daily limit
-    if (checkDailyLimit()) {
-      setShowCodeDialog(true);
-      return;
-    }
-    
-    setIsProcessing(true);
-    setShowPreview(false);
-    
-    try {
-      // Remove background
-      toast.info('Removing background...');
-      const backgroundRemovedBlob = await removeBackground(originalImageElement);
-      
-      // Create different sizes with current settings
-      toast.info('Creating icon sizes...');
-      
-      const processedImagesPromises = ICON_SIZES.map(async (size) => {
-        console.log(`Creating final size: ${size}x${size}`);
-        const resizedBlob = await resizeImageWithSettings(backgroundRemovedBlob, size);
-        return {
-          size,
-          url: URL.createObjectURL(resizedBlob),
-          blob: resizedBlob
-        };
-      });
-      
-      const processed = await Promise.all(processedImagesPromises);
-      setProcessedImages(processed);
-      
-      // Increment conversion count after successful processing
-      incrementConversionCount();
-      
-      toast.success('Images processed successfully!');
-    } catch (error) {
-      console.error('Processing error:', error);
-      toast.error('Failed to process image. Please try again.');
-      setShowPreview(true); // Show preview again on error
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   const resetEditor = () => {
-    // Revoke URLs to prevent memory leaks
-    if (originalImage) {
-      URL.revokeObjectURL(originalImage);
-    }
-    processedImages.forEach(img => {
-      URL.revokeObjectURL(img.url);
-    });
-    
-    // Reset all state
     setOriginalImage(null);
-    setProcessedImages([]);
     setOriginalImageElement(null);
+    setProcessedImages([]);
     setShowPreview(false);
-    setIsProcessing(false);
-    setPreviewSettings({ margin: 10, scaleMode: 'fit' });
-    setShowCodeDialog(false);
-    setCodeInput('');
-    setIsCodeValid(false);
-    
-    // Reset file input
+    setCropMode(false);
+    setCropSelection(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
-    toast.success('Editor reset successfully!');
   };
 
   return (
     <>
       <Helmet>
-        <title>Chrome Extension Image Editor – Format Icons with Background Removal</title>
-        <meta name="description" content="Upload any image and automatically format it for Chrome extension icons. AI background removal, multiple sizes, transparent PNG output." />
-        <link rel="canonical" href="https://acme.zone/products/chrome-extension-image-editor" />
-        <meta property="og:title" content="Chrome Extension Image Editor" />
-        <meta property="og:description" content="Professional icon formatter for Chrome extensions with AI background removal" />
-        <meta property="og:url" content="https://acme.zone/products/chrome-extension-image-editor" />
-        <meta name="twitter:title" content="Chrome Extension Image Editor" />
-        <meta name="twitter:description" content="Format images for Chrome extension icons with AI background removal" />
+        <title>Chrome Extension Image Editor - AI Background Removal | Format Icons Automatically</title>
+        <meta 
+          name="description" 
+          content="Upload any image and automatically format it for Chrome extension submissions. AI removes backgrounds and creates all required icon sizes (16x16, 32x32, 48x48, 128x128) in seconds." 
+        />
+        <link rel="canonical" href="/chrome-extension-image-editor" />
+        <meta property="og:title" content="Chrome Extension Image Editor - AI Background Removal" />
+        <meta property="og:description" content="Upload any image and automatically format it for Chrome extension submissions with AI background removal." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="/chrome-extension-image-editor" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Chrome Extension Image Editor - AI Background Removal" />
+        <meta name="twitter:description" content="Upload any image and automatically format it for Chrome extension submissions with AI background removal." />
       </Helmet>
 
       <div className="min-h-screen flex flex-col">
@@ -700,181 +596,101 @@ const ChromeExtensionImageEditor: React.FC = () => {
                     Upload Image
                   </CardTitle>
                   <CardDescription>
-                    Upload your image to automatically format it for Chrome extension icons
+                    Choose any image file (PNG, JPG, JPEG) to get started
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div 
-                    className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <ImageIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg mb-2">Click to upload an image</p>
-                    <p className="text-sm text-muted-foreground">PNG, JPG, JPEG up to 10MB</p>
+                  <div className="space-y-4">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-32 border-2 border-dashed border-border hover:border-primary"
+                      variant="outline"
+                      size="lg"
+                    >
+                      <div className="text-center">
+                        <Upload className="h-8 w-8 mx-auto mb-2" />
+                        <span className="text-lg">Click to upload image</span>
+                      </div>
+                    </Button>
+                    
+                    <div className="text-center text-sm text-muted-foreground">
+                      <p>
+                        {getConversionCount()}/{DAILY_LIMIT} conversions used today
+                        {!isCodeValid && getConversionCount() >= DAILY_LIMIT && " (Limit reached)"}
+                      </p>
+                    </div>
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
                 </CardContent>
               </Card>
 
-              {/* Processing Status */}
-              {isProcessing && (
+              {/* Preview Section with Crop Functionality */}
+              {showPreview && originalImage && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-center gap-3">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span>Processing image...</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Preview Settings */}
-              {showPreview && originalImage && originalImageElement && (
-                <Card className="border-2 border-primary/50 bg-primary/5">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-primary">
-                      <Settings className="h-5 w-5" />
-                      🎯 Adjust Settings Before Processing
-                    </CardTitle>
-                    <CardDescription className="text-lg font-medium">
-                      {cropMode ? 'Drag to select the area you want to crop' : 'Preview how your icons will look and adjust margins and scaling, then click "Process Images" below'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Crop Mode Controls */}
-                    {!cropMode ? (
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5" />
+                        Image Preview & Settings
+                      </span>
                       <div className="flex gap-2">
-                        <Button 
-                          onClick={() => setCropMode(true)}
-                          variant="outline"
-                          className="flex items-center gap-2"
-                        >
-                          ✂️ Crop Image
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 items-center p-4 bg-blue-50 rounded-lg border">
-                        <p className="text-sm text-blue-700 flex-1">
-                          Click and drag on the image below to select the crop area
-                        </p>
-                        <div className="flex gap-2">
+                        {cropMode ? (
+                          <>
+                            <Button 
+                              onClick={applyCrop}
+                              size="sm"
+                              disabled={!cropSelection}
+                            >
+                              Apply Crop
+                            </Button>
+                            <Button 
+                              onClick={cancelCrop}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
                           <Button 
-                            onClick={applyCrop}
-                            size="sm"
-                            disabled={!cropSelection}
-                          >
-                            Apply Crop
-                          </Button>
-                          <Button 
-                            onClick={cancelCrop}
+                            onClick={() => setCropMode(true)}
                             variant="outline"
                             size="sm"
                           >
-                            Cancel
+                            Crop Image
                           </Button>
-                        </div>
+                        )}
                       </div>
-                    )}
-
-                    {/* Image Display */}
-                    <div className="border rounded-lg overflow-hidden bg-gray-50">
-                      <canvas
-                        ref={imageCanvasRef}
-                        className="max-w-full h-auto cursor-crosshair"
-                        style={{ display: 'block', margin: '0 auto' }}
-                        onMouseDown={handleCanvasMouseDown}
-                        onMouseMove={handleCanvasMouseMove}
-                        onMouseUp={handleCanvasMouseUp}
-                        onMouseLeave={handleCanvasMouseUp}
-                      />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Image Display with Crop Functionality */}
+                    <div className="flex justify-center">
+                      <div className="relative">
+                        <canvas
+                          ref={imageCanvasRef}
+                          onMouseDown={handleCanvasMouseDown}
+                          onMouseMove={handleCanvasMouseMove}
+                          onMouseUp={handleCanvasMouseUp}
+                          className={`max-w-full h-auto border rounded ${cropMode ? 'cursor-crosshair' : ''}`}
+                          style={{ maxWidth: '500px', maxHeight: '400px' }}
+                        />
+                        {cropMode && (
+                          <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-sm">
+                            Drag to select crop area
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {!cropMode && (
-                      <>
-                        {/* Settings Controls */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Margin Control */}
-                          <div className="space-y-3">
-                            <Label htmlFor="margin-slider">
-                              Margin: {previewSettings.margin}%
-                            </Label>
-                            <Slider
-                              id="margin-slider"
-                              min={0}
-                              max={30}
-                              step={1}
-                              value={[previewSettings.margin]}
-                              onValueChange={([value]) => 
-                                setPreviewSettings(prev => ({ ...prev, margin: value }))
-                              }
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Scale Mode Control */}
-                          <div className="space-y-3">
-                            <Label>Scale Mode</Label>
-                            <div className="flex gap-2">
-                              {[
-                                { value: 'fit', label: 'Fit' },
-                                { value: 'fill', label: 'Fill' },
-                                { value: 'crop', label: 'Crop' }
-                              ].map(({ value, label }) => (
-                                <Button
-                                  key={value}
-                                  variant={previewSettings.scaleMode === value ? 'default' : 'outline'}
-                                  size="sm"
-                                  onClick={() => 
-                                    setPreviewSettings(prev => ({ ...prev, scaleMode: value as any }))
-                                  }
-                                >
-                                  {label}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Icon Previews */}
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Icon Previews</h3>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[16, 32, 48, 128].map(size => (
-                              <div key={size} className="text-center space-y-2">
-                                <div className="border rounded p-2 bg-white inline-block">
-                                  <PreviewIcon 
-                                    originalImage={originalImageElement}
-                                    size={size}
-                                    settings={previewSettings}
-                                  />
-                                </div>
-                                <p className="text-sm font-medium">{size}×{size}px</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Process Button */}
-                        <div className="pt-4 border-t">
-                          <Button 
-                            onClick={processImages}
-                            className="w-full h-12 text-lg font-semibold"
-                            size="lg"
-                          >
-                            🚀 Process Images with Background Removal
-                          </Button>
-                          <p className="text-sm text-muted-foreground text-center mt-2">
-                            This will remove the background and create all icon sizes
-                          </p>
-                        </div>
-                      </>
-                    )}
+                    {/* Settings Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Margin Control */}
                       <div className="space-y-3">
                         <Label htmlFor="margin-slider">
@@ -942,8 +758,16 @@ const ChromeExtensionImageEditor: React.FC = () => {
                         onClick={processImages}
                         className="w-full h-12 text-lg font-semibold"
                         size="lg"
+                        disabled={isProcessing}
                       >
-                        🚀 Process Images with Background Removal
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          '🚀 Process Images with Background Removal'
+                        )}
                       </Button>
                       <p className="text-sm text-muted-foreground text-center mt-2">
                         This will remove the background and create all icon sizes
@@ -970,17 +794,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
-                  <CardContent>
-                    <div className="flex justify-center">
-                      <img 
-                        src={originalImage} 
-                        alt="Original" 
-                        className="max-w-sm max-h-64 object-contain rounded-lg border"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Processed Images */}
               {processedImages.length > 0 && (
@@ -996,7 +809,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={downloadAll} className="flex-1">
+                      <Button onClick={downloadAll}>
                         <Download className="h-4 w-4 mr-2" />
                         Download All
                       </Button>
@@ -1123,84 +936,69 @@ const ChromeExtensionImageEditor: React.FC = () => {
 
 // Preview component to show how icons will look
 const PreviewIcon: React.FC<{
-  originalImage: HTMLImageElement;
+  originalImage: HTMLImageElement | null;
   size: number;
   settings: { margin: number; scaleMode: 'fit' | 'fill' | 'crop' };
 }> = ({ originalImage, size, settings }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (originalImage && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      canvas.width = size;
+      canvas.height = size;
 
-    canvas.width = size;
-    canvas.height = size;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-    // Clear canvas
-    ctx.clearRect(0, 0, size, size);
-    
-    // Enable high-quality rendering
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+      const marginPixels = (settings.margin / 100) * size;
+      const availableSize = size - (marginPixels * 2);
 
-    // Calculate available space after margin
-    const marginPixels = (settings.margin / 100) * size;
-    const availableSize = size - (marginPixels * 2);
+      let scale, scaledWidth, scaledHeight, offsetX, offsetY;
 
-    let scale, scaledWidth, scaledHeight, offsetX, offsetY;
+      if (settings.scaleMode === 'fit') {
+        scale = Math.min(availableSize / originalImage.width, availableSize / originalImage.height);
+        scaledWidth = originalImage.width * scale;
+        scaledHeight = originalImage.height * scale;
+        offsetX = (size - scaledWidth) / 2;
+        offsetY = (size - scaledHeight) / 2;
+      } else if (settings.scaleMode === 'fill') {
+        scale = Math.max(availableSize / originalImage.width, availableSize / originalImage.height);
+        scaledWidth = originalImage.width * scale;
+        scaledHeight = originalImage.height * scale;
+        offsetX = (size - scaledWidth) / 2;
+        offsetY = (size - scaledHeight) / 2;
+      } else {
+        const minDimension = Math.min(originalImage.width, originalImage.height);
+        const cropX = (originalImage.width - minDimension) / 2;
+        const cropY = (originalImage.height - minDimension) / 2;
+        
+        scaledWidth = availableSize;
+        scaledHeight = availableSize;
+        offsetX = marginPixels;
+        offsetY = marginPixels;
+        
+        ctx.drawImage(
+          originalImage,
+          cropX, cropY, minDimension, minDimension,
+          offsetX, offsetY, scaledWidth, scaledHeight
+        );
+        return;
+      }
 
-    if (settings.scaleMode === 'fit') {
-      // Fit entire image within available space
-      scale = Math.min(availableSize / originalImage.width, availableSize / originalImage.height);
-      scaledWidth = originalImage.width * scale;
-      scaledHeight = originalImage.height * scale;
-      offsetX = (size - scaledWidth) / 2;
-      offsetY = (size - scaledHeight) / 2;
-    } else if (settings.scaleMode === 'fill') {
-      // Fill available space, may crop image
-      scale = Math.max(availableSize / originalImage.width, availableSize / originalImage.height);
-      scaledWidth = originalImage.width * scale;
-      scaledHeight = originalImage.height * scale;
-      offsetX = (size - scaledWidth) / 2;
-      offsetY = (size - scaledHeight) / 2;
-    } else { // crop
-      // Use largest square crop from center of image
-      const minDimension = Math.min(originalImage.width, originalImage.height);
-      const cropX = (originalImage.width - minDimension) / 2;
-      const cropY = (originalImage.height - minDimension) / 2;
-
-      scaledWidth = availableSize;
-      scaledHeight = availableSize;
-      offsetX = marginPixels;
-      offsetY = marginPixels;
-
-      // Draw cropped image
-      ctx.drawImage(
-        originalImage,
-        cropX, cropY, minDimension, minDimension,  // source (cropped square)
-        offsetX, offsetY, scaledWidth, scaledHeight // destination
-      );
-      return;
+      ctx.drawImage(originalImage, offsetX, offsetY, scaledWidth, scaledHeight);
     }
-
-    // Draw the image with calculated dimensions
-    ctx.drawImage(
-      originalImage,
-      0, 0, originalImage.width, originalImage.height,    // source (full image)
-      offsetX, offsetY, scaledWidth, scaledHeight         // destination
-    );
   }, [originalImage, size, settings]);
 
   return (
-    <canvas 
-      ref={canvasRef} 
-      width={size} 
+    <canvas
+      ref={canvasRef}
+      width={size}
       height={size}
       style={{ width: size, height: size }}
-      className="border rounded"
     />
   );
 };
