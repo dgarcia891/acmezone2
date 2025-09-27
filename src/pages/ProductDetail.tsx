@@ -163,6 +163,22 @@ const ProductDetail = () => {
                 ))}
               </ul>
             </section>
+            {product.slug === "insightreel" && (
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                <p className="text-sm text-muted-foreground">
+                  🚀 <strong>Coming Soon:</strong> Visit{" "}
+                  <a 
+                    href="https://insight-reels.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline font-medium"
+                  >
+                    insight-reels.com
+                  </a>{" "}
+                  where you'll be able to save your video insights and retrieve them later across all your devices.
+                </p>
+              </div>
+            )}
             <div className="mt-8 flex gap-3">
               {product.link && (
                 <Button asChild>
