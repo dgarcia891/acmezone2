@@ -64,7 +64,7 @@ export const products: Product[] = [
     tags: ["chrome-extension", "linkedin", "job-search", "automation", "analytics", "notifications"],
     category: "Extensions",
     priceLabel: "From $15",
-    image: "/lovable-uploads/77e104a6-6780-4226-8a1e-f7bdac09fc40.png",
+    image: "/lovable-uploads/linkedin-job-scanner-hero.png",
     seoTitle: "LinkedIn Job Scanner – Automated Job Search Chrome Extension",
     seoDescription: "Automate your LinkedIn job search with advanced scanning, real-time alerts, and job analytics. Find opportunities faster with smart filtering.",
     type: "Chrome Extension"
