@@ -4,48 +4,55 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Download, Loader2, RotateCcw, ImageIcon } from 'lucide-react';
+import { Upload, Download, Loader2, RotateCcw, ImageIcon, Sparkles } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
+import { supabase } from '@/integrations/supabase/client';
 
 env.allowLocalModels = false;
 env.useBrowserCache = false;
 
 const MAX_IMAGE_DIMENSION = 1024;
-const DAILY_LIMIT = 3;
+const AI_DAILY_LIMIT = 3;
 
 const BackgroundRemover: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [usageCount, setUsageCount] = useState(0);
+  const [aiUsageCount, setAiUsageCount] = useState(0);
+  const [method, setMethod] = useState<'browser' | 'ai'>('browser');
+  const [threshold, setThreshold] = useState([0.5]);
+  const [smoothing, setSmoothing] = useState([1]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const count = getUsageCount();
-    setUsageCount(count);
+    const count = getAiUsageCount();
+    setAiUsageCount(count);
   }, []);
 
   const getTodayKey = () => {
     return new Date().toDateString();
   };
 
-  const getUsageCount = (): number => {
+  const getAiUsageCount = (): number => {
     const today = getTodayKey();
-    const stored = localStorage.getItem(`bg_remover_${today}`);
+    const stored = localStorage.getItem(`bg_remover_ai_${today}`);
     return stored ? parseInt(stored, 10) : 0;
   };
 
-  const incrementUsageCount = () => {
+  const incrementAiUsageCount = () => {
     const today = getTodayKey();
-    const current = getUsageCount();
+    const current = getAiUsageCount();
     const newCount = current + 1;
-    localStorage.setItem(`bg_remover_${today}`, newCount.toString());
-    setUsageCount(newCount);
+    localStorage.setItem(`bg_remover_ai_${today}`, newCount.toString());
+    setAiUsageCount(newCount);
   };
 
-  const checkDailyLimit = (): boolean => {
-    return getUsageCount() >= DAILY_LIMIT;
+  const checkAiDailyLimit = (): boolean => {
+    return getAiUsageCount() >= AI_DAILY_LIMIT;
   };
 
   const resizeImageIfNeeded = (
@@ -79,9 +86,8 @@ const BackgroundRemover: React.FC = () => {
 
   const removeBackground = async (imageElement: HTMLImageElement): Promise<string> => {
     try {
-      console.log('Starting background removal process...');
+      console.log('Starting browser-based background removal...');
       
-      // Use RMBG model which is specifically trained for background removal
       const segmenter = await pipeline(
         'image-segmentation',
         'Xenova/rmbg-1.4',
@@ -104,8 +110,6 @@ const BackgroundRemover: React.FC = () => {
       console.log('Processing with background removal model...');
       const result = await segmenter(imageData);
 
-      console.log('Segmentation result:', result);
-
       if (!result || !Array.isArray(result) || result.length === 0 || !result[0].mask) {
         throw new Error('Invalid segmentation result');
       }
@@ -122,12 +126,24 @@ const BackgroundRemover: React.FC = () => {
       const outputImageData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
       const data = outputImageData.data;
 
-      // Apply the mask with better edge handling
-      // RMBG returns the foreground mask directly, so we use it as-is
+      // Apply threshold and smoothing adjustments
+      const thresholdValue = threshold[0];
+      const smoothValue = smoothing[0];
+
       for (let i = 0; i < result[0].mask.data.length; i++) {
-        // The mask value represents foreground confidence (0-1)
-        // We use it directly as alpha
-        const alpha = Math.round(result[0].mask.data[i] * 255);
+        let maskValue = result[0].mask.data[i];
+        
+        // Apply threshold
+        maskValue = maskValue > thresholdValue ? 1 : maskValue < (1 - thresholdValue) ? 0 : maskValue;
+        
+        // Apply smoothing (simple averaging with neighbors)
+        if (smoothValue > 1 && i > 0 && i < result[0].mask.data.length - 1) {
+          const weight = 1 / smoothValue;
+          maskValue = maskValue * (1 - weight) + 
+                     (result[0].mask.data[i - 1] + result[0].mask.data[i + 1]) * weight / 2;
+        }
+        
+        const alpha = Math.round(maskValue * 255);
         data[i * 4 + 3] = alpha;
       }
 
@@ -137,6 +153,24 @@ const BackgroundRemover: React.FC = () => {
       return outputCanvas.toDataURL('image/png');
     } catch (error) {
       console.error('Error removing background:', error);
+      throw error;
+    }
+  };
+
+  const removeBackgroundAI = async (imageBase64: string): Promise<string> => {
+    try {
+      console.log('Starting AI-powered background removal...');
+      
+      const { data, error } = await supabase.functions.invoke('remove-background-ai', {
+        body: { image: imageBase64 }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'AI processing failed');
+
+      return data.processedImage;
+    } catch (error) {
+      console.error('Error with AI background removal:', error);
       throw error;
     }
   };
@@ -154,11 +188,6 @@ const BackgroundRemover: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (checkDailyLimit()) {
-      toast.error(`Daily limit of ${DAILY_LIMIT} uses reached. Try again tomorrow!`);
-      return;
-    }
-
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
@@ -174,7 +203,7 @@ const BackgroundRemover: React.FC = () => {
       const imageUrl = URL.createObjectURL(file);
       setOriginalImage(imageUrl);
       setProcessedImage(null);
-      toast.success('Image loaded! Click "Remove Background" to process.');
+      toast.success('Image loaded! Choose a method to remove the background.');
     } catch (error) {
       console.error('Error loading image:', error);
       toast.error('Failed to load image');
@@ -184,18 +213,32 @@ const BackgroundRemover: React.FC = () => {
   const handleRemoveBackground = async () => {
     if (!originalImage) return;
 
-    if (checkDailyLimit()) {
-      toast.error(`Daily limit of ${DAILY_LIMIT} uses reached. Try again tomorrow!`);
+    if (method === 'ai' && checkAiDailyLimit()) {
+      toast.error(`Daily AI limit of ${AI_DAILY_LIMIT} uses reached. Try again tomorrow or use Browser method!`);
       return;
     }
 
     setIsProcessing(true);
     try {
-      const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
-      const result = await removeBackground(img);
-      setProcessedImage(result);
-      incrementUsageCount();
-      toast.success('Background removed successfully!');
+      if (method === 'browser') {
+        const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
+        const result = await removeBackground(img);
+        setProcessedImage(result);
+        toast.success('Background removed successfully!');
+      } else {
+        // AI method
+        const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get canvas context');
+        resizeImageIfNeeded(canvas, ctx, img);
+        const imageBase64 = canvas.toDataURL('image/png', 1.0);
+        
+        const result = await removeBackgroundAI(imageBase64);
+        setProcessedImage(result);
+        incrementAiUsageCount();
+        toast.success('Background removed with AI!');
+      }
     } catch (error) {
       console.error('Error removing background:', error);
       toast.error('Failed to remove background. Please try again.');
@@ -244,7 +287,7 @@ const BackgroundRemover: React.FC = () => {
     }
   };
 
-  const remainingUses = DAILY_LIMIT - usageCount;
+  const aiRemainingUses = AI_DAILY_LIMIT - aiUsageCount;
 
   return (
     <>
@@ -276,12 +319,15 @@ const BackgroundRemover: React.FC = () => {
               AI Background Remover
             </h1>
             <p className="text-xl text-muted-foreground mb-6">
-              Remove backgrounds from images instantly with AI. Perfect for logos, product photos, and graphics.
+              Remove backgrounds from images instantly. Choose between unlimited browser-based processing or high-quality AI removal.
             </p>
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="text-muted-foreground">Daily uses:</span>
-              <span className="font-semibold text-primary">
-                {remainingUses} of {DAILY_LIMIT} remaining
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                Browser method: <span className="font-semibold text-primary">Unlimited</span>
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-muted-foreground">
+                AI method: <span className="font-semibold text-primary">{aiRemainingUses} of {AI_DAILY_LIMIT} remaining</span>
               </span>
             </div>
           </div>
@@ -316,6 +362,82 @@ const BackgroundRemover: React.FC = () => {
             </Card>
           ) : (
             <div className="space-y-6">
+              {/* Method Selection and Adjustment Controls */}
+              <Card className="max-w-2xl mx-auto">
+                <CardHeader>
+                  <CardTitle>Processing Method</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <Tabs value={method} onValueChange={(v) => setMethod(v as 'browser' | 'ai')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="browser">
+                        Browser (Unlimited)
+                      </TabsTrigger>
+                      <TabsTrigger value="ai" disabled={checkAiDailyLimit()}>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        AI Powered ({aiRemainingUses}/{AI_DAILY_LIMIT})
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="browser" className="space-y-4 mt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Free unlimited processing in your browser. Adjust settings to fine-tune results.
+                      </p>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Edge Threshold: {threshold[0].toFixed(2)}</Label>
+                          <Slider
+                            value={threshold}
+                            onValueChange={setThreshold}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Higher values remove more background, lower values preserve more edges
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Edge Smoothing: {smoothing[0].toFixed(1)}x</Label>
+                          <Slider
+                            value={smoothing}
+                            onValueChange={setSmoothing}
+                            min={1}
+                            max={5}
+                            step={0.5}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Higher values create smoother edges, lower values preserve sharp edges
+                          </p>
+                        </div>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="ai" className="space-y-4 mt-4">
+                      <p className="text-sm text-muted-foreground">
+                        High-quality AI-powered background removal. {aiRemainingUses} uses remaining today.
+                      </p>
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <ul className="text-sm space-y-2">
+                          <li className="flex items-start gap-2">
+                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Superior edge detection for complex images</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Better handling of hair, fur, and transparent objects</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <span>Professional quality results</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -376,7 +498,7 @@ const BackgroundRemover: React.FC = () => {
                 {!processedImage && (
                   <Button
                     onClick={handleRemoveBackground}
-                    disabled={isProcessing || checkDailyLimit()}
+                    disabled={isProcessing || (method === 'ai' && checkAiDailyLimit())}
                     size="lg"
                   >
                     {isProcessing ? (
@@ -385,16 +507,24 @@ const BackgroundRemover: React.FC = () => {
                         Processing...
                       </>
                     ) : (
-                      'Remove Background'
+                      <>
+                        {method === 'ai' && <Sparkles className="mr-2 h-4 w-4" />}
+                        Remove Background
+                      </>
                     )}
                   </Button>
                 )}
 
                 {processedImage && (
-                  <Button onClick={handleDownload} size="lg">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PNG
-                  </Button>
+                  <>
+                    <Button onClick={handleDownload} size="lg">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PNG
+                    </Button>
+                    <Button onClick={() => setProcessedImage(null)} variant="outline" size="lg">
+                      Try Again
+                    </Button>
+                  </>
                 )}
 
                 <Button onClick={handleReset} variant="outline" size="lg">
@@ -403,10 +533,10 @@ const BackgroundRemover: React.FC = () => {
                 </Button>
               </div>
 
-              {checkDailyLimit() && (
+              {method === 'ai' && checkAiDailyLimit() && (
                 <div className="max-w-2xl mx-auto mt-6 p-4 bg-muted rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">
-                    You've reached your daily limit of {DAILY_LIMIT} uses. Come back tomorrow for more!
+                    You've reached your daily AI limit of {AI_DAILY_LIMIT} uses. Try the Browser method (unlimited) or come back tomorrow!
                   </p>
                 </div>
               )}

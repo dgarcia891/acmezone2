@@ -51,3 +51,6 @@ verify_jwt = false
 
 [functions.validate-unlock-code]
 verify_jwt = false
+
+[functions.remove-background-ai]
+verify_jwt = false
