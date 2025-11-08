@@ -173,7 +173,7 @@ export const products: Product[] = [
     tags: ["web-app", "ai", "image-processing", "background-removal", "free", "privacy"],
     category: "Tools",
     priceLabel: "Free",
-    image: "/lovable-uploads/cf56ad71-6061-4d89-baca-7b079bf1e873.png",
+    image: "/lovable-uploads/background-remover-hero.png",
     seoTitle: "Background Remover – Free AI Background Removal Tool",
     seoDescription: "Remove backgrounds from images instantly with AI. 100% private, browser-based processing. Perfect for products, logos, and portraits. 3 free uses daily.",
     type: "Web App"
