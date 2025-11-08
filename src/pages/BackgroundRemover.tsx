@@ -159,6 +159,39 @@ const BackgroundRemover: React.FC = () => {
     }
   };
 
+  const parseRemoveBgError = (errorMessage: string): { title: string; description: string; action?: string } => {
+    if (errorMessage.includes('REMOVE_BG_INVALID_KEY')) {
+      return {
+        title: 'Invalid API Key',
+        description: 'Your Remove.bg API key is invalid or has insufficient credits.',
+        action: 'Check your API key and credits at remove.bg'
+      };
+    } else if (errorMessage.includes('REMOVE_BG_NO_CREDITS')) {
+      return {
+        title: 'No Credits Available',
+        description: 'You have run out of Remove.bg API credits.',
+        action: 'Purchase more credits at remove.bg/pricing or use the Browser method'
+      };
+    } else if (errorMessage.includes('REMOVE_BG_INVALID_IMAGE')) {
+      return {
+        title: 'Invalid Image',
+        description: 'The image format or size is not supported by Remove.bg.',
+        action: 'Try a different image or use the Browser method'
+      };
+    } else if (errorMessage.includes('REMOVE_BG_RATE_LIMIT')) {
+      return {
+        title: 'Rate Limit Exceeded',
+        description: 'Too many requests to Remove.bg API.',
+        action: 'Please wait a moment and try again'
+      };
+    }
+    return {
+      title: 'Background Removal Failed',
+      description: errorMessage.replace('REMOVE_BG_ERROR: ', ''),
+      action: 'Try the Browser method or check your Remove.bg account'
+    };
+  };
+
   const removeBackgroundAI = async (imageBase64: string): Promise<string> => {
     try {
       console.log('Starting AI-powered background removal...');
@@ -259,8 +292,16 @@ const BackgroundRemover: React.FC = () => {
       }
     } catch (error) {
       console.error('Error removing background:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
-      toast.error(errorMessage);
+      
+      if (method === 'ai' && error instanceof Error) {
+        const errorInfo = parseRemoveBgError(error.message);
+        toast.error(errorInfo.title, {
+          description: `${errorInfo.description}${errorInfo.action ? ` ${errorInfo.action}.` : ''}`
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
+        toast.error(errorMessage);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -434,7 +475,7 @@ const BackgroundRemover: React.FC = () => {
                     </TabsContent>
                     <TabsContent value="ai" className="space-y-4 mt-4">
                       <p className="text-sm text-muted-foreground">
-                        High-quality AI-powered background removal. {aiRemainingUses} uses remaining today.
+                        High-quality AI-powered background removal using Remove.bg API. {aiRemainingUses} uses remaining today.
                       </p>
                       <div className="p-4 bg-muted/50 rounded-lg">
                         <ul className="text-sm space-y-2">
@@ -451,6 +492,16 @@ const BackgroundRemover: React.FC = () => {
                             <span>Professional quality results</span>
                           </li>
                         </ul>
+                      </div>
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          <strong>Note:</strong> AI method requires a Remove.bg API key with available credits. 
+                          If you encounter issues, verify your API key and credit balance at{' '}
+                          <a href="https://remove.bg/users/sign_in" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900 dark:hover:text-amber-100">
+                            remove.bg
+                          </a>
+                          , or use the free Browser method instead.
+                        </p>
                       </div>
                     </TabsContent>
                   </Tabs>

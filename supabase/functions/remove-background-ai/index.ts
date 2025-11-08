@@ -67,14 +67,18 @@ serve(async (req) => {
       const errorText = await removeBgResponse.text();
       console.error('Remove.bg API error:', removeBgResponse.status, errorText);
       
-      // Handle specific error codes
+      // Handle specific error codes with detailed messages
       if (removeBgResponse.status === 403) {
-        throw new Error('Invalid API key or insufficient credits');
+        throw new Error('REMOVE_BG_INVALID_KEY: Your Remove.bg API key is invalid or you have insufficient credits. Please check your API key at https://remove.bg/users/sign_in and verify your credit balance.');
+      } else if (removeBgResponse.status === 402) {
+        throw new Error('REMOVE_BG_NO_CREDITS: You have run out of Remove.bg API credits. Please purchase more credits at https://remove.bg/pricing or try the free Browser method instead.');
       } else if (removeBgResponse.status === 400) {
-        throw new Error(`Invalid image format or size: ${errorText}`);
+        throw new Error('REMOVE_BG_INVALID_IMAGE: The image format or size is not supported. Please try a different image or use the Browser method.');
+      } else if (removeBgResponse.status === 429) {
+        throw new Error('REMOVE_BG_RATE_LIMIT: Too many requests. Please wait a moment and try again.');
       }
       
-      throw new Error(`Remove.bg API failed: ${errorText}`);
+      throw new Error(`REMOVE_BG_ERROR: ${errorText || 'Unknown error occurred'}`);
     }
 
     console.log('Getting response buffer...');
