@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { Check } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { products } from "@/data/products";
@@ -52,6 +53,14 @@ const Products = () => {
                 <CardDescription className="text-base leading-relaxed">
                   {p.summary}
                 </CardDescription>
+                <div className="space-y-2 pt-2">
+                  {p.features.slice(0, 4).map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
