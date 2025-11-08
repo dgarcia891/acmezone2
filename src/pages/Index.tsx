@@ -32,7 +32,7 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
       </CardHeader>
       
       <div className="px-6 pb-4">
-        <div className="relative h-32 bg-muted/20 rounded-lg overflow-hidden">
+        <div className="relative h-32 bg-muted/20 rounded-lg overflow-hidden group">
           {hasMultipleImages ? (
             <Carousel 
               className="w-full h-full"
@@ -45,7 +45,7 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
                       src={image} 
                       alt={`${product.name} screenshot ${index + 1}`} 
                       loading="lazy"
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
                     />
                   </CarouselItem>
                 ))}
@@ -58,7 +58,7 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
               src={product.image} 
               alt={`${product.name} product image`} 
               loading="lazy"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
             />
           )}
         </div>
