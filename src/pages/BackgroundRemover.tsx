@@ -80,9 +80,11 @@ const BackgroundRemover: React.FC = () => {
   const removeBackground = async (imageElement: HTMLImageElement): Promise<string> => {
     try {
       console.log('Starting background removal process...');
+      
+      // Use RMBG model which is specifically trained for background removal
       const segmenter = await pipeline(
         'image-segmentation',
-        'Xenova/segformer-b0-finetuned-ade-512-512',
+        'Xenova/rmbg-1.4',
         { device: 'webgpu' }
       );
 
@@ -96,10 +98,10 @@ const BackgroundRemover: React.FC = () => {
         `Image ${wasResized ? 'was' : 'was not'} resized. Final dimensions: ${canvas.width}x${canvas.height}`
       );
 
-      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      const imageData = canvas.toDataURL('image/png', 1.0);
       console.log('Image converted to base64');
 
-      console.log('Processing with segmentation model...');
+      console.log('Processing with background removal model...');
       const result = await segmenter(imageData);
 
       console.log('Segmentation result:', result);
@@ -120,8 +122,12 @@ const BackgroundRemover: React.FC = () => {
       const outputImageData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
       const data = outputImageData.data;
 
+      // Apply the mask with better edge handling
+      // RMBG returns the foreground mask directly, so we use it as-is
       for (let i = 0; i < result[0].mask.data.length; i++) {
-        const alpha = Math.round((1 - result[0].mask.data[i]) * 255);
+        // The mask value represents foreground confidence (0-1)
+        // We use it directly as alpha
+        const alpha = Math.round(result[0].mask.data[i] * 255);
         data[i * 4 + 3] = alpha;
       }
 
