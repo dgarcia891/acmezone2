@@ -17,6 +17,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
 import Support from "./pages/Support";
 import ChromeExtensionImageEditor from "./pages/ChromeExtensionImageEditor";
+import BackgroundRemover from "./pages/BackgroundRemover";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
                 <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
+                <Route path="/background-remover" element={<BackgroundRemover />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />

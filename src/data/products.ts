@@ -151,5 +151,31 @@ export const products: Product[] = [
     seoTitle: "Chrome Extension Image Editor – Automatic Icon Formatter with Background Removal",
     seoDescription: "Format images for Chrome extension icons with AI background removal. Get all required sizes instantly with perfect transparency.",
     type: "Web App"
+  },
+  {
+    id: "background-remover",
+    name: "Background Remover",
+    slug: "background-remover",
+    summary: "Free AI-powered background removal tool - runs entirely in your browser for complete privacy.",
+    description: "Background Remover is a powerful, privacy-focused web app that removes backgrounds from your images using AI technology. Everything runs locally in your browser - no uploads, no servers, complete privacy.\n\n✨ **AI-Powered Processing**: Advanced machine learning models remove backgrounds with professional quality, preserving fine details like hair, fur, and complex edges while maintaining image quality.\n\n🔒 **100% Private**: All processing happens in your browser with no data sent to servers, complete privacy for sensitive images, no accounts or sign-ups required, and instant processing without uploads.\n\n🎨 **Perfect Results**: Side-by-side comparison view to see your results, transparent PNG output for versatile use, works with logos, product photos, portraits, and graphics, with professional quality for e-commerce and marketing.\n\n⚡ **Fast & Free**: Process images in seconds with 3 free uses per day, no credit card required, no watermarks, and unlimited downloads of your processed images.\n\n📦 **Easy to Use**: Drag and drop or click to upload with support for JPG, PNG, JPEG, and WebP formats, instant preview of results, and one-click download of transparent PNG files.\n\n🎯 **Perfect For**: E-commerce sellers creating product images, graphic designers preparing assets, content creators making thumbnails, social media marketers, and anyone who needs transparent images fast!",
+    features: [
+      "AI-powered background removal",
+      "100% browser-based processing (no uploads)",
+      "Complete privacy - no data sent to servers",
+      "Side-by-side before/after comparison",
+      "Transparent PNG output",
+      "High-quality edge detection",
+      "Works with portraits, products, logos, and graphics",
+      "3 free uses per day",
+      "No watermarks or sign-ups",
+      "Instant processing and download"
+    ],
+    tags: ["web-app", "ai", "image-processing", "background-removal", "free", "privacy"],
+    category: "Tools",
+    priceLabel: "Free",
+    image: "/lovable-uploads/cf56ad71-6061-4d89-baca-7b079bf1e873.png",
+    seoTitle: "Background Remover – Free AI Background Removal Tool",
+    seoDescription: "Remove backgrounds from images instantly with AI. 100% private, browser-based processing. Perfect for products, logos, and portraits. 3 free uses daily.",
+    type: "Web App"
   }
 ];
