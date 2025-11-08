@@ -21,71 +21,70 @@ serve(async (req) => {
       );
     }
 
-    // Use Lovable AI with vision capabilities to enhance background removal
-    // This uses Google Gemini Pro Vision which can better identify foreground vs background
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const REMOVE_BG_API_KEY = Deno.env.get('REMOVE_BG_API_KEY');
+    if (!REMOVE_BG_API_KEY) {
+      throw new Error('REMOVE_BG_API_KEY not configured');
     }
 
-    // First, analyze the image with AI to understand its content
-    const analysisResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Starting Remove.bg API background removal...');
+
+    // Extract base64 data from data URL if present
+    let base64Data = image;
+    if (image.startsWith('data:')) {
+      base64Data = image.split(',')[1];
+    }
+
+    // Call Remove.bg API
+    const removeBgResponse = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'X-Api-Key': REMOVE_BG_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Analyze this image and describe the main subject/foreground object and the background. Be specific about edges, glows, and transparency effects that might make background removal challenging.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: image
-                }
-              }
-            ]
-          }
-        ]
+        image_file_b64: base64Data,
+        size: 'auto',
+        format: 'png',
+        // Optional: Add more parameters for better results
+        // bg_color: null, // Keep transparent
+        // crop: false,
+        // scale: '100%'
       })
     });
 
-    if (!analysisResponse.ok) {
-      const error = await analysisResponse.text();
-      console.error('AI analysis failed:', error);
-      throw new Error('Failed to analyze image with AI');
+    if (!removeBgResponse.ok) {
+      const errorText = await removeBgResponse.text();
+      console.error('Remove.bg API error:', removeBgResponse.status, errorText);
+      
+      // Handle specific error codes
+      if (removeBgResponse.status === 403) {
+        throw new Error('Invalid API key or insufficient credits');
+      } else if (removeBgResponse.status === 400) {
+        throw new Error('Invalid image format or size');
+      }
+      
+      throw new Error(`Remove.bg API failed: ${errorText}`);
     }
 
-    const analysisData = await analysisResponse.json();
-    const analysis = analysisData.choices[0]?.message?.content || '';
+    // Get the processed image as arraybuffer
+    const processedImageBuffer = await removeBgResponse.arrayBuffer();
     
-    console.log('AI Analysis:', analysis);
+    // Convert to base64
+    const processedImageBase64 = btoa(
+      new Uint8Array(processedImageBuffer).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ''
+      )
+    );
 
-    // For now, we return the original image with analysis info
-    // In a production setup, you would:
-    // 1. Use the AI analysis to determine the best removal strategy
-    // 2. Call a specialized background removal API (like Remove.bg)
-    // 3. Or use a more powerful server-side ML model
-    
-    // NOTE: This is a placeholder implementation
-    // To use a real background removal service, integrate with:
-    // - Remove.bg API: https://www.remove.bg/api
-    // - ClipDrop API: https://clipdrop.co/apis
-    // - Or deploy a custom ML model
-    
+    const processedImageDataUrl = `data:image/png;base64,${processedImageBase64}`;
+
+    console.log('Background removed successfully with Remove.bg');
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        processedImage: image,
-        analysis,
-        note: 'AI-enhanced processing active. For production, integrate with a background removal API service.'
+        processedImage: processedImageDataUrl
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
