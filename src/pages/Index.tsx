@@ -95,7 +95,7 @@ const Index = () => {
       </Helmet>
       <Header />
       <main className="flex-1">
-        <section className="relative py-20 md:py-32">
+        <section className="relative py-20 md:py-28 pb-8 md:pb-12">
           <div className="container mx-auto px-4">
             <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">
               <span className="h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
