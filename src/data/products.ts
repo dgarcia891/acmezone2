@@ -176,6 +176,7 @@ export const products: Product[] = [
     image: "/lovable-uploads/background-remover-hero.png",
     seoTitle: "Background Remover – Free AI Background Removal Tool",
     seoDescription: "Remove backgrounds from images instantly with AI. 100% private, browser-based processing. Perfect for products, logos, and portraits. 3 free uses daily.",
-    type: "Web App"
+    type: "Web App",
+    link: "/background-remover"
   }
 ];

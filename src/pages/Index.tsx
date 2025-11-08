@@ -69,7 +69,9 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
           {product.summary}
         </CardDescription>
         <Button asChild className="w-full mt-4">
-          <Link to={`/products/${product.slug}`}>View Details</Link>
+          <Link to={product.link || `/products/${product.slug}`}>
+            {product.link ? 'Try Now' : 'View Details'}
+          </Link>
         </Button>
       </CardContent>
     </Card>
