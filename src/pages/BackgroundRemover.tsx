@@ -160,14 +160,30 @@ const BackgroundRemover: React.FC = () => {
   const removeBackgroundAI = async (imageBase64: string): Promise<string> => {
     try {
       console.log('Starting AI-powered background removal...');
+      console.log('Calling remove-background-ai edge function...');
       
       const { data, error } = await supabase.functions.invoke('remove-background-ai', {
         body: { image: imageBase64 }
       });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'AI processing failed');
+      console.log('Edge function response:', { data, error });
 
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(`API Error: ${error.message || 'Failed to call background removal service'}`);
+      }
+      
+      if (!data?.success) {
+        const errorMsg = data?.error || 'AI processing failed';
+        console.error('Processing failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (!data.processedImage) {
+        throw new Error('No processed image returned from API');
+      }
+
+      console.log('AI background removal successful');
       return data.processedImage;
     } catch (error) {
       console.error('Error with AI background removal:', error);
@@ -241,7 +257,8 @@ const BackgroundRemover: React.FC = () => {
       }
     } catch (error) {
       console.error('Error removing background:', error);
-      toast.error('Failed to remove background. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }

@@ -11,10 +11,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('Remove background AI function called');
+
   try {
     const { image } = await req.json();
+    console.log('Request body parsed, image present:', !!image);
 
     if (!image) {
+      console.error('No image provided in request');
       return new Response(
         JSON.stringify({ success: false, error: 'No image provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -22,7 +26,10 @@ serve(async (req) => {
     }
 
     const REMOVE_BG_API_KEY = Deno.env.get('REMOVE_BG_API_KEY');
+    console.log('Remove.bg API key present:', !!REMOVE_BG_API_KEY);
+    
     if (!REMOVE_BG_API_KEY) {
+      console.error('REMOVE_BG_API_KEY not configured');
       throw new Error('REMOVE_BG_API_KEY not configured');
     }
 
@@ -31,8 +38,14 @@ serve(async (req) => {
     // Extract base64 data from data URL if present
     let base64Data = image;
     if (image.startsWith('data:')) {
-      base64Data = image.split(',')[1];
+      const parts = image.split(',');
+      if (parts.length > 1) {
+        base64Data = parts[1];
+        console.log('Extracted base64 from data URL, length:', base64Data.length);
+      }
     }
+
+    console.log('Calling Remove.bg API...');
 
     // Call Remove.bg API
     const removeBgResponse = await fetch('https://api.remove.bg/v1.0/removebg', {
@@ -45,12 +58,10 @@ serve(async (req) => {
         image_file_b64: base64Data,
         size: 'auto',
         format: 'png',
-        // Optional: Add more parameters for better results
-        // bg_color: null, // Keep transparent
-        // crop: false,
-        // scale: '100%'
       })
     });
+
+    console.log('Remove.bg API response status:', removeBgResponse.status);
 
     if (!removeBgResponse.ok) {
       const errorText = await removeBgResponse.text();
@@ -60,14 +71,16 @@ serve(async (req) => {
       if (removeBgResponse.status === 403) {
         throw new Error('Invalid API key or insufficient credits');
       } else if (removeBgResponse.status === 400) {
-        throw new Error('Invalid image format or size');
+        throw new Error(`Invalid image format or size: ${errorText}`);
       }
       
       throw new Error(`Remove.bg API failed: ${errorText}`);
     }
 
+    console.log('Getting response buffer...');
     // Get the processed image as arraybuffer
     const processedImageBuffer = await removeBgResponse.arrayBuffer();
+    console.log('Buffer size:', processedImageBuffer.byteLength);
     
     // Convert to base64
     const processedImageBase64 = btoa(
@@ -93,6 +106,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in remove-background-ai:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
