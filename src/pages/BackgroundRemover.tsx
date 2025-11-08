@@ -90,7 +90,7 @@ const BackgroundRemover: React.FC = () => {
       
       const segmenter = await pipeline(
         'image-segmentation',
-        'Xenova/rmbg-1.4',
+        'Xenova/segformer-b0-finetuned-ade-512-512',
         { device: 'webgpu' }
       );
 
@@ -130,8 +130,10 @@ const BackgroundRemover: React.FC = () => {
       const thresholdValue = threshold[0];
       const smoothValue = smoothing[0];
 
+      // Apply inverted mask to alpha channel (keep subject, remove background)
       for (let i = 0; i < result[0].mask.data.length; i++) {
-        let maskValue = result[0].mask.data[i];
+        // Invert the mask value (1 - value) to keep the subject instead of the background
+        let maskValue = 1 - result[0].mask.data[i];
         
         // Apply threshold
         maskValue = maskValue > thresholdValue ? 1 : maskValue < (1 - thresholdValue) ? 0 : maskValue;
@@ -455,6 +457,45 @@ const BackgroundRemover: React.FC = () => {
                 </CardContent>
               </Card>
 
+              <div className="flex flex-wrap justify-center gap-4 mb-6">
+                {!processedImage && (
+                  <Button
+                    onClick={handleRemoveBackground}
+                    disabled={isProcessing || (method === 'ai' && checkAiDailyLimit())}
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        {method === 'ai' && <Sparkles className="mr-2 h-4 w-4" />}
+                        Remove Background
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {processedImage && (
+                  <>
+                    <Button onClick={handleDownload} size="lg">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PNG
+                    </Button>
+                    <Button onClick={() => setProcessedImage(null)} variant="outline" size="lg">
+                      Try Again
+                    </Button>
+                  </>
+                )}
+
+                <Button onClick={handleReset} variant="outline" size="lg">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Start Over
+                </Button>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -509,45 +550,6 @@ const BackgroundRemover: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-4">
-                {!processedImage && (
-                  <Button
-                    onClick={handleRemoveBackground}
-                    disabled={isProcessing || (method === 'ai' && checkAiDailyLimit())}
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        {method === 'ai' && <Sparkles className="mr-2 h-4 w-4" />}
-                        Remove Background
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {processedImage && (
-                  <>
-                    <Button onClick={handleDownload} size="lg">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PNG
-                    </Button>
-                    <Button onClick={() => setProcessedImage(null)} variant="outline" size="lg">
-                      Try Again
-                    </Button>
-                  </>
-                )}
-
-                <Button onClick={handleReset} variant="outline" size="lg">
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Start Over
-                </Button>
               </div>
 
               {method === 'ai' && checkAiDailyLimit() && (
