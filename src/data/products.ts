@@ -147,7 +147,7 @@ export const products: Product[] = [
     tags: ["web-app", "chrome-extension", "image-processing", "ai", "developer-tools", "icons"],
     category: "Tools",
     priceLabel: "Free",
-    image: "/lovable-uploads/1b1092b3-65ab-4c9a-a6d9-a214ccc6b5b8.png",
+    image: "/lovable-uploads/chrome-extension-image-editor-hero.png",
     seoTitle: "Chrome Extension Image Editor – Automatic Icon Formatter with Background Removal",
     seoDescription: "Format images for Chrome extension icons with AI background removal. Get all required sizes instantly with perfect transparency.",
     type: "Web App"
