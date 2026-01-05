@@ -6,12 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw, Settings } from 'lucide-react';
+import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
-import { supabase } from '@/integrations/supabase/client';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -35,9 +32,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
     scaleMode: 'fit' as 'fit' | 'fill' | 'crop'
   });
   const [originalImageElement, setOriginalImageElement] = useState<HTMLImageElement | null>(null);
-  const [showCodeDialog, setShowCodeDialog] = useState(false);
-  const [codeInput, setCodeInput] = useState('');
-  const [isCodeValid, setIsCodeValid] = useState(false);
   const [cropMode, setCropMode] = useState(false);
   const [cropSelection, setCropSelection] = useState<{
     startX: number;
@@ -49,66 +43,12 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Daily conversion limit functions
-  const DAILY_LIMIT = 10;
-
   // Redraw canvas when crop mode or selection changes
   React.useEffect(() => {
     if (originalImageElement) {
       drawImageWithCropOverlay();
     }
   }, [cropMode, cropSelection, originalImageElement]);
-
-  const getTodayKey = () => {
-    return new Date().toDateString();
-  };
-
-  const getConversionCount = () => {
-    const today = getTodayKey();
-    const stored = localStorage.getItem(`conversions_${today}`);
-    return stored ? parseInt(stored, 10) : 0;
-  };
-
-  const incrementConversionCount = () => {
-    const today = getTodayKey();
-    const current = getConversionCount();
-    localStorage.setItem(`conversions_${today}`, (current + 1).toString());
-  };
-
-  const checkDailyLimit = () => {
-    const count = getConversionCount();
-    return count >= DAILY_LIMIT && !isCodeValid;
-  };
-
-  const validateCode = async (code: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-unlock-code', {
-        body: { code }
-      });
-      
-      if (error) {
-        console.error('Error validating unlock code:', error);
-        return false;
-      }
-      
-      return data?.valid === true;
-    } catch (error) {
-      console.error('Error validating unlock code:', error);
-      return false;
-    }
-  };
-
-  const handleCodeSubmit = async () => {
-    const isValid = await validateCode(codeInput);
-    if (isValid) {
-      setIsCodeValid(true);
-      setShowCodeDialog(false);
-      setCodeInput('');
-      toast.success('Code accepted! You can now continue processing images.');
-    } else {
-      toast.error('Invalid unlock code. Please try again.');
-    }
-  };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!cropMode || !imageCanvasRef.current) return;
@@ -456,15 +396,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
     });
   };
 
-  const loadImage = (file: Blob): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files[0]) {
@@ -492,11 +423,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const processImages = async () => {
     if (!originalImageElement) return;
     
-    if (checkDailyLimit()) {
-      setShowCodeDialog(true);
-      return;
-    }
-    
     setIsProcessing(true);
     
     try {
@@ -519,7 +445,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
       }
       
       setProcessedImages(newProcessedImages);
-      incrementConversionCount();
       
       toast.success(`Successfully processed ${ICON_SIZES.length} icon sizes!`);
     } catch (error) {
@@ -619,13 +544,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
                         <span className="text-lg">Click to upload image</span>
                       </div>
                     </Button>
-                    
-                    <div className="text-center text-sm text-muted-foreground">
-                      <p>
-                        {getConversionCount()}/{DAILY_LIMIT} conversions used today
-                        {!isCodeValid && getConversionCount() >= DAILY_LIMIT && " (Limit reached)"}
-                      </p>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -883,40 +801,6 @@ const ChromeExtensionImageEditor: React.FC = () => {
         </main>
 
         <Footer />
-        
-        {/* Code Entry Dialog */}
-        <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Daily Limit Reached</DialogTitle>
-              <DialogDescription>
-                You've reached the daily limit of {DAILY_LIMIT} image conversions. 
-                Enter the unlock code to continue processing more images today.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="unlock-code">Unlock Code</Label>
-                <Input
-                  id="unlock-code"
-                  type="text"
-                  placeholder="Enter unlock code..."
-                  value={codeInput}
-                  onChange={(e) => setCodeInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCodeSubmit()}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCodeDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCodeSubmit}>
-                Submit Code
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <style>{`

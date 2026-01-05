@@ -1,59 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Download, Loader2, RotateCcw, ImageIcon, Sparkles } from 'lucide-react';
+import { Upload, Download, Loader2, RotateCcw, ImageIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { pipeline, env } from '@huggingface/transformers';
-import { supabase } from '@/integrations/supabase/client';
 
 env.allowLocalModels = false;
 env.useBrowserCache = false;
 
 const MAX_IMAGE_DIMENSION = 1024;
-const AI_DAILY_LIMIT = 3;
 
 const BackgroundRemover: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [aiUsageCount, setAiUsageCount] = useState(0);
-  const [method, setMethod] = useState<'browser' | 'ai'>('browser');
   const [threshold, setThreshold] = useState([0.5]);
   const [smoothing, setSmoothing] = useState([1]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const count = getAiUsageCount();
-    setAiUsageCount(count);
-  }, []);
-
-  const getTodayKey = () => {
-    return new Date().toDateString();
-  };
-
-  const getAiUsageCount = (): number => {
-    const today = getTodayKey();
-    const stored = localStorage.getItem(`bg_remover_ai_${today}`);
-    return stored ? parseInt(stored, 10) : 0;
-  };
-
-  const incrementAiUsageCount = () => {
-    const today = getTodayKey();
-    const current = getAiUsageCount();
-    const newCount = current + 1;
-    localStorage.setItem(`bg_remover_ai_${today}`, newCount.toString());
-    setAiUsageCount(newCount);
-  };
-
-  const checkAiDailyLimit = (): boolean => {
-    return getAiUsageCount() >= AI_DAILY_LIMIT;
-  };
 
   const resizeImageIfNeeded = (
     canvas: HTMLCanvasElement,
@@ -159,73 +127,6 @@ const BackgroundRemover: React.FC = () => {
     }
   };
 
-  const parseRemoveBgError = (errorMessage: string): { title: string; description: string; action?: string } => {
-    if (errorMessage.includes('REMOVE_BG_INVALID_KEY')) {
-      return {
-        title: 'Invalid API Key',
-        description: 'Your Remove.bg API key is invalid or has insufficient credits.',
-        action: 'Check your API key and credits at remove.bg'
-      };
-    } else if (errorMessage.includes('REMOVE_BG_NO_CREDITS')) {
-      return {
-        title: 'No Credits Available',
-        description: 'You have run out of Remove.bg API credits.',
-        action: 'Purchase more credits at remove.bg/pricing or use the Browser method'
-      };
-    } else if (errorMessage.includes('REMOVE_BG_INVALID_IMAGE')) {
-      return {
-        title: 'Invalid Image',
-        description: 'The image format or size is not supported by Remove.bg.',
-        action: 'Try a different image or use the Browser method'
-      };
-    } else if (errorMessage.includes('REMOVE_BG_RATE_LIMIT')) {
-      return {
-        title: 'Rate Limit Exceeded',
-        description: 'Too many requests to Remove.bg API.',
-        action: 'Please wait a moment and try again'
-      };
-    }
-    return {
-      title: 'Background Removal Failed',
-      description: errorMessage.replace('REMOVE_BG_ERROR: ', ''),
-      action: 'Try the Browser method or check your Remove.bg account'
-    };
-  };
-
-  const removeBackgroundAI = async (imageBase64: string): Promise<string> => {
-    try {
-      console.log('Starting AI-powered background removal...');
-      console.log('Calling remove-background-ai edge function...');
-      
-      const { data, error } = await supabase.functions.invoke('remove-background-ai', {
-        body: { image: imageBase64 }
-      });
-
-      console.log('Edge function response:', { data, error });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(`API Error: ${error.message || 'Failed to call background removal service'}`);
-      }
-      
-      if (!data?.success) {
-        const errorMsg = data?.error || 'AI processing failed';
-        console.error('Processing failed:', errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      if (!data.processedImage) {
-        throw new Error('No processed image returned from API');
-      }
-
-      console.log('AI background removal successful');
-      return data.processedImage;
-    } catch (error) {
-      console.error('Error with AI background removal:', error);
-      throw error;
-    }
-  };
-
   const loadImage = (file: File): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -254,7 +155,7 @@ const BackgroundRemover: React.FC = () => {
       const imageUrl = URL.createObjectURL(file);
       setOriginalImage(imageUrl);
       setProcessedImage(null);
-      toast.success('Image loaded! Choose a method to remove the background.');
+      toast.success('Image loaded! Click "Remove Background" to process.');
     } catch (error) {
       console.error('Error loading image:', error);
       toast.error('Failed to load image');
@@ -264,44 +165,16 @@ const BackgroundRemover: React.FC = () => {
   const handleRemoveBackground = async () => {
     if (!originalImage) return;
 
-    if (method === 'ai' && checkAiDailyLimit()) {
-      toast.error(`Daily AI limit of ${AI_DAILY_LIMIT} uses reached. Try again tomorrow or use Browser method!`);
-      return;
-    }
-
     setIsProcessing(true);
     try {
-      if (method === 'browser') {
-        const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
-        const result = await removeBackground(img);
-        setProcessedImage(result);
-        toast.success('Background removed successfully!');
-      } else {
-        // AI method
-        const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not get canvas context');
-        resizeImageIfNeeded(canvas, ctx, img);
-        const imageBase64 = canvas.toDataURL('image/png', 1.0);
-        
-        const result = await removeBackgroundAI(imageBase64);
-        setProcessedImage(result);
-        incrementAiUsageCount();
-        toast.success('Background removed with AI!');
-      }
+      const img = await loadImage(await fetch(originalImage).then((r) => r.blob()) as File);
+      const result = await removeBackground(img);
+      setProcessedImage(result);
+      toast.success('Background removed successfully!');
     } catch (error) {
       console.error('Error removing background:', error);
-      
-      if (method === 'ai' && error instanceof Error) {
-        const errorInfo = parseRemoveBgError(error.message);
-        toast.error(errorInfo.title, {
-          description: `${errorInfo.description}${errorInfo.action ? ` ${errorInfo.action}.` : ''}`
-        });
-      } else {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
-        toast.error(errorMessage);
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove background. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -347,27 +220,25 @@ const BackgroundRemover: React.FC = () => {
     }
   };
 
-  const aiRemainingUses = AI_DAILY_LIMIT - aiUsageCount;
-
   return (
     <>
       <Helmet>
-        <title>Background Remover – Free AI Background Removal Tool | Acme Zone</title>
+        <title>Background Remover – Free Browser-Based Background Removal Tool | Acme Zone</title>
         <meta
           name="description"
-          content="Remove backgrounds from images instantly with AI. 100% private, browser-based processing. Perfect for products, logos, and portraits. 3 free uses daily."
+          content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers. Perfect for products, logos, and portraits. Unlimited free uses."
         />
-        <meta name="keywords" content="background remover, AI, image editing, transparent background, free tool" />
+        <meta name="keywords" content="background remover, image editing, transparent background, free tool, browser-based" />
         <link rel="canonical" href="https://acme.zone/background-remover" />
         
-        <meta property="og:title" content="Background Remover – Free AI Background Removal Tool" />
-        <meta property="og:description" content="Remove backgrounds from images instantly with AI. 100% private, browser-based processing." />
+        <meta property="og:title" content="Background Remover – Free Browser-Based Background Removal Tool" />
+        <meta property="og:description" content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://acme.zone/background-remover" />
         
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Background Remover – Free AI Background Removal Tool" />
-        <meta name="twitter:description" content="Remove backgrounds from images instantly with AI. 100% private, browser-based processing." />
+        <meta name="twitter:title" content="Background Remover – Free Browser-Based Background Removal Tool" />
+        <meta name="twitter:description" content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers." />
       </Helmet>
 
       <Header />
@@ -376,20 +247,11 @@ const BackgroundRemover: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              AI Background Remover
+              Background Remover
             </h1>
             <p className="text-xl text-muted-foreground mb-6">
-              Remove backgrounds from images instantly. Choose between unlimited browser-based processing or high-quality AI removal.
+              Remove backgrounds from images instantly. Free, unlimited, and 100% private – all processing happens in your browser.
             </p>
-            <div className="flex items-center justify-center gap-4 text-sm">
-              <span className="text-muted-foreground">
-                Browser method: <span className="font-semibold text-primary">Unlimited</span>
-              </span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-muted-foreground">
-                AI method: <span className="font-semibold text-primary">{aiRemainingUses} of {AI_DAILY_LIMIT} remaining</span>
-              </span>
-            </div>
           </div>
 
           {!originalImage ? (
@@ -422,180 +284,94 @@ const BackgroundRemover: React.FC = () => {
             </Card>
           ) : (
             <div className="space-y-6">
-              {/* Method Selection and Adjustment Controls */}
+              {/* Adjustment Controls */}
               <Card className="max-w-2xl mx-auto">
                 <CardHeader>
-                  <CardTitle>Processing Method</CardTitle>
+                  <CardTitle>Adjustment Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <Tabs value={method} onValueChange={(v) => setMethod(v as 'browser' | 'ai')} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="browser">
-                        Browser (Unlimited)
-                      </TabsTrigger>
-                      <TabsTrigger value="ai" disabled={checkAiDailyLimit()}>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        AI Powered ({aiRemainingUses}/{AI_DAILY_LIMIT})
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="browser" className="space-y-4 mt-4">
-                      <p className="text-sm text-muted-foreground">
-                        Free unlimited processing in your browser. Adjust settings to fine-tune results.
+                  <p className="text-sm text-muted-foreground">
+                    Free unlimited processing in your browser. Adjust settings to fine-tune results.
+                  </p>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Edge Threshold: {threshold[0].toFixed(2)}</Label>
+                      <Slider
+                        value={threshold}
+                        onValueChange={setThreshold}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Lower values capture more details but may include background
                       </p>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Edge Threshold: {threshold[0].toFixed(2)}</Label>
-                          <Slider
-                            value={threshold}
-                            onValueChange={setThreshold}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            className="w-full"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Higher values remove more background, lower values preserve more edges
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Edge Smoothing: {smoothing[0].toFixed(1)}x</Label>
-                          <Slider
-                            value={smoothing}
-                            onValueChange={setSmoothing}
-                            min={1}
-                            max={5}
-                            step={0.5}
-                            className="w-full"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Higher values create smoother edges, lower values preserve sharp edges
-                          </p>
-                        </div>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="ai" className="space-y-4 mt-4">
-                      <p className="text-sm text-muted-foreground">
-                        High-quality AI-powered background removal using Remove.bg API. {aiRemainingUses} uses remaining today.
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Edge Smoothing: {smoothing[0].toFixed(1)}</Label>
+                      <Slider
+                        value={smoothing}
+                        onValueChange={setSmoothing}
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Higher values create smoother edges
                       </p>
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <ul className="text-sm space-y-2">
-                          <li className="flex items-start gap-2">
-                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Superior edge detection for complex images</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Better handling of hair, fur, and transparent objects</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>Professional quality results</span>
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                        <p className="text-xs text-amber-700 dark:text-amber-300">
-                          <strong>Note:</strong> AI method requires a Remove.bg API key with available credits. 
-                          If you encounter issues, verify your API key and credit balance at{' '}
-                          <a href="https://remove.bg/users/sign_in" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900 dark:hover:text-amber-100">
-                            remove.bg
-                          </a>
-                          , or use the free Browser method instead.
-                        </p>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              <div className="flex flex-wrap justify-center gap-4 mb-6">
-                {!processedImage && (
-                  <Button
-                    onClick={handleRemoveBackground}
-                    disabled={isProcessing || (method === 'ai' && checkAiDailyLimit())}
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        {method === 'ai' && <Sparkles className="mr-2 h-4 w-4" />}
-                        Remove Background
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {processedImage && (
-                  <>
-                    <Button onClick={handleDownload} size="lg">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PNG
-                    </Button>
-                    <Button onClick={() => setProcessedImage(null)} variant="outline" size="lg">
-                      Try Again
-                    </Button>
-                  </>
-                )}
-
-                <Button onClick={handleReset} variant="outline" size="lg">
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Start Over
-                </Button>
-              </div>
-
+              {/* Image Preview Grid */}
               <div className="grid md:grid-cols-2 gap-6">
+                {/* Original Image */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
                       <ImageIcon className="h-5 w-5" />
-                      Original
+                      Original Image
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+                    <div className="aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
                       <img
                         src={originalImage}
                         alt="Original"
-                        className="w-full h-full object-contain"
+                        className="max-h-full max-w-full object-contain"
                       />
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Processed Image */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
                       <ImageIcon className="h-5 w-5" />
-                      Processed
+                      Processed Image
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="relative aspect-square rounded-lg overflow-hidden"
-                         style={{
-                           backgroundImage: 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)',
-                           backgroundSize: '20px 20px',
-                           backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-                         }}>
+                    <div 
+                      className="aspect-square rounded-lg overflow-hidden flex items-center justify-center"
+                      style={{
+                        background: 'repeating-conic-gradient(#e5e5e5 0% 25%, white 0% 50%) 50% / 20px 20px'
+                      }}
+                    >
                       {processedImage ? (
                         <img
                           src={processedImage}
                           alt="Processed"
-                          className="w-full h-full object-contain"
+                          className="max-h-full max-w-full object-contain"
                         />
                       ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          {isProcessing ? (
-                            <div className="text-center">
-                              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
-                              <p>Removing background...</p>
-                            </div>
-                          ) : (
-                            <p>Click "Remove Background" to process</p>
-                          )}
+                        <div className="text-center text-muted-foreground p-4">
+                          <ImageIcon className="mx-auto h-12 w-12 mb-2 opacity-50" />
+                          <p>Click "Remove Background" to process</p>
                         </div>
                       )}
                     </div>
@@ -603,44 +379,68 @@ const BackgroundRemover: React.FC = () => {
                 </Card>
               </div>
 
-              {method === 'ai' && checkAiDailyLimit() && (
-                <div className="max-w-2xl mx-auto mt-6 p-4 bg-muted rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">
-                    You've reached your daily AI limit of {AI_DAILY_LIMIT} uses. Try the Browser method (unlimited) or come back tomorrow!
-                  </p>
-                </div>
-              )}
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button
+                  onClick={handleRemoveBackground}
+                  disabled={isProcessing}
+                  size="lg"
+                  className="min-w-[200px]"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Remove Background'
+                  )}
+                </Button>
+
+                {processedImage && (
+                  <Button onClick={handleDownload} variant="outline" size="lg">
+                    <Download className="mr-2 h-5 w-5" />
+                    Download PNG
+                  </Button>
+                )}
+
+                <Button onClick={handleReset} variant="ghost" size="lg">
+                  <RotateCcw className="mr-2 h-5 w-5" />
+                  Start Over
+                </Button>
+              </div>
             </div>
           )}
 
-          <div className="mt-12 max-w-3xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>How It Works</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-muted-foreground">
-                <div>
-                  <h3 className="font-semibold text-foreground mb-2">🔒 100% Private & Secure</h3>
-                  <p className="text-sm">
-                    All processing happens directly in your browser. Your images never leave your device - 
-                    no uploads, no servers, complete privacy.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-2">✨ AI-Powered Quality</h3>
-                  <p className="text-sm">
-                    Advanced machine learning models detect and remove backgrounds with professional quality,
-                    preserving fine details and edges.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-2">⚡ Fast & Free</h3>
-                  <p className="text-sm">
-                    Get 3 free background removals per day. No sign-up, no credit card, no watermarks.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Feature List */}
+          <div className="mt-16 grid md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Upload className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-2">100% Private</h3>
+              <p className="text-sm text-muted-foreground">
+                All processing happens in your browser. Your images never leave your device.
+              </p>
+            </div>
+            <div>
+              <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                <ImageIcon className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-2">Unlimited Free Uses</h3>
+              <p className="text-sm text-muted-foreground">
+                No daily limits, no sign-up required. Use as many times as you need.
+              </p>
+            </div>
+            <div>
+              <div className="w-12 h-12 mx-auto mb-4 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Download className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-2">High Quality Output</h3>
+              <p className="text-sm text-muted-foreground">
+                Download transparent PNG files ready for any use.
+              </p>
+            </div>
           </div>
         </div>
       </main>
