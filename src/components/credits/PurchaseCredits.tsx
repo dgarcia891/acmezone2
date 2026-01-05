@@ -1,11 +1,7 @@
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, CreditCard, Sparkles } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { Check, AlertCircle, Sparkles } from 'lucide-react';
 
 interface CreditPackage {
   id: string;
@@ -58,64 +54,22 @@ const creditPackages: CreditPackage[] = [
 ];
 
 export const PurchaseCredits = () => {
-  const [loadingPackage, setLoadingPackage] = useState<string | null>(null);
-  const { toast } = useToast();
-  const { user, session } = useAuth();
-
-  const handlePurchase = async (pkg: CreditPackage) => {
-    if (!user || !session) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to purchase credits.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setLoadingPackage(pkg.id);
-      
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          packageId: pkg.id,
-          credits: pkg.credits,
-          amount: pkg.price * 100, // Convert to cents
-        },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.url) {
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (error: any) {
-      console.error('Purchase error:', error);
-      toast({
-        title: "Purchase failed",
-        description: error.message || "Failed to initiate purchase. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingPackage(null);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gradient-primary mb-2">Purchase Credits</h2>
-        <p className="text-muted-foreground">Choose the perfect package for your job search needs</p>
+        <p className="text-muted-foreground">Credit purchases are temporarily unavailable</p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Unavailable notice */}
+      <div className="flex items-center justify-center gap-2 p-4 bg-muted rounded-lg max-w-md mx-auto">
+        <AlertCircle className="w-5 h-5 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Payment processing is currently being set up. Please check back later.
+        </p>
+      </div>
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 opacity-50 pointer-events-none">
         {creditPackages.map((pkg) => (
           <Card key={pkg.id} className={`relative elevated ${pkg.popular ? 'ring-2 ring-primary' : ''}`}>
             {pkg.popular && (
@@ -147,21 +101,11 @@ export const PurchaseCredits = () => {
             
             <CardContent className="space-y-4">
               <Button
-                onClick={() => handlePurchase(pkg)}
-                disabled={loadingPackage === pkg.id || !user}
+                disabled
                 className="w-full"
                 variant={pkg.popular ? "default" : "outline"}
               >
-                {loadingPackage === pkg.id ? (
-                  'Processing...'
-                ) : !user ? (
-                  'Login Required'
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Buy Now
-                  </>
-                )}
+                Unavailable
               </Button>
               
               <ul className="space-y-2 text-sm">

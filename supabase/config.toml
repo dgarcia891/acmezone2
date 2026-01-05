@@ -37,20 +37,5 @@ security_update_password_require_reauthentication = true
 enable_signup = true
 enable_confirmations = false
 
-[functions.analyze]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.create-payment]
-verify_jwt = false
-
 [functions.get-balance]
-verify_jwt = false
-
-[functions.validate-unlock-code]
-verify_jwt = false
-
-[functions.remove-background-ai]
 verify_jwt = false
