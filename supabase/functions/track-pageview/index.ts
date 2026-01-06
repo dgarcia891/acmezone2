@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
     // Check if IP is excluded
     const { data: excludedIp } = await supabase
-      .from('AZ_excluded_ips')
+      .from('az_excluded_ips')
       .select('id')
       .eq('ip_address', ip)
       .single();
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
     // Insert page view
     const { error } = await supabase
-      .from('AZ_page_views')
+      .from('az_page_views')
       .insert({
         path,
         ip_address: ip,

@@ -76,7 +76,7 @@ const SiteAnalytics = () => {
   const fetchExcludedIps = async () => {
     try {
       const { data, error } = await supabase
-        .from('AZ_excluded_ips' as any)
+        .from('az_excluded_ips' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -93,7 +93,7 @@ const SiteAnalytics = () => {
 
       // Fetch all page views
       const { data: pageViews, error } = await supabase
-        .from('AZ_page_views' as any)
+        .from('az_page_views' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -165,7 +165,7 @@ const SiteAnalytics = () => {
       setExcludingIp(true);
 
       const { error } = await supabase
-        .from('AZ_excluded_ips' as any)
+        .from('az_excluded_ips' as any)
         .insert({
           ip_address: currentIp,
           excluded_by: user.id,
@@ -203,7 +203,7 @@ const SiteAnalytics = () => {
   const removeExcludedIp = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('AZ_excluded_ips' as any)
+        .from('az_excluded_ips' as any)
         .delete()
         .eq('id', id);
 
