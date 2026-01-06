@@ -13,6 +13,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Admin from "./pages/Admin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
 import Support from "./pages/Support";
@@ -38,6 +39,11 @@ const App = () => (
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <Admin />
                   </ProtectedRoute>
                 } />
                 <Route path="/payment-success" element={

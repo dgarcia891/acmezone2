@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, User } from "lucide-react";
+import { useAdmin } from "@/hooks/useAdmin";
+import { LogOut, User, Shield } from "lucide-react";
 
 const Header = () => {
   const { user, signOut, loading } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -27,6 +29,14 @@ const Header = () => {
             <>
               {user ? (
                 <div className="flex items-center gap-3">
+                  {isAdmin && (
+                    <NavLink to="/admin" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
+                      <span className="flex items-center gap-1">
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </span>
+                    </NavLink>
+                  )}
                   <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
                     <span className="flex items-center gap-1">
                       <User className="h-4 w-4" />
