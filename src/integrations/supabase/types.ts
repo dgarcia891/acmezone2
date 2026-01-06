@@ -62,6 +62,72 @@ export type Database = {
         }
         Relationships: []
       }
+      az_products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          display_order: number
+          features: string[]
+          id: string
+          image: string
+          images: string[] | null
+          is_active: boolean
+          link: string | null
+          name: string
+          price_label: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          summary: string
+          tags: string[]
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          display_order?: number
+          features?: string[]
+          id: string
+          image: string
+          images?: string[] | null
+          is_active?: boolean
+          link?: string | null
+          name: string
+          price_label?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          summary: string
+          tags?: string[]
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          features?: string[]
+          id?: string
+          image?: string
+          images?: string[] | null
+          is_active?: boolean
+          link?: string | null
+          name?: string
+          price_label?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          summary?: string
+          tags?: string[]
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       az_user_roles: {
         Row: {
           created_at: string
