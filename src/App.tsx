@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Products from "./pages/Products";
@@ -23,6 +24,12 @@ import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
+// Component to handle page tracking inside BrowserRouter
+const PageTracker = () => {
+  usePageTracking();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -32,6 +39,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <PageTracker />
               <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Index />} />

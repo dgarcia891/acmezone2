@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      az_excluded_ips: {
+        Row: {
+          created_at: string
+          excluded_by: string | null
+          id: string
+          ip_address: string
+        }
+        Insert: {
+          created_at?: string
+          excluded_by?: string | null
+          id?: string
+          ip_address: string
+        }
+        Update: {
+          created_at?: string
+          excluded_by?: string | null
+          id?: string
+          ip_address?: string
+        }
+        Relationships: []
+      }
+      az_page_views: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          path: string
+          referrer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          path: string
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          path?: string
+          referrer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       az_user_roles: {
         Row: {
           created_at: string
