@@ -14,7 +14,8 @@ import {
   Check,
   Loader2,
   BarChart3,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react';
 import {
   Table,
@@ -27,10 +28,13 @@ import {
 
 interface PageViewStats {
   totalViews: number;
+  totalUniqueVisitors: number;
   todayViews: number;
+  todayUniqueVisitors: number;
   weekViews: number;
-  topPages: { path: string; count: number }[];
-  dailyTrend: { date: string; count: number }[];
+  weekUniqueVisitors: number;
+  topPages: { path: string; views: number; uniqueVisitors: number }[];
+  dailyTrend: { date: string; views: number; uniqueVisitors: number }[];
 }
 
 interface ExcludedIp {
@@ -44,8 +48,11 @@ const SiteAnalytics = () => {
   const { toast } = useToast();
   const [stats, setStats] = useState<PageViewStats>({
     totalViews: 0,
+    totalUniqueVisitors: 0,
     todayViews: 0,
+    todayUniqueVisitors: 0,
     weekViews: 0,
+    weekUniqueVisitors: 0,
     topPages: [],
     dailyTrend: [],
   });
@@ -113,39 +120,66 @@ const SiteAnalytics = () => {
 
       // Calculate stats
       const totalViews = views.length;
-      const todayViews = views.filter(v => new Date(v.created_at) >= today).length;
-      const weekViews = views.filter(v => new Date(v.created_at) >= weekAgo).length;
+      const totalUniqueVisitors = new Set(views.map(v => v.ip_address).filter(Boolean)).size;
+      
+      const todayViewsData = views.filter(v => new Date(v.created_at) >= today);
+      const todayViews = todayViewsData.length;
+      const todayUniqueVisitors = new Set(todayViewsData.map(v => v.ip_address).filter(Boolean)).size;
+      
+      const weekViewsData = views.filter(v => new Date(v.created_at) >= weekAgo);
+      const weekViews = weekViewsData.length;
+      const weekUniqueVisitors = new Set(weekViewsData.map(v => v.ip_address).filter(Boolean)).size;
 
-      // Top pages
-      const pageCounts: Record<string, number> = {};
+      // Top pages with unique visitors
+      const pageData: Record<string, { views: number; ips: Set<string> }> = {};
       views.forEach(v => {
-        pageCounts[v.path] = (pageCounts[v.path] || 0) + 1;
+        if (!pageData[v.path]) {
+          pageData[v.path] = { views: 0, ips: new Set() };
+        }
+        pageData[v.path].views++;
+        if (v.ip_address) {
+          pageData[v.path].ips.add(v.ip_address);
+        }
       });
-      const topPages = Object.entries(pageCounts)
-        .map(([path, count]) => ({ path, count }))
-        .sort((a, b) => b.count - a.count)
+      const topPages = Object.entries(pageData)
+        .map(([path, data]) => ({ 
+          path, 
+          views: data.views, 
+          uniqueVisitors: data.ips.size 
+        }))
+        .sort((a, b) => b.views - a.views)
         .slice(0, 10);
 
-      // Daily trend (last 7 days)
-      const dailyTrend: { date: string; count: number }[] = [];
+      // Daily trend (last 7 days) with unique visitors
+      const dailyTrend: { date: string; views: number; uniqueVisitors: number }[] = [];
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
         const nextDate = new Date(date);
         nextDate.setDate(nextDate.getDate() + 1);
         
-        const count = views.filter(v => {
+        const dayViews = views.filter(v => {
           const viewDate = new Date(v.created_at);
           return viewDate >= date && viewDate < nextDate;
-        }).length;
+        });
 
         dailyTrend.push({
           date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-          count,
+          views: dayViews.length,
+          uniqueVisitors: new Set(dayViews.map(v => v.ip_address).filter(Boolean)).size,
         });
       }
 
-      setStats({ totalViews, todayViews, weekViews, topPages, dailyTrend });
+      setStats({ 
+        totalViews, 
+        totalUniqueVisitors, 
+        todayViews, 
+        todayUniqueVisitors, 
+        weekViews, 
+        weekUniqueVisitors, 
+        topPages, 
+        dailyTrend 
+      });
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast({
@@ -227,20 +261,33 @@ const SiteAnalytics = () => {
 
   const isCurrentIpExcluded = currentIp && excludedIps.some(ip => ip.ip_address === currentIp);
 
-  const maxTrendCount = Math.max(...stats.dailyTrend.map(d => d.count), 1);
+  const maxTrendViews = Math.max(...stats.dailyTrend.map(d => d.views), 1);
 
   return (
     <div className="space-y-6">
       {/* Page View Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Page Views</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {loading ? '...' : stats.totalViews.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">All time</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.totalUniqueVisitors.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
@@ -255,18 +302,44 @@ const SiteAnalytics = () => {
             <div className="text-2xl font-bold">
               {loading ? '...' : stats.todayViews.toLocaleString()}
             </div>
+            <p className="text-xs text-muted-foreground">{stats.todayUniqueVisitors} unique</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Visitors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.todayUniqueVisitors.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">Since midnight</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Week</CardTitle>
+            <CardTitle className="text-sm font-medium">Week Views</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {loading ? '...' : stats.weekViews.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Last 7 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Week Visitors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : stats.weekUniqueVisitors.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Last 7 days</p>
           </CardContent>
@@ -280,7 +353,7 @@ const SiteAnalytics = () => {
             <BarChart3 className="h-5 w-5" />
             Traffic Trend (Last 7 Days)
           </CardTitle>
-          <CardDescription>Daily page views</CardDescription>
+          <CardDescription>Daily page views and unique visitors</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -288,22 +361,43 @@ const SiteAnalytics = () => {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : (
-            <div className="flex items-end justify-between gap-2 h-40">
-              {stats.dailyTrend.map((day, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div 
-                    className="w-full bg-primary/80 rounded-t transition-all hover:bg-primary"
-                    style={{ 
-                      height: `${Math.max((day.count / maxTrendCount) * 120, 4)}px` 
-                    }}
-                    title={`${day.count} views`}
-                  />
-                  <span className="text-xs text-muted-foreground text-center">
-                    {day.date.split(' ')[0]}
-                  </span>
-                  <span className="text-xs font-medium">{day.count}</span>
+            <div className="space-y-4">
+              <div className="flex gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-primary/80 rounded" />
+                  <span className="text-muted-foreground">Views</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500/80 rounded" />
+                  <span className="text-muted-foreground">Unique Visitors</span>
+                </div>
+              </div>
+              <div className="flex items-end justify-between gap-2 h-40">
+                {stats.dailyTrend.map((day, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex gap-0.5 justify-center items-end h-[120px]">
+                      <div 
+                        className="flex-1 bg-primary/80 rounded-t transition-all hover:bg-primary"
+                        style={{ 
+                          height: `${Math.max((day.views / maxTrendViews) * 120, 4)}px` 
+                        }}
+                        title={`${day.views} views`}
+                      />
+                      <div 
+                        className="flex-1 bg-green-500/80 rounded-t transition-all hover:bg-green-500"
+                        style={{ 
+                          height: `${Math.max((day.uniqueVisitors / maxTrendViews) * 120, 4)}px` 
+                        }}
+                        title={`${day.uniqueVisitors} unique visitors`}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground text-center">
+                      {day.date.split(' ')[0]}
+                    </span>
+                    <span className="text-xs font-medium">{day.views}/{day.uniqueVisitors}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -333,6 +427,7 @@ const SiteAnalytics = () => {
                 <TableRow>
                   <TableHead>Page</TableHead>
                   <TableHead className="text-right">Views</TableHead>
+                  <TableHead className="text-right">Unique</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -340,7 +435,10 @@ const SiteAnalytics = () => {
                   <TableRow key={i}>
                     <TableCell className="font-mono text-sm">{page.path}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="secondary">{page.count.toLocaleString()}</Badge>
+                      <Badge variant="secondary">{page.views.toLocaleString()}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="outline">{page.uniqueVisitors.toLocaleString()}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}
