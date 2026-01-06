@@ -18,18 +18,8 @@ export const useCredits = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const { data, error } = await supabase.functions.invoke('get-balance');
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data?.ok) {
-        setBalance(data.balance || 0);
-      } else {
-        throw new Error(data?.error || 'Failed to fetch balance');
-      }
+      // Credits system not yet configured - show 0 balance
+      setBalance(0);
     } catch (err: any) {
       console.error('Error fetching balance:', err);
       setError(err.message || 'Failed to fetch credit balance');
