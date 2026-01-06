@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Product, useProducts } from '@/hooks/useProducts';
 import { Save, X, Plus, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ImageUpload from './ImageUpload';
 
 interface ProductEditorProps {
   product: Product | null;
@@ -340,13 +341,11 @@ const ProductEditor = ({ product, open, onClose, onSave }: ProductEditorProps) =
               <h3 className="text-lg font-semibold">Images</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="image">Main Image URL</Label>
-                <Input
-                  id="image"
+                <Label htmlFor="image">Main Image</Label>
+                <ImageUpload
                   value={formData.image}
-                  onChange={e => setFormData(prev => ({ ...prev, image: e.target.value }))}
-                  placeholder="/lovable-uploads/image.png"
-                  required
+                  onChange={(url) => setFormData(prev => ({ ...prev, image: url }))}
+                  placeholder="Enter URL or upload main image..."
                 />
               </div>
 
@@ -363,21 +362,14 @@ const ProductEditor = ({ product, open, onClose, onSave }: ProductEditorProps) =
                   </Button>
                 </div>
                 {formData.images.map((img, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={img}
-                      onChange={e => handleArrayChange('images', index, e.target.value)}
-                      placeholder="/lovable-uploads/image.png"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleArrayRemove('images', index)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
+                  <ImageUpload
+                    key={index}
+                    value={img}
+                    onChange={(url) => handleArrayChange('images', index, url)}
+                    onRemove={() => handleArrayRemove('images', index)}
+                    showRemove={true}
+                    placeholder="Enter URL or upload image..."
+                  />
                 ))}
               </div>
             </div>
