@@ -18,12 +18,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import ogImage from "@/assets/og-default.jpg";
 
 const ProductCard = ({ product }: { product: Product }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const hasMultipleImages = product.images && product.images.length > 1;
   const displayImages = product.images && product.images.length > 0 ? product.images : [product.image];
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const hasMultipleImages = product.images && product.images.length > 1;
-  const displayImages = product.images || [product.image];
 
   return (
     <Card className="overflow-hidden hover-scale transition-shadow shadow-sm hover:shadow-lg elevated flex flex-col">
