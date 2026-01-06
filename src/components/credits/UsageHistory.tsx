@@ -37,31 +37,9 @@ export const UsageHistory = () => {
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        
-        // Try to fetch from existing PA tables first, then fallback to empty arrays
-        try {
-          const { data: usage } = await supabase
-            .from('pa_usage_logs')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(20);
-          setUsageHistory(usage || []);
-        } catch (error) {
-          console.log('No usage logs available yet');
-          setUsageHistory([]);
-        }
-
-        try {
-          const { data: credits } = await supabase
-            .from('pa_credits')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(20);
-          setCreditHistory(credits || []);
-        } catch (error) {
-          console.log('No credit history available yet');
-          setCreditHistory([]);
-        }
+        // Tables don't exist yet - show empty state
+        setUsageHistory([]);
+        setCreditHistory([]);
       } catch (error) {
         console.error('Error fetching history:', error);
       } finally {
