@@ -76,7 +76,7 @@ const Admin = () => {
       
       // Use raw query to avoid type issues with newly created table
       const { data: rolesData, error: rolesError } = await supabase
-        .from('AZ_user_roles' as any)
+        .from('az_user_roles')
         .select('*')
         .order('created_at', { ascending: false });
 
