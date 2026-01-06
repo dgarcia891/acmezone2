@@ -3,8 +3,12 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { products } from "@/data/products";
+import { useProducts, Product } from "@/hooks/useProducts";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil } from "lucide-react";
+import ProductEditor from "@/components/admin/ProductEditor";
 import {
   Carousel,
   CarouselContent,
@@ -16,9 +20,25 @@ import {
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const product = products.find((p) => p.slug === slug);
+  const { getProductBySlug, fetchProducts } = useProducts();
+  const { isAdmin } = useAdmin();
+  
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!slug) return;
+      setLoading(true);
+      const data = await getProductBySlug(slug);
+      setProduct(data);
+      setLoading(false);
+    };
+    loadProduct();
+  }, [slug]);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -27,6 +47,39 @@ const ProductDetail = () => {
       setCurrentImageIndex(carouselApi.selectedScrollSnap());
     });
   }, [carouselApi]);
+
+  const handleProductSave = async () => {
+    if (slug) {
+      const data = await getProductBySlug(slug);
+      setProduct(data);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="container mx-auto py-12">
+          <article className="grid gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <Skeleton className="w-full aspect-video rounded-lg" />
+            </div>
+            <div className="lg:col-span-7 space-y-4">
+              <Skeleton className="h-10 w-2/3" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-4 w-1/3" />
+              <div className="space-y-2 mt-6">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+          </article>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   if (!product) {
     return (
@@ -48,7 +101,7 @@ const ProductDetail = () => {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
-    description: product.seoDescription || product.summary,
+    description: product.seo_description || product.summary,
     category: product.category,
     brand: { "@type": "Brand", name: "Acme Zone" },
     url: `https://acme.zone/products/${product.slug}`,
@@ -63,8 +116,8 @@ const ProductDetail = () => {
 
   const pageUrl = `https://acme.zone/products/${product.slug}`;
   const imageUrl = product.image.startsWith("http") ? product.image : `https://acme.zone${product.image}`;
-  const title = product.seoTitle || `${product.name} | Acme Zone`;
-  const description = product.seoDescription || product.summary;
+  const title = product.seo_title || `${product.name} | Acme Zone`;
+  const description = product.seo_description || product.summary;
 
   return (
     <>
@@ -139,14 +192,27 @@ const ProductDetail = () => {
             )}
           </div>
           <div className="lg:col-span-7">
-            <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditorOpen(true)}
+                  className="flex-shrink-0"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+            </div>
             <p className="mt-2 text-muted-foreground">{product.summary}</p>
             <div className="mt-4 text-sm text-muted-foreground">
               <span className="mr-4">Category: {product.category}</span>
               {product.type && <span>Type: {product.type}</span>}
             </div>
-            {product.priceLabel && (
-              <div className="mt-2 text-sm">Pricing: {product.priceLabel}</div>
+            {product.price_label && (
+              <div className="mt-2 text-sm">Pricing: {product.price_label}</div>
             )}
             <section className="mt-6">
               <div className="space-y-4 leading-relaxed text-base">
@@ -193,6 +259,15 @@ const ProductDetail = () => {
         </article>
       </main>
       <Footer />
+
+      {isAdmin && (
+        <ProductEditor
+          product={product}
+          open={isEditorOpen}
+          onClose={() => setIsEditorOpen(false)}
+          onSave={handleProductSave}
+        />
+      )}
     </>
   );
 };
