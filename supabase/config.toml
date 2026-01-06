@@ -1,1 +1,7 @@
 project_id = "ypeopjbfbxmjfkejbkuq"
+
+[functions.get-balance]
+verify_jwt = false
+
+[functions.track-pageview]
+verify_jwt = false
