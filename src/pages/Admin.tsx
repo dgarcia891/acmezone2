@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import SiteAnalytics from '@/components/admin/SiteAnalytics';
+import ProductManagement from '@/components/admin/ProductManagement';
 import { 
   Users, 
   Shield, 
@@ -22,7 +23,8 @@ import {
   Mail,
   RefreshCw,
   ArrowLeft,
-  BarChart3
+  BarChart3,
+  Package
 } from 'lucide-react';
 
 interface UserStats {
@@ -186,6 +188,10 @@ const Admin = () => {
                 <Users className="h-4 w-4" />
                 Users
               </TabsTrigger>
+              <TabsTrigger value="products" className="gap-2">
+                <Package className="h-4 w-4" />
+                Products
+              </TabsTrigger>
               <TabsTrigger value="analytics" className="gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Analytics
@@ -289,6 +295,10 @@ const Admin = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="products">
+              <ProductManagement />
             </TabsContent>
 
             <TabsContent value="analytics">

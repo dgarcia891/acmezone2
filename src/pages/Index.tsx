@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { products } from "@/data/products";
+import { useProducts, Product } from "@/hooks/useProducts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Carousel,
   CarouselContent,
@@ -16,7 +17,10 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ogImage from "@/assets/og-default.jpg";
 
-const ProductCard = ({ product }: { product: typeof products[0] }) => {
+const ProductCard = ({ product }: { product: Product }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const hasMultipleImages = product.images && product.images.length > 1;
+  const displayImages = product.images && product.images.length > 0 ? product.images : [product.image];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const hasMultipleImages = product.images && product.images.length > 1;
   const displayImages = product.images || [product.image];
@@ -27,7 +31,7 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
         <CardTitle className="text-xl font-bold leading-tight">{product.name}</CardTitle>
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{product.category}</span>
-          {product.priceLabel && <span className="font-medium">{product.priceLabel}</span>}
+          {product.price_label && <span className="font-medium">{product.price_label}</span>}
         </div>
       </CardHeader>
       
@@ -79,6 +83,8 @@ const ProductCard = ({ product }: { product: typeof products[0] }) => {
 };
 
 const Index = () => {
+  const { products, loading } = useProducts();
+
   return (
     <>
       <Helmet>
@@ -126,11 +132,31 @@ const Index = () => {
               <h2 className="font-display text-3xl lg:text-4xl tracking-tight mb-4">Featured Products</h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Discover tools and extensions designed for modern workflows</p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <Skeleton className="h-6 w-2/3" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </CardHeader>
+                    <div className="px-6 pb-4">
+                      <Skeleton className="h-32 w-full rounded-lg" />
+                    </div>
+                    <CardContent>
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-10 w-full mt-4" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>
