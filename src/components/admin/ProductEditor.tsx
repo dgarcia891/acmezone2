@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Product, useProducts } from '@/hooks/useProducts';
-import { Save, X, Plus, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Save, X, Plus, Trash2, Loader2, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ImageUpload from './ImageUpload';
 
@@ -112,6 +113,71 @@ const ProductEditor = ({ product, open, onClose, onSave }: ProductEditorProps) =
     }));
   };
 
+  const additionalUploadInputId = useId();
+  const [additionalUploading, setAdditionalUploading] = useState(false);
+
+  const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file.',
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image under 5MB.',
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setAdditionalUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => {
+        const existing = (prev.images || []).filter(i => i.trim() !== '');
+        return { ...prev, images: [...existing, publicUrl, ''] };
+      });
+
+      toast({
+        title: 'Image uploaded',
+        description: 'Added to additional images (click Save Product to persist).',
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error?.message || 'Failed to upload image. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAdditionalUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -167,8 +233,8 @@ const ProductEditor = ({ product, open, onClose, onSave }: ProductEditorProps) =
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[70vh] pr-4">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <ScrollArea className="max-h-[70vh]">
+          <form onSubmit={handleSubmit} className="space-y-6 pr-6">
             {/* Basic Info */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
@@ -350,16 +416,28 @@ const ProductEditor = ({ product, open, onClose, onSave }: ProductEditorProps) =
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <Label>Additional Images</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleArrayAdd('images')}
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Add Image
-                  </Button>
+
+                  <input
+                    id={additionalUploadInputId}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAdditionalImageUpload}
+                    className="sr-only"
+                  />
+
+                  {additionalUploading ? (
+                    <Button type="button" variant="outline" size="sm" disabled>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Uploading...
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <label htmlFor={additionalUploadInputId} className="cursor-pointer">
+                        <Upload className="w-4 h-4 mr-1" /> Upload Image
+                      </label>
+                    </Button>
+                  )}
                 </div>
                 {formData.images.map((img, index) => (
                   <ImageUpload
