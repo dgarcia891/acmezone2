@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useId } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,7 @@ const ImageUpload = ({
 }: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const { toast } = useToast();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,26 +101,37 @@ const ImageUpload = ({
           className="flex-1"
         />
         <input
+          id={fileInputId}
           ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="hidden"
+          className="sr-only"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          title="Upload image"
-        >
-          {uploading ? (
+
+        {uploading ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            disabled
+            title="Uploading"
+          >
             <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Upload className="w-4 h-4" />
-          )}
-        </Button>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            asChild
+            title="Upload image"
+          >
+            <label htmlFor={fileInputId} className="cursor-pointer">
+              <Upload className="w-4 h-4" />
+            </label>
+          </Button>
+        )}
         {showRemove && onRemove && (
           <Button
             type="button"
