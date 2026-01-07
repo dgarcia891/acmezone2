@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -14,7 +12,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get IP from headers (Cloudflare/proxy) or connection
     const ip = req.headers.get('cf-connecting-ip') || 
@@ -39,13 +36,18 @@ Deno.serve(async (req) => {
     }
 
     // Check if IP is excluded
-    const { data: excludedIp } = await supabase
-      .from('az_excluded_ips')
-      .select('id')
-      .eq('ip_address', ip)
-      .single();
+    const excludedResp = await fetch(
+      `${supabaseUrl}/rest/v1/az_excluded_ips?ip_address=eq.${encodeURIComponent(ip)}&select=id&limit=1`,
+      {
+        headers: {
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+        },
+      }
+    );
+    const excludedData = await excludedResp.json();
 
-    if (excludedIp) {
+    if (excludedData && excludedData.length > 0) {
       console.log(`Skipping page view for excluded IP: ${ip}`);
       return new Response(JSON.stringify({ success: true, excluded: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -53,18 +55,29 @@ Deno.serve(async (req) => {
     }
 
     // Insert page view
-    const { error } = await supabase
-      .from('az_page_views')
-      .insert({
-        path,
-        ip_address: ip,
-        user_agent: userAgent || req.headers.get('user-agent'),
-        referrer: referrer || req.headers.get('referer'),
-      });
+    const insertResp = await fetch(
+      `${supabaseUrl}/rest/v1/az_page_views`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          path,
+          ip_address: ip,
+          user_agent: userAgent || req.headers.get('user-agent'),
+          referrer: referrer || req.headers.get('referer'),
+        }),
+      }
+    );
 
-    if (error) {
-      console.error('Error inserting page view:', error);
-      throw error;
+    if (!insertResp.ok) {
+      const errorText = await insertResp.text();
+      console.error('Error inserting page view:', errorText);
+      throw new Error(errorText);
     }
 
     console.log(`Page view tracked: ${path} from ${ip}`);
