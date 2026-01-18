@@ -1,13 +1,80 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { usePageTracking } from "@/hooks/usePageTracking";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
+import Contact from "./pages/Contact";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Admin from "./pages/Admin";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PreApplyAI from "./pages/PreApplyAI";
+import Support from "./pages/Support";
+import ChromeExtensionImageEditor from "./pages/ChromeExtensionImageEditor";
+import BackgroundRemover from "./pages/BackgroundRemover";
+import ScrollToTop from "./components/ScrollToTop";
 
-const App = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="p-10 bg-white shadow-lg rounded-xl text-center">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">Welcome to Acme.zone</h1>
-        <p className="text-gray-600">Scaffolded with Vite + React + Tailwind CSS</p>
-      </div>
-    </div>
-  );
+const queryClient = new QueryClient();
+
+// Component to handle page tracking inside BrowserRouter
+const PageTracker = () => {
+  usePageTracking();
+  return null;
 };
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <HelmetProvider>
+        <AuthProvider>
+          <div className="min-h-screen flex flex-col">
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <PageTracker />
+              <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/payment-success" element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } />
+                <Route path="/products" element={<Products />} />
+                <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
+                <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
+                <Route path="/background-remover" element={<BackgroundRemover />} />
+                <Route path="/products/:slug" element={<ProductDetail />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/support" element={<Support />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </div>
+        </AuthProvider>
+      </HelmetProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
