@@ -1,0 +1,14 @@
+{
+    "system": "Antigravity Orchestrator",
+    "version": "4.5-retrofit",
+    "last_updated": "2025-02-27",
+    "mode": "Architecture-First",
+    "protocols": {
+        "lovable_hybrid": true,
+        "supabase_safety_lock": "STRICT",
+        "architecture_enforced": true,
+        "security_clamps": true
+    },
+    "memory_location": "docs/project_state.json",
+    "architecture_location": "docs/architecture.md"
+}
