@@ -1,0 +1,15 @@
+{
+  "features": {},
+  "backlog": [],
+  "constraints": [
+    "Relative paths only",
+    "No rm/rmdir/del/sudo",
+    "500-line limit for file edits"
+  ],
+  "version": "4.0",
+  "project_name": "Acme.zone Website",
+  "project_type": "Web Application",
+  "deployment_target": "Lovable.dev",
+  "repository": "https://github.com/dgarcia891/acmezone2.git",
+  "stack_preference": "Lovable.dev Compatible (React/Vite/Tailwind)"
+}
