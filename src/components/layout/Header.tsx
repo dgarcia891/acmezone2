@@ -2,7 +2,15 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
-import { LogOut, User, Shield } from "lucide-react";
+import { LogOut, User, Shield, LayoutGrid, Youtube, Briefcase } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const { user, signOut, loading } = useAuth();
@@ -22,6 +30,29 @@ const Header = () => {
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <NavLink to="/" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Home</NavLink>
+
+          {/* My Apps Dropdown */}
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors outline-none">
+                <LayoutGrid className="h-4 w-4" />
+                My Apps
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Product Dashboards</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/insightreel/dashboard')}>
+                  <Youtube className="mr-2 h-4 w-4 text-destructive" />
+                  InsightReel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                  Pre-Apply AI
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           <NavLink to="/products" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Products</NavLink>
           <NavLink to="/contact" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Contact</NavLink>
           

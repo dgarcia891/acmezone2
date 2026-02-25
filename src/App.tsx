@@ -24,6 +24,8 @@ import HeicToJpgConverter from "./pages/HeicToJpgConverter";
 import InsightReelPricing from "./pages/InsightReelPricing";
 import InsightReelSuccess from "./pages/InsightReelSuccess";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -82,6 +84,8 @@ const App = () => (
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
