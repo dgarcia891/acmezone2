@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, User, Shield, Zap, CreditCard } from 'lucide-react';
+import { LogOut, User, Shield, Zap, CreditCard, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditBalance } from '@/components/credits/CreditBalance';
@@ -125,6 +125,45 @@ const Dashboard = () => {
                     Extension connected & ready to use
                   </p>
                 </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <Separator className="my-8" />
+
+          {/* Your Active Products Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <LayoutDashboard className="h-6 w-6 text-primary" />
+              Your Products
+            </h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* InsightReel Product Card */}
+              <Card className="elevated border-primary/20">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">InsightReel</CardTitle>
+                    <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded-full">Pro Active</span>
+                  </div>
+                  <CardDescription>AI-powered YouTube video insights &amp; analytics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Access your recent video analyses, fact-checks, and manage your subscription.
+                  </p>
+                  <Button onClick={() => navigate('/insightreel/dashboard')} className="w-full">
+                    Open Dashboard
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Placeholder for future products */}
+              <Card className="elevated border-dashed">
+                <CardHeader>
+                  <CardTitle className="text-lg text-muted-foreground">More Apps Coming Soon</CardTitle>
+                  <CardDescription>Stay tuned for more Acme Zone tools.</CardDescription>
+                </CardHeader>
               </Card>
             </div>
           </div>
