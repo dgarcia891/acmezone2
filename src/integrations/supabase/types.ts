@@ -128,6 +128,57 @@ export type Database = {
         }
         Relationships: []
       }
+      az_profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_pro: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_pro?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_pro?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_usage_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       az_user_roles: {
         Row: {
           created_at: string
