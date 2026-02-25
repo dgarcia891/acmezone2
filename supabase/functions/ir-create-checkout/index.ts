@@ -35,7 +35,8 @@ serve(async (req) => {
     }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
+    const priceId = Deno.env.get("STRIPE_PRICE_ID");
+    if (!stripeKey || !priceId) {
       return new Response(JSON.stringify({ error: "SERVER_CONFIG" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -65,15 +66,7 @@ serve(async (req) => {
       client_reference_id: user.id,
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: "InsightReel Pro",
-              description: "Unlimited AI-powered video transcript analysis",
-            },
-            unit_amount: 999,
-            recurring: { interval: "month" },
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
