@@ -58,10 +58,10 @@ export default function InsightReelSuccess() {
 
               <div className="pt-4 flex flex-col gap-2">
                 <Button asChild>
-                  <Link to="/products/insightreel">Back to InsightReel</Link>
+                  <Link to="/insightreel/dashboard">Go to InsightReel Dashboard</Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link to="/dashboard">Go to Dashboard</Link>
+                  <Link to="/insightreel/pricing">View Plan</Link>
                 </Button>
               </div>
             </CardContent>
