@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ir-manage-subscription]
 verify_jwt = false
+
+[functions.ir-get-history]
+verify_jwt = false
