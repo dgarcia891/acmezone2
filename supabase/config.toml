@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.track-pageview]
 verify_jwt = false
+
+[functions.ir-create-checkout]
+verify_jwt = false
+
+[functions.ir-stripe-webhook]
+verify_jwt = false
+
+[functions.ir-analyze]
+verify_jwt = false
+
+[functions.ir-manage-subscription]
+verify_jwt = false

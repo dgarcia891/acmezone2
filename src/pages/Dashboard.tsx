@@ -1,16 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, User, Shield, Zap } from 'lucide-react';
+import { LogOut, User, Shield, Zap, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { PurchaseCredits } from '@/components/credits/PurchaseCredits';
 import { UsageHistory } from '@/components/credits/UsageHistory';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -22,9 +24,35 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  const [managingSubscription, setManagingSubscription] = useState(false);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleManageSubscription = async () => {
+    setManagingSubscription(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in first.');
+        return;
+      }
+      const res = await supabase.functions.invoke('ir-manage-subscription', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.error || !res.data?.url) {
+        const msg = res.data?.message || 'Could not open subscription portal.';
+        toast.error(msg);
+        return;
+      }
+      window.open(res.data.url, '_blank');
+    } catch {
+      toast.error('Something went wrong.');
+    } finally {
+      setManagingSubscription(false);
+    }
   };
 
   if (loading) {
@@ -59,6 +87,10 @@ const Dashboard = () => {
                   Signed in as {user.email}
                 </p>
               </div>
+              <Button variant="outline" onClick={handleManageSubscription} disabled={managingSubscription}>
+                <CreditCard className="w-4 h-4 mr-2" />
+                {managingSubscription ? 'Loading…' : 'Manage Subscription'}
+              </Button>
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
