@@ -29,6 +29,11 @@ serve(async (req) => {
     return new Response("Invalid signature", { status: 400 });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.client_reference_id;
@@ -38,40 +43,42 @@ serve(async (req) => {
       return new Response("Missing user id", { status: 400 });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    if (session.mode === "subscription") {
+      // Managed Pro subscription
+      const { error } = await supabase
+        .from("az_profiles")
+        .update({ is_pro: true })
+        .eq("user_id", userId);
 
-    // Upgrade user to Pro
-    const { error } = await supabase
-      .from("az_profiles")
-      .update({ is_pro: true })
-      .eq("user_id", userId);
+      if (error) {
+        console.error("Failed to update profile (Pro):", error);
+        return new Response("DB error", { status: 500 });
+      }
+      console.log(`User ${userId} upgraded to Pro`);
+    } else if (session.mode === "payment") {
+      // BYOK Lifetime License one-time payment
+      const { error } = await supabase
+        .from("az_profiles")
+        .update({ has_byok_license: true })
+        .eq("user_id", userId);
 
-    if (error) {
-      console.error("Failed to update profile:", error);
-      return new Response("DB error", { status: 500 });
+      if (error) {
+        console.error("Failed to update profile (BYOK):", error);
+        return new Response("DB error", { status: 500 });
+      }
+      console.log(`User ${userId} granted BYOK lifetime license`);
     }
-
-    console.log(`User ${userId} upgraded to Pro`);
   }
 
   if (event.type === "customer.subscription.deleted") {
     const subscription = event.data.object as Stripe.Subscription;
-    // Look up user by Stripe customer ID
-    const stripe2 = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    const sessions = await stripe2.checkout.sessions.list({
+    const sessions = await stripe.checkout.sessions.list({
       customer: subscription.customer as string,
       limit: 1,
     });
     const userId = sessions.data[0]?.client_reference_id;
 
     if (userId) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
       await supabase
         .from("az_profiles")
         .update({ is_pro: false })

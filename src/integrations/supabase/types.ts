@@ -132,24 +132,30 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          has_byok_license: boolean
           id: string
           is_pro: boolean
+          trial_credits: number
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           email: string
+          has_byok_license?: boolean
           id?: string
           is_pro?: boolean
+          trial_credits?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           email?: string
+          has_byok_license?: boolean
           id?: string
           is_pro?: boolean
+          trial_credits?: number
           updated_at?: string
           user_id?: string
         }
