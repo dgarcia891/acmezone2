@@ -1,26 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "chrome-extension://plohgpfkkhnennkgoneolbpomnhoclmk",
+];
 
-function json(body: Record<string, unknown>, status = 200) {
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
+}
+
+function json(body: Record<string, unknown>, status = 200, cors: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const cors = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
     /* ── Auth ─────────────────────────────────────── */
     const auth = req.headers.get("Authorization") ?? "";
-    if (!auth.startsWith("Bearer ")) return json({ error: "UNAUTHORIZED" }, 401);
+    if (!auth.startsWith("Bearer ")) return json({ error: "UNAUTHORIZED" }, 401, cors);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,7 +39,7 @@ serve(async (req) => {
       global: { headers: { Authorization: auth } },
     });
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !user) return json({ error: "UNAUTHORIZED" }, 401);
+    if (authErr || !user) return json({ error: "UNAUTHORIZED" }, 401, cors);
 
     /* ── Pro check ────────────────────────────────── */
     const adminClient = createClient(supabaseUrl, serviceKey);
@@ -41,16 +50,16 @@ serve(async (req) => {
       .single();
 
     if (!profile?.is_pro) {
-      return json({ error: "PAYMENT_REQUIRED", message: "Pro subscription required" }, 402);
+      return json({ error: "PAYMENT_REQUIRED", message: "Pro subscription required" }, 402, cors);
     }
 
     /* ── Parse body ───────────────────────────────── */
     const { transcript, context } = await req.json();
-    if (!transcript) return json({ error: "BAD_REQUEST", message: "transcript is required" }, 400);
+    if (!transcript) return json({ error: "BAD_REQUEST", message: "transcript is required" }, 400, cors);
 
     /* ── Call Gemini via Lovable AI gateway ────────── */
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return json({ error: "SERVER_CONFIG", message: "AI key not configured" }, 500);
+    if (!apiKey) return json({ error: "SERVER_CONFIG", message: "AI key not configured" }, 500, cors);
 
     const systemPrompt = `You are InsightReel, an AI that analyzes video transcripts and provides concise, actionable insights. Focus on key takeaways, sentiment, and notable patterns.`;
     const userPrompt = context
@@ -75,7 +84,7 @@ serve(async (req) => {
 
     if (!aiResp.ok) {
       console.error("AI provider error:", aiResp.status, await aiResp.text());
-      return json({ error: "PROVIDER_ERROR" }, 502);
+      return json({ error: "PROVIDER_ERROR" }, 502, cors);
     }
 
     const aiData = await aiResp.json();
@@ -88,9 +97,9 @@ serve(async (req) => {
       metadata: { transcript_length: transcript.length },
     });
 
-    return json({ ok: true, analysis });
+    return json({ ok: true, analysis }, 200, cors);
   } catch (err) {
     console.error("ir-analyze error:", err);
-    return json({ error: "SERVER_ERROR" }, 500);
+    return json({ error: "SERVER_ERROR" }, 500, getCorsHeaders(req));
   }
 });
