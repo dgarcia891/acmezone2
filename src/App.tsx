@@ -21,6 +21,7 @@ import Support from "./pages/Support";
 import ChromeExtensionImageEditor from "./pages/ChromeExtensionImageEditor";
 import BackgroundRemover from "./pages/BackgroundRemover";
 import HeicToJpgConverter from "./pages/HeicToJpgConverter";
+import InsightReelLanding from "./pages/InsightReelLanding";
 import InsightReelPricing from "./pages/InsightReelPricing";
 import InsightReelSuccess from "./pages/InsightReelSuccess";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
                 <Route path="/background-remover" element={<BackgroundRemover />} />
                 <Route path="/heic-to-jpg" element={<HeicToJpgConverter />} />
+                <Route path="/insightreel" element={<InsightReelLanding />} />
                 <Route path="/insightreel/pricing" element={<InsightReelPricing />} />
                 <Route path="/insightreel/success" element={
                   <ProtectedRoute>
