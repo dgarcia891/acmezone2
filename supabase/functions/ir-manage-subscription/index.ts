@@ -13,6 +13,24 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
+    /* ── Maintenance mode kill switch ─────────────── */
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: config } = await adminClient
+      .from("az_app_config")
+      .select("value")
+      .eq("key", "maintenance_mode")
+      .single();
+
+    if (config?.value === true) {
+      return new Response(JSON.stringify({ error: "SERVICE_UNAVAILABLE", message: "InsightReel is temporarily under maintenance." }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), {
@@ -48,7 +66,6 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
-    // Find the Stripe customer by email
     const customers = await stripe.customers.list({ email, limit: 1 });
     if (customers.data.length === 0) {
       return new Response(

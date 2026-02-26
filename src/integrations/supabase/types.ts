@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      az_app_config: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       az_excluded_ips: {
         Row: {
           created_at: string
@@ -131,30 +152,36 @@ export type Database = {
       az_profiles: {
         Row: {
           created_at: string
+          daily_usage_count: number
           email: string
           has_byok_license: boolean
           id: string
           is_pro: boolean
+          last_usage_reset: string
           trial_credits: number
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          daily_usage_count?: number
           email: string
           has_byok_license?: boolean
           id?: string
           is_pro?: boolean
+          last_usage_reset?: string
           trial_credits?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          daily_usage_count?: number
           email?: string
           has_byok_license?: boolean
           id?: string
           is_pro?: boolean
+          last_usage_reset?: string
           trial_credits?: number
           updated_at?: string
           user_id?: string

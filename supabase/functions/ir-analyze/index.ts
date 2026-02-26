@@ -22,9 +22,36 @@ function json(body: Record<string, unknown>, status = 200, cors: Record<string, 
   });
 }
 
+/* ── Burst protection: in-memory per-user concurrency limiter ── */
+const activeRequests = new Map<string, number>();
+const MAX_CONCURRENT = 2;
+
+const PRO_DAILY_LIMIT = 100;
+
 serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+  /* ── Maintenance mode kill switch ─────────────── */
+  try {
+    const adminClientEarly = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: config } = await adminClientEarly
+      .from("az_app_config")
+      .select("value")
+      .eq("key", "maintenance_mode")
+      .single();
+
+    if (config?.value === true) {
+      return json({ error: "SERVICE_UNAVAILABLE", message: "InsightReel is temporarily under maintenance. Please try again later." }, 503, cors);
+    }
+  } catch (e) {
+    console.error("Maintenance check failed, proceeding:", e);
+  }
+
+  let userId: string | null = null;
 
   try {
     /* ── Auth ─────────────────────────────────────── */
@@ -40,15 +67,41 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "UNAUTHORIZED" }, 401, cors);
 
+    userId = user.id;
+
+    /* ── Burst protection ─────────────────────────── */
+    const current = activeRequests.get(userId) ?? 0;
+    if (current >= MAX_CONCURRENT) {
+      return json({ error: "TOO_MANY_REQUESTS", message: "Too many concurrent requests. Please wait for your current analysis to complete." }, 429, cors);
+    }
+    activeRequests.set(userId, current + 1);
+
     /* ── Fetch profile ────────────────────────────── */
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data: profile } = await adminClient
       .from("az_profiles")
-      .select("is_pro, has_byok_license, trial_credits")
+      .select("is_pro, has_byok_license, trial_credits, daily_usage_count, last_usage_reset")
       .eq("user_id", user.id)
       .single();
 
-    if (!profile) return json({ error: "UNAUTHORIZED", message: "Profile not found" }, 401, cors);
+    if (!profile) {
+      return json({ error: "UNAUTHORIZED", message: "Profile not found" }, 401, cors);
+    }
+
+    /* ── Daily quota reset check ──────────────────── */
+    const now = new Date();
+    const lastReset = new Date(profile.last_usage_reset);
+    const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+    let dailyCount = profile.daily_usage_count;
+
+    if (hoursSinceReset >= 24) {
+      // Reset daily counter
+      dailyCount = 0;
+      await adminClient
+        .from("az_profiles")
+        .update({ daily_usage_count: 0, last_usage_reset: now.toISOString() })
+        .eq("user_id", user.id);
+    }
 
     /* ── Parse body ───────────────────────────────── */
     const { transcript, context } = await req.json();
@@ -72,6 +125,16 @@ serve(async (req) => {
       }, 402, cors);
     }
 
+    /* ── Daily quota enforcement (Pro & Trial) ────── */
+    if (mode === "pro" && dailyCount >= PRO_DAILY_LIMIT) {
+      return json({
+        error: "TOO_MANY_REQUESTS",
+        message: "Fair Use Policy: You have exceeded your daily limit of 100 analyses. Your quota resets every 24 hours.",
+        daily_usage_count: dailyCount,
+        limit: PRO_DAILY_LIMIT,
+      }, 429, cors);
+    }
+
     /* ── Build AI request ─────────────────────────── */
     const systemPrompt = `You are InsightReel, an AI that analyzes video transcripts and provides concise, actionable insights. Focus on key takeaways, sentiment, and notable patterns.`;
     const userPrompt = context
@@ -81,7 +144,6 @@ serve(async (req) => {
     let analysis: string;
 
     if (mode === "byok") {
-      // Call Gemini directly with the user's own API key
       const geminiResp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userGeminiKey}`,
         {
@@ -102,7 +164,6 @@ serve(async (req) => {
       const geminiData = await geminiResp.json();
       analysis = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     } else {
-      // Pro or Trial: use Lovable AI gateway
       const apiKey = Deno.env.get("LOVABLE_API_KEY");
       if (!apiKey) return json({ error: "SERVER_CONFIG", message: "AI key not configured" }, 500, cors);
 
@@ -131,13 +192,19 @@ serve(async (req) => {
       analysis = aiData.choices?.[0]?.message?.content ?? "";
     }
 
-    /* ── Decrement trial credits on success ────────── */
+    /* ── Post-success updates ─────────────────────── */
+    const updates: Record<string, unknown> = {
+      daily_usage_count: dailyCount + 1,
+    };
+
     if (mode === "trial") {
-      await adminClient
-        .from("az_profiles")
-        .update({ trial_credits: profile.trial_credits - 1 })
-        .eq("user_id", user.id);
+      updates.trial_credits = profile.trial_credits - 1;
     }
+
+    await adminClient
+      .from("az_profiles")
+      .update(updates)
+      .eq("user_id", user.id);
 
     /* ── Log usage ────────────────────────────────── */
     await adminClient.from("az_usage_logs").insert({
@@ -150,5 +217,12 @@ serve(async (req) => {
   } catch (err) {
     console.error("ir-analyze error:", err);
     return json({ error: "SERVER_ERROR" }, 500, getCorsHeaders(req));
+  } finally {
+    /* ── Release burst limiter ────────────────────── */
+    if (userId) {
+      const c = activeRequests.get(userId) ?? 1;
+      if (c <= 1) activeRequests.delete(userId);
+      else activeRequests.set(userId, c - 1);
+    }
   }
 });
