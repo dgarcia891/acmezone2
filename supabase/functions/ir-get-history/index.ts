@@ -20,6 +20,24 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
+    /* ── Maintenance mode kill switch ─────────────── */
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: config } = await adminClient
+      .from("az_app_config")
+      .select("value")
+      .eq("key", "maintenance_mode")
+      .single();
+
+    if (config?.value === true) {
+      return new Response(JSON.stringify({ error: "SERVICE_UNAVAILABLE", message: "InsightReel is temporarily under maintenance." }), {
+        status: 503,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     const auth = req.headers.get("Authorization") ?? "";
     if (!auth.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), {
