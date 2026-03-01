@@ -14,6 +14,9 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import SiteAnalytics from '@/components/admin/SiteAnalytics';
 import ProductManagement from '@/components/admin/ProductManagement';
+import PatternManagement from '@/components/admin/sa/PatternManagement';
+import DetectionViewer from '@/components/admin/sa/DetectionViewer';
+import CorrectionViewer from '@/components/admin/sa/CorrectionViewer';
 import { 
   Users, 
   Shield, 
@@ -24,7 +27,10 @@ import {
   RefreshCw,
   ArrowLeft,
   BarChart3,
-  Package
+  Package,
+  AlertTriangle,
+  Eye,
+  MessageSquare
 } from 'lucide-react';
 
 interface UserStats {
@@ -196,6 +202,18 @@ const Admin = () => {
                 <BarChart3 className="h-4 w-4" />
                 Analytics
               </TabsTrigger>
+              <TabsTrigger value="sa-patterns" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                SA Patterns
+              </TabsTrigger>
+              <TabsTrigger value="sa-detections" className="gap-2">
+                <Eye className="h-4 w-4" />
+                SA Detections
+              </TabsTrigger>
+              <TabsTrigger value="sa-corrections" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                SA Corrections
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -303,6 +321,18 @@ const Admin = () => {
 
             <TabsContent value="analytics">
               <SiteAnalytics />
+            </TabsContent>
+
+            <TabsContent value="sa-patterns">
+              <PatternManagement />
+            </TabsContent>
+
+            <TabsContent value="sa-detections">
+              <DetectionViewer />
+            </TabsContent>
+
+            <TabsContent value="sa-corrections">
+              <CorrectionViewer />
             </TabsContent>
           </Tabs>
         </main>
