@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.ir-get-history]
 verify_jwt = false
+
+[functions.sa-sync-patterns]
+verify_jwt = false
+
+[functions.sa-report-detection]
+verify_jwt = false
+
+[functions.sa-submit-correction]
+verify_jwt = false
