@@ -29,6 +29,3 @@ verify_jwt = false
 
 [functions.sa-submit-correction]
 verify_jwt = false
-
-[functions.sa-e2e-test]
-verify_jwt = false
