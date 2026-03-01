@@ -233,6 +233,134 @@ export type Database = {
         }
         Relationships: []
       }
+      sa_app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      sa_corrections: {
+        Row: {
+          ai_review_result: Json | null
+          created_at: string
+          detection_id: string | null
+          feedback: string
+          id: string
+          review_status: string
+          reviewed_at: string | null
+          url_hash: string
+          user_comment: string | null
+        }
+        Insert: {
+          ai_review_result?: Json | null
+          created_at?: string
+          detection_id?: string | null
+          feedback: string
+          id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          url_hash: string
+          user_comment?: string | null
+        }
+        Update: {
+          ai_review_result?: Json | null
+          created_at?: string
+          detection_id?: string | null
+          feedback?: string
+          id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          url_hash?: string
+          user_comment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_corrections_detection_id_fkey"
+            columns: ["detection_id"]
+            isOneToOne: false
+            referencedRelation: "sa_detections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sa_detections: {
+        Row: {
+          ai_confidence: number | null
+          ai_verdict: string | null
+          created_at: string
+          extension_version: string | null
+          id: string
+          severity: string
+          signals: Json
+          url_hash: string
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_verdict?: string | null
+          created_at?: string
+          extension_version?: string | null
+          id?: string
+          severity: string
+          signals: Json
+          url_hash: string
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_verdict?: string | null
+          created_at?: string
+          extension_version?: string | null
+          id?: string
+          severity?: string
+          signals?: Json
+          url_hash?: string
+        }
+        Relationships: []
+      }
+      sa_patterns: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          phrase: string
+          severity_weight: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          id?: string
+          phrase: string
+          severity_weight?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          phrase?: string
+          severity_weight?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
