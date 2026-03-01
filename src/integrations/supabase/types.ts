@@ -313,7 +313,7 @@ export type Database = {
           extension_version?: string | null
           id?: string
           severity: string
-          signals: Json
+          signals?: Json
           url_hash: string
         }
         Update: {
