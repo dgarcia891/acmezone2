@@ -27,6 +27,7 @@ import InsightReelSuccess from "./pages/InsightReelSuccess";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import HydraGuardAdmin from "./pages/HydraGuardAdmin";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,11 @@ const App = () => (
                 <Route path="/insightreel/dashboard" element={
                   <ProtectedRoute>
                     <InsightReelDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/hydra-guard/admin" element={
+                  <ProtectedRoute>
+                    <HydraGuardAdmin />
                   </ProtectedRoute>
                 } />
                 <Route path="/products/:slug" element={<ProductDetail />} />
