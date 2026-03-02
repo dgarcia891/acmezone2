@@ -1,92 +1,60 @@
 
 
-# Hydra Guard Admin Dashboard
+# Remove Exposed Emails & Add CAPTCHA to Forms
 
 ## Overview
-Move and upgrade the existing Scam Alert admin components from the `/admin` page into a standalone `/hydra-guard/admin` route with enhanced UI including stats cards, better filtering, severity color-coding, and pagination.
-
-## What stays the same
-- Existing `sa_patterns`, `sa_detections`, `sa_corrections`, `sa_app_config` tables and their schemas (no DB changes)
-- Existing edge functions (`sa-sync-patterns`, `sa-report-detection`, `sa-submit-correction`)
-- Existing RLS policies (admin-only access via `has_role`)
+Remove all plaintext email addresses from the site to prevent scraping by spammers/crawlers. Replace "mailto:" links with links to the Contact page. Add a simple math-based CAPTCHA challenge to the Contact form that must be solved before the Submit button appears.
 
 ## Changes
 
-### 1. Create `/hydra-guard/admin` page
-**New file:** `src/pages/HydraGuardAdmin.tsx`
-- Admin-only page with auth check using `useAdmin` hook (same pattern as `/admin`)
-- Redirects non-admins to `/dashboard` with error toast
-- Header/Footer from existing layout components
-- "Hydra Guard Admin" branding with Shield icon
-- Three-tab layout: Detections, Corrections (default), Patterns
+### 1. Remove emails from Support page
+**File:** `src/pages/Support.tsx`
+- Replace `<a href="mailto:support@acme.zone">Contact Support</a>` with `<Link to="/contact">Contact Support</Link>` (two instances)
+- Remove any visible email text from the page
+- The "Email Support" card and "Still Need Help" section both route to the Contact form instead
 
-### 2. Upgrade Detections tab
-**New file:** `src/components/hydra-guard/DetectionsTab.tsx`
-- Stats cards row: total detections (7 days), critical/high count, most common severity, AI verification rate
-- Filters: severity dropdown (all/critical/high/medium/low), search by url_hash
-- Table with severity color-coded badges (critical=red, high=orange, medium=yellow, low=blue)
-- Expandable row detail dialog showing full signals JSON
-- Pagination (50 rows per page with prev/next controls)
+### 2. Add math CAPTCHA to Contact form
+**File:** `src/pages/Contact.tsx`
+- Generate a random simple math problem on mount (e.g., "What is 7 + 4?")
+- Add a new input field where the user types the answer
+- The Submit button remains hidden/disabled until the correct answer is entered
+- Regenerate the problem after each successful submission
+- Keep the existing honeypot field as an additional layer
 
-### 3. Upgrade Corrections tab (priority)
-**New file:** `src/components/hydra-guard/CorrectionsTab.tsx`
-- Stats cards: pending count, approved this week, rejected this week
-- Filters: status (pending default), feedback type, date
-- Table: url_hash, feedback type (badge), user comment (truncated), review status (color badge), AI review indicator, actions
-- Approve/Reject buttons with immediate DB update
-- Detail modal: full url_hash, feedback, user comment, AI review JSON, timestamps
-- Approve action: updates `review_status` to "approved" and sets `reviewed_at`
-- Reject action: updates `review_status` to "rejected" and sets `reviewed_at`
+**CAPTCHA behavior:**
+- On component mount: pick two random numbers (1-20), store the expected sum
+- Display: "What is X + Y?" with an input field
+- When the user types the correct answer, the Submit button fades in
+- Wrong/empty answer: Submit button stays hidden, no error shown (to avoid giving bots feedback)
 
-### 4. Upgrade Patterns tab
-**New file:** `src/components/hydra-guard/PatternsTab.tsx`
-- Stats cards: total active, recently added (7 days), patterns by category breakdown
-- Filters: category, source, active toggle, search
-- Table with severity_weight shown as a mini progress bar (1-10 scale)
-- Source badges color-coded (manual=secondary, ai_promoted=primary, community=outline)
-- Full CRUD: add/edit dialog, delete with confirmation, active toggle
-- Confidence slider in edit form (severity_weight 1-10)
-
-### 5. Remove SA tabs from `/admin`
-- Remove the three SA tab triggers and content from `src/pages/Admin.tsx`
-- Remove the imports for `PatternManagement`, `DetectionViewer`, `CorrectionViewer`
-- Keep the old component files in `src/components/admin/sa/` (can be deleted later or kept as reference)
-
-### 6. Register route in App.tsx
-- Add `/hydra-guard/admin` route wrapped in `ProtectedRoute`
-- Import new `HydraGuardAdmin` page component
-
-### 7. Severity color scheme
-Applied consistently across all tabs:
-- CRITICAL / critical: `bg-red-500/15 text-red-700 border-red-200`
-- HIGH / high: `bg-orange-500/15 text-orange-700 border-orange-200`
-- MEDIUM / medium: `bg-yellow-500/15 text-yellow-700 border-yellow-200`
-- LOW / low: `bg-blue-500/15 text-blue-700 border-blue-200`
-- SAFE / safe: `bg-green-500/15 text-green-700 border-green-200`
+### 3. Support page update (from prior approved plan)
+Since we're already modifying Support.tsx, this will also be combined with the approved plan to restructure it into a general Acme Zone support page with per-product FAQ sections.
 
 ---
 
 ## Technical Details
 
-### File changes summary
+### Files changed
 | Action | File |
 |--------|------|
-| Create | `src/pages/HydraGuardAdmin.tsx` |
-| Create | `src/components/hydra-guard/DetectionsTab.tsx` |
-| Create | `src/components/hydra-guard/CorrectionsTab.tsx` |
-| Create | `src/components/hydra-guard/PatternsTab.tsx` |
-| Modify | `src/pages/Admin.tsx` (remove SA tabs) |
-| Modify | `src/App.tsx` (add route) |
+| Modify | `src/pages/Support.tsx` -- remove mailto links, restructure as Acme Zone support hub |
+| Modify | `src/pages/Contact.tsx` -- add math CAPTCHA, hide submit until solved |
 
-### Data queries
-All queries use the existing `supabase` client from `@/integrations/supabase/client` with `as unknown as Type[]` casting (same pattern as existing components). Tables queried:
-- `sa_patterns` -- full CRUD
-- `sa_detections` -- SELECT only
-- `sa_corrections` -- SELECT + UPDATE (review_status, reviewed_at)
+### CAPTCHA implementation
+```text
+State:
+  captchaA: number (1-20)
+  captchaB: number (1-20)
+  captchaAnswer: string (user input)
+  captchaSolved: boolean (computed: parseInt(answer) === a + b)
 
-### Pagination approach
-Each tab loads 50 rows at a time using `.range(from, to)` with simple prev/next page controls at the bottom of each table.
+UI:
+  [Label] "Quick check: What is {a} + {b}?"
+  [Input] number field
+  [Submit button] only rendered when captchaSolved is true
+```
+
+No external dependencies needed -- pure React state with random number generation via `Math.random()`.
 
 ### No database changes required
-The existing schema supports everything needed. The `severity_weight` (1-10) maps naturally to a confidence/weight display. The `url_hash` privacy model is preserved.
 
