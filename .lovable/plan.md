@@ -1,82 +1,92 @@
 
 
-# Hybrid Monetization Model for InsightReel
+# Hydra Guard Admin Dashboard
 
 ## Overview
-Transform the InsightReel backend from a single "Pro-only" gate into a three-tier access system: Free Trial (3 credits), Managed Pro ($9.99/mo subscription), and BYOK Lifetime License ($29 one-time).
+Move and upgrade the existing Scam Alert admin components from the `/admin` page into a standalone `/hydra-guard/admin` route with enhanced UI including stats cards, better filtering, severity color-coding, and pagination.
+
+## What stays the same
+- Existing `sa_patterns`, `sa_detections`, `sa_corrections`, `sa_app_config` tables and their schemas (no DB changes)
+- Existing edge functions (`sa-sync-patterns`, `sa-report-detection`, `sa-submit-correction`)
+- Existing RLS policies (admin-only access via `has_role`)
+
+## Changes
+
+### 1. Create `/hydra-guard/admin` page
+**New file:** `src/pages/HydraGuardAdmin.tsx`
+- Admin-only page with auth check using `useAdmin` hook (same pattern as `/admin`)
+- Redirects non-admins to `/dashboard` with error toast
+- Header/Footer from existing layout components
+- "Hydra Guard Admin" branding with Shield icon
+- Three-tab layout: Detections, Corrections (default), Patterns
+
+### 2. Upgrade Detections tab
+**New file:** `src/components/hydra-guard/DetectionsTab.tsx`
+- Stats cards row: total detections (7 days), critical/high count, most common severity, AI verification rate
+- Filters: severity dropdown (all/critical/high/medium/low), search by url_hash
+- Table with severity color-coded badges (critical=red, high=orange, medium=yellow, low=blue)
+- Expandable row detail dialog showing full signals JSON
+- Pagination (50 rows per page with prev/next controls)
+
+### 3. Upgrade Corrections tab (priority)
+**New file:** `src/components/hydra-guard/CorrectionsTab.tsx`
+- Stats cards: pending count, approved this week, rejected this week
+- Filters: status (pending default), feedback type, date
+- Table: url_hash, feedback type (badge), user comment (truncated), review status (color badge), AI review indicator, actions
+- Approve/Reject buttons with immediate DB update
+- Detail modal: full url_hash, feedback, user comment, AI review JSON, timestamps
+- Approve action: updates `review_status` to "approved" and sets `reviewed_at`
+- Reject action: updates `review_status` to "rejected" and sets `reviewed_at`
+
+### 4. Upgrade Patterns tab
+**New file:** `src/components/hydra-guard/PatternsTab.tsx`
+- Stats cards: total active, recently added (7 days), patterns by category breakdown
+- Filters: category, source, active toggle, search
+- Table with severity_weight shown as a mini progress bar (1-10 scale)
+- Source badges color-coded (manual=secondary, ai_promoted=primary, community=outline)
+- Full CRUD: add/edit dialog, delete with confirmation, active toggle
+- Confidence slider in edit form (severity_weight 1-10)
+
+### 5. Remove SA tabs from `/admin`
+- Remove the three SA tab triggers and content from `src/pages/Admin.tsx`
+- Remove the imports for `PatternManagement`, `DetectionViewer`, `CorrectionViewer`
+- Keep the old component files in `src/components/admin/sa/` (can be deleted later or kept as reference)
+
+### 6. Register route in App.tsx
+- Add `/hydra-guard/admin` route wrapped in `ProtectedRoute`
+- Import new `HydraGuardAdmin` page component
+
+### 7. Severity color scheme
+Applied consistently across all tabs:
+- CRITICAL / critical: `bg-red-500/15 text-red-700 border-red-200`
+- HIGH / high: `bg-orange-500/15 text-orange-700 border-orange-200`
+- MEDIUM / medium: `bg-yellow-500/15 text-yellow-700 border-yellow-200`
+- LOW / low: `bg-blue-500/15 text-blue-700 border-blue-200`
+- SAFE / safe: `bg-green-500/15 text-green-700 border-green-200`
 
 ---
 
-## 1. Database Migration
+## Technical Details
 
-Add two new columns to `az_profiles`:
+### File changes summary
+| Action | File |
+|--------|------|
+| Create | `src/pages/HydraGuardAdmin.tsx` |
+| Create | `src/components/hydra-guard/DetectionsTab.tsx` |
+| Create | `src/components/hydra-guard/CorrectionsTab.tsx` |
+| Create | `src/components/hydra-guard/PatternsTab.tsx` |
+| Modify | `src/pages/Admin.tsx` (remove SA tabs) |
+| Modify | `src/App.tsx` (add route) |
 
-| Column | Type | Default | Purpose |
-|--------|------|---------|---------|
-| `trial_credits` | integer | 3 | Free analyses for new users |
-| `has_byok_license` | boolean | false | Lifetime BYOK license flag |
+### Data queries
+All queries use the existing `supabase` client from `@/integrations/supabase/client` with `as unknown as Type[]` casting (same pattern as existing components). Tables queried:
+- `sa_patterns` -- full CRUD
+- `sa_detections` -- SELECT only
+- `sa_corrections` -- SELECT + UPDATE (review_status, reviewed_at)
 
-Update the `handle_new_user_profile` trigger so new signups get `trial_credits = 3`.
+### Pagination approach
+Each tab loads 50 rows at a time using `.range(from, to)` with simple prev/next page controls at the bottom of each table.
 
----
-
-## 2. Update `ir-analyze` Edge Function
-
-Replace the current binary Pro check with a tiered authorization flow:
-
-```text
-Request arrives
-  |
-  +-- Read X-User-Gemini-Key header
-  |
-  +-- Fetch profile (is_pro, has_byok_license, trial_credits)
-  |
-  +-- BYOK path: header present + has_byok_license = true
-  |     -> Call Gemini directly with user's key
-  |
-  +-- Pro path: is_pro = true
-  |     -> Call Gemini via Lovable AI gateway (existing flow)
-  |
-  +-- Trial path: trial_credits > 0
-  |     -> Call Gemini via Lovable AI gateway
-  |     -> On success, decrement trial_credits by 1
-  |
-  +-- None of the above -> 402 PAYMENT_REQUIRED
-```
-
-Key details:
-- Add `x-user-gemini-key` to the CORS `Access-Control-Allow-Headers` list
-- For BYOK, call `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={userKey}` directly
-- Log usage for all three paths (metadata includes `{ mode: "byok" | "pro" | "trial" }`)
-- CORS remains locked to `chrome-extension://plohgpfkkhnennkgoneolbpomnhoclmk`
-
----
-
-## 3. Update `ir-stripe-webhook` Edge Function
-
-Currently handles `checkout.session.completed` (sets `is_pro = true`) and `customer.subscription.deleted` (sets `is_pro = false`).
-
-Update the `checkout.session.completed` handler to distinguish between:
-- **Subscription checkout** (`session.mode === "subscription"`) -- existing behavior, set `is_pro = true`
-- **One-time payment** (`session.mode === "payment"`) -- new BYOK license, set `has_byok_license = true`
-
-No new Stripe price ID secret is needed at this stage -- the webhook simply checks the session mode.
-
----
-
-## 4. Files Changed
-
-| File | Action |
-|------|--------|
-| DB migration | Add `trial_credits` and `has_byok_license` columns, update trigger |
-| `supabase/functions/ir-analyze/index.ts` | Rewrite authorization logic for 3-tier access |
-| `supabase/functions/ir-stripe-webhook/index.ts` | Add BYOK one-time payment handling |
-
----
-
-## Technical Notes
-
-- The `ir-get-history`, `ir-create-checkout`, and `ir-manage-subscription` functions require no changes.
-- A separate Stripe Price for the $29 BYOK license will need to be created in your Stripe dashboard and passed to `ir-create-checkout` when the extension requests a BYOK purchase (future frontend work).
-- Existing Pro subscribers are unaffected -- their `trial_credits` will default to 3 but won't be consumed since the Pro check runs first.
+### No database changes required
+The existing schema supports everything needed. The `severity_weight` (1-10) maps naturally to a confidence/weight display. The `url_hash` privacy model is preserved.
 
