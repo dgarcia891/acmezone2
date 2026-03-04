@@ -15,6 +15,7 @@ interface Adjustment {
   adjusted_by: string | null;
   created_at: string;
   phrase: {
+    id: string;
     phrase: string;
     severity_weight: number;
   } | null;
@@ -31,7 +32,8 @@ const PatternAdjustmentHistory = () => {
         .from('pattern_adjustments')
         .select(`
           *,
-          phrase:phrase_id (
+          phrase:sa_patterns!phrase_id (
+            id,
             phrase,
             severity_weight
           )
@@ -72,9 +74,16 @@ const PatternAdjustmentHistory = () => {
         return (
           <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">
-                "{a.phrase?.phrase || 'Deleted pattern'}"
-              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-sm truncate">
+                  "{a.phrase?.phrase || 'Deleted pattern'}"
+                </span>
+                {a.phrase?.severity_weight != null && (
+                  <Badge variant="outline" className="text-xs">
+                    {a.phrase.severity_weight >= 8 ? 'HIGH' : a.phrase.severity_weight >= 4 ? 'MEDIUM' : 'LOW'}
+                  </Badge>
+                )}
+              </div>
               {a.adjustment_reason && (
                 <p className="text-xs text-muted-foreground mt-1 truncate">{a.adjustment_reason}</p>
               )}
