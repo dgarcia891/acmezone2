@@ -15,6 +15,9 @@ import Footer from '@/components/layout/Footer';
 import SiteAnalytics from '@/components/admin/SiteAnalytics';
 import SmtpSettings from '@/components/admin/SmtpSettings';
 import ProductManagement from '@/components/admin/ProductManagement';
+import DetectionsTab from '@/components/hydra-guard/DetectionsTab';
+import CorrectionsTab from '@/components/hydra-guard/CorrectionsTab';
+import PatternsTab from '@/components/hydra-guard/PatternsTab';
 import { 
   Users, 
   Shield, 
@@ -25,7 +28,10 @@ import {
   RefreshCw,
   ArrowLeft,
   BarChart3,
-  Package
+  Package,
+  Eye,
+  MessageSquare,
+  Database
 } from 'lucide-react';
 
 interface UserStats {
@@ -197,6 +203,10 @@ const Admin = () => {
                 <BarChart3 className="h-4 w-4" />
                 Analytics
               </TabsTrigger>
+              <TabsTrigger value="hydra-guard" className="gap-2">
+                <Shield className="h-4 w-4 text-destructive" />
+                Hydra Guard
+              </TabsTrigger>
               <TabsTrigger value="settings" className="gap-2">
                 <Mail className="h-4 w-4" />
                 Settings
@@ -308,6 +318,19 @@ const Admin = () => {
 
             <TabsContent value="analytics">
               <SiteAnalytics />
+            </TabsContent>
+
+            <TabsContent value="hydra-guard">
+              <Tabs defaultValue="corrections" className="space-y-4">
+                <TabsList>
+                  <TabsTrigger value="detections" className="gap-2"><Eye className="h-4 w-4" />Detections</TabsTrigger>
+                  <TabsTrigger value="corrections" className="gap-2"><MessageSquare className="h-4 w-4" />Corrections</TabsTrigger>
+                  <TabsTrigger value="patterns" className="gap-2"><Database className="h-4 w-4" />Patterns</TabsTrigger>
+                </TabsList>
+                <TabsContent value="detections"><DetectionsTab /></TabsContent>
+                <TabsContent value="corrections"><CorrectionsTab /></TabsContent>
+                <TabsContent value="patterns"><PatternsTab /></TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="settings">
