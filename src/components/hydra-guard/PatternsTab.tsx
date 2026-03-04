@@ -14,7 +14,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { sourceBadgeVariant, formatDate, PAGE_SIZE } from './severity-utils';
-import { Database, Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, BarChart3 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CardDescription } from '@/components/ui/card';
+import PatternAdjustmentHistory from './PatternAdjustmentHistory';
+import { Database, Plus, Search, ChevronLeft, ChevronRight, Pencil, Trash2, BarChart3, History, ChevronDown } from 'lucide-react';
 
 interface Pattern {
   id: string;
@@ -282,6 +285,28 @@ const PatternsTab = () => {
           <DialogFooter><Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : editingId ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Pattern Adjustment History */}
+      <Collapsible className="mt-6">
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full">
+            <History className="w-4 h-4 mr-2" />
+            View Pattern Adjustment History
+            <ChevronDown className="w-4 h-4 ml-auto" />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Recent Pattern Adjustments</CardTitle>
+              <CardDescription>Changes made based on user corrections</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PatternAdjustmentHistory />
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };

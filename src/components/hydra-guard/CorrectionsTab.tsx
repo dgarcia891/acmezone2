@@ -6,9 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
-import { Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, Loader2 } from 'lucide-react';
 
 interface Correction {
   id: string;
@@ -18,7 +19,9 @@ interface Correction {
   user_comment: string | null;
   review_status: string;
   reviewed_at: string | null;
+  reviewed_by: string | null;
   ai_review_result: Record<string, unknown> | null;
+  ai_analysis: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -26,6 +29,7 @@ interface Stats { pending: number; approvedWeek: number; rejectedWeek: number; }
 
 const CorrectionsTab = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({ pending: 0, approvedWeek: 0, rejectedWeek: 0 });
@@ -33,7 +37,7 @@ const CorrectionsTab = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('pending');
   const [selected, setSelected] = useState<Correction | null>(null);
-  const [acting, setActing] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -63,23 +67,74 @@ const CorrectionsTab = () => {
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
-    setActing(id);
+  const handleApprove = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const { data, error } = await supabase.functions.invoke('approve-correction', {
+        body: { correctionId: id, adminUserId: user?.id }
+      });
+
+      if (error) {
+        console.warn('Edge function not available, using direct update:', error);
+        const { error: updateError } = await supabase
+          .from('sa_corrections')
+          .update({ review_status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as never)
+          .eq('id', id);
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: 'Correction Approved',
+        description: data?.adjustment_count
+          ? `Pattern confidence adjusted (${data.adjustment_count} patterns updated)`
+          : 'Marked as approved',
+      });
+      fetchData();
+      fetchStats();
+      if (selected?.id === id) setSelected(null);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setActionLoading(id);
     const { error } = await supabase
       .from('sa_corrections')
-      .update({ review_status: status, reviewed_at: new Date().toISOString() } as never)
+      .update({ review_status: 'rejected', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as never)
       .eq('id', id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: status === 'approved' ? 'Approved' : 'Rejected', description: `Correction ${status}.` });
+      toast({ title: 'Correction Rejected', description: 'No pattern changes made.' });
       fetchData();
       fetchStats();
       if (selected?.id === id) setSelected(null);
     }
-    setActing(null);
+    setActionLoading(null);
   };
 
+  const handleNeedsReview = async (id: string) => {
+    setActionLoading(id);
+    const { error } = await supabase
+      .from('sa_corrections')
+      .update({ review_status: 'needs_review', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as never)
+      .eq('id', id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Marked for Review', description: 'Requires manual investigation.' });
+      fetchData();
+      fetchStats();
+      if (selected?.id === id) setSelected(null);
+    }
+    setActionLoading(null);
+  };
+
+  const isPending = (status: string) => status === 'pending';
+  const isLoading = (id: string) => actionLoading === id;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
@@ -148,10 +203,17 @@ const CorrectionsTab = () => {
                       <td className="p-3">
                         <div className="flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => setSelected(c)}>View</Button>
-                          {c.review_status === 'pending' && (
+                          {isPending(c.review_status) && (
                             <>
-                              <Button size="sm" variant="outline" className="text-green-600" disabled={acting === c.id} onClick={() => handleAction(c.id, 'approved')}>✓</Button>
-                              <Button size="sm" variant="outline" className="text-red-600" disabled={acting === c.id} onClick={() => handleAction(c.id, 'rejected')}>✗</Button>
+                              <Button size="sm" variant="outline" className="text-green-600" disabled={isLoading(c.id)} onClick={() => handleApprove(c.id)}>
+                                {isLoading(c.id) ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600" disabled={isLoading(c.id)} onClick={() => handleReject(c.id)}>
+                                <XCircle className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-orange-600" disabled={isLoading(c.id)} onClick={() => handleNeedsReview(c.id)}>
+                                <AlertCircle className="h-3 w-3" />
+                              </Button>
                             </>
                           )}
                         </div>
@@ -192,13 +254,22 @@ const CorrectionsTab = () => {
                   <pre className="mt-1 p-3 rounded bg-muted text-xs overflow-x-auto">{JSON.stringify(selected.ai_review_result, null, 2)}</pre>
                 </div>
               )}
-              {selected.review_status === 'pending' && (
+              {selected.ai_analysis && (
+                <div>
+                  <span className="font-medium">AI Analysis:</span>
+                  <pre className="mt-1 p-3 rounded bg-muted text-xs overflow-x-auto">{JSON.stringify(selected.ai_analysis, null, 2)}</pre>
+                </div>
+              )}
+              {isPending(selected.review_status) && (
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" variant="outline" disabled={acting === selected.id} onClick={() => handleAction(selected.id, 'approved')}>
-                    <CheckCircle className="h-4 w-4 mr-2" /> Approve
+                  <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => handleApprove(selected.id)}>
+                    <CheckCircle className="h-4 w-4 mr-2" /> Approve & Adjust
                   </Button>
-                  <Button className="flex-1" variant="outline" disabled={acting === selected.id} onClick={() => handleAction(selected.id, 'rejected')}>
+                  <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => handleReject(selected.id)}>
                     <XCircle className="h-4 w-4 mr-2" /> Reject
+                  </Button>
+                  <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => handleNeedsReview(selected.id)}>
+                    <AlertCircle className="h-4 w-4 mr-2" /> Needs Review
                   </Button>
                 </div>
               )}
