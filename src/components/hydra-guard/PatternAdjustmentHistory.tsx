@@ -14,11 +14,9 @@ interface Adjustment {
   adjustment_reason: string | null;
   adjusted_by: string | null;
   created_at: string;
-  phrase: {
-    id: string;
-    phrase: string;
-    severity_weight: number;
-  } | null;
+  pattern_phrase: string | null;
+  pattern_severity_weight: number | null;
+  admin_email: string | null;
 }
 
 const PatternAdjustmentHistory = () => {
@@ -26,24 +24,16 @@ const PatternAdjustmentHistory = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchHistory = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from('pattern_adjustments')
-        .select(`
-          *,
-          phrase:sa_patterns!phrase_id (
-            id,
-            phrase,
-            severity_weight
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const { data, error } = await supabase.rpc('get_adjustment_history', { _limit: 20 });
+      if (error) {
+        console.error('[Hydra Guard] Failed to fetch adjustment history:', error);
+      }
       setAdjustments((data as unknown as Adjustment[]) || []);
       setLoading(false);
     };
-    fetch();
+    fetchHistory();
   }, []);
 
   if (loading) {
@@ -71,25 +61,36 @@ const PatternAdjustmentHistory = () => {
       {adjustments.map(a => {
         const increased = a.new_weight > a.old_weight;
         const diff = a.new_weight - a.old_weight;
+        const severityLabel = a.pattern_severity_weight != null
+          ? (a.pattern_severity_weight >= 8 ? 'HIGH' : a.pattern_severity_weight >= 4 ? 'MEDIUM' : 'LOW')
+          : null;
+
         return (
           <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium text-sm truncate">
-                  "{a.phrase?.phrase || 'Deleted pattern'}"
+                  "{a.pattern_phrase || 'Deleted pattern'}"
                 </span>
-                {a.phrase?.severity_weight != null && (
+                {severityLabel && (
                   <Badge variant="outline" className="text-xs">
-                    {a.phrase.severity_weight >= 8 ? 'HIGH' : a.phrase.severity_weight >= 4 ? 'MEDIUM' : 'LOW'}
+                    {severityLabel}
                   </Badge>
                 )}
               </div>
               {a.adjustment_reason && (
                 <p className="text-xs text-muted-foreground mt-1 truncate">{a.adjustment_reason}</p>
               )}
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                </p>
+                {a.admin_email && (
+                  <span className="text-xs text-muted-foreground">
+                    · by {a.admin_email}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 ml-4 shrink-0">
               <div className="flex items-center gap-1 text-sm">
