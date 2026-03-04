@@ -420,6 +420,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_adjustment_history: {
+        Args: { _limit?: number }
+        Returns: {
+          adjusted_by: string
+          adjustment_reason: string
+          admin_email: string
+          correction_id: string
+          created_at: string
+          id: string
+          new_weight: number
+          old_weight: number
+          pattern_phrase: string
+          pattern_severity_weight: number
+          phrase_id: string
+        }[]
+      }
       get_my_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
