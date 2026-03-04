@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import SiteAnalytics from '@/components/admin/SiteAnalytics';
+import SmtpSettings from '@/components/admin/SmtpSettings';
 import ProductManagement from '@/components/admin/ProductManagement';
 import { 
   Users, 
@@ -196,6 +197,10 @@ const Admin = () => {
                 <BarChart3 className="h-4 w-4" />
                 Analytics
               </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Mail className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -303,6 +308,10 @@ const Admin = () => {
 
             <TabsContent value="analytics">
               <SiteAnalytics />
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <SmtpSettings />
             </TabsContent>
           </Tabs>
         </main>
