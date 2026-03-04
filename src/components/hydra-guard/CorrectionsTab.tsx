@@ -71,7 +71,7 @@ const CorrectionsTab = () => {
     setActionLoading(id);
     try {
       const { data, error } = await supabase.functions.invoke('approve-correction', {
-        body: { correctionId: id, adminUserId: user?.id }
+        body: { correctionId: id }
       });
 
       if (error) {
