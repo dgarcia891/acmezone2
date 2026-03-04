@@ -233,6 +233,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pattern_adjustments: {
+        Row: {
+          adjusted_by: string | null
+          adjustment_reason: string | null
+          correction_id: string | null
+          created_at: string
+          id: string
+          new_weight: number
+          old_weight: number
+          phrase_id: string | null
+        }
+        Insert: {
+          adjusted_by?: string | null
+          adjustment_reason?: string | null
+          correction_id?: string | null
+          created_at?: string
+          id?: string
+          new_weight: number
+          old_weight: number
+          phrase_id?: string | null
+        }
+        Update: {
+          adjusted_by?: string | null
+          adjustment_reason?: string | null
+          correction_id?: string | null
+          created_at?: string
+          id?: string
+          new_weight?: number
+          old_weight?: number
+          phrase_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pattern_adjustments_correction_id_fkey"
+            columns: ["correction_id"]
+            isOneToOne: false
+            referencedRelation: "sa_corrections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pattern_adjustments_phrase_id_fkey"
+            columns: ["phrase_id"]
+            isOneToOne: false
+            referencedRelation: "sa_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sa_app_config: {
         Row: {
           key: string
@@ -253,6 +301,7 @@ export type Database = {
       }
       sa_corrections: {
         Row: {
+          ai_analysis: Json | null
           ai_review_result: Json | null
           created_at: string
           detection_id: string | null
@@ -260,10 +309,12 @@ export type Database = {
           id: string
           review_status: string
           reviewed_at: string | null
+          reviewed_by: string | null
           url_hash: string
           user_comment: string | null
         }
         Insert: {
+          ai_analysis?: Json | null
           ai_review_result?: Json | null
           created_at?: string
           detection_id?: string | null
@@ -271,10 +322,12 @@ export type Database = {
           id?: string
           review_status?: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           url_hash: string
           user_comment?: string | null
         }
         Update: {
+          ai_analysis?: Json | null
           ai_review_result?: Json | null
           created_at?: string
           detection_id?: string | null
@@ -282,6 +335,7 @@ export type Database = {
           id?: string
           review_status?: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           url_hash?: string
           user_comment?: string | null
         }

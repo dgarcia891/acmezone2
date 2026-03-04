@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { severityBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
-import { Activity, AlertTriangle, Shield, Eye, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Activity, AlertTriangle, Shield, Eye, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 
 interface Detection {
   id: string;
@@ -28,15 +29,30 @@ interface Stats {
   aiRate: number;
 }
 
+const DATE_RANGES: { value: string; label: string; days: number | null }[] = [
+  { value: '24h', label: 'Last 24 Hours', days: 1 },
+  { value: '7d', label: 'Last 7 Days', days: 7 },
+  { value: '30d', label: 'Last 30 Days', days: 30 },
+  { value: 'all', label: 'All Time', days: null },
+];
+
 const DetectionsTab = () => {
+  const { toast } = useToast();
   const [detections, setDetections] = useState<Detection[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({ total7d: 0, criticalHigh: 0, topSeverity: '-', aiRate: 0 });
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [dateRange, setDateRange] = useState('7d');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Detection | null>(null);
+
+  const getCutoffDate = useCallback((range: string) => {
+    const entry = DATE_RANGES.find(d => d.value === range);
+    if (!entry?.days) return null;
+    return new Date(Date.now() - entry.days * 86400000).toISOString();
+  }, []);
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -57,17 +73,62 @@ const DetectionsTab = () => {
     setLoading(true);
     let query = supabase.from('sa_detections').select('*', { count: 'exact' });
     if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
+    const cutoff = getCutoffDate(dateRange);
+    if (cutoff) query = query.gte('created_at', cutoff);
     if (search) query = query.ilike('url_hash', `%${search}%`);
     const from = page * PAGE_SIZE;
     const { data, count } = await query.order('created_at', { ascending: false }).range(from, from + PAGE_SIZE - 1);
     setDetections((data as unknown as Detection[]) || []);
     setTotalCount(count ?? 0);
     setLoading(false);
-  }, [page, severityFilter, search]);
+  }, [page, severityFilter, dateRange, search, getCutoffDate]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Real-time subscription for new detections
+  useEffect(() => {
+    const channel = supabase
+      .channel('detections-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sa_detections' },
+        (payload) => {
+          const newDetection = payload.new as Detection;
+
+          // Check if it matches current severity filter
+          const matchesSeverity = severityFilter === 'all' || newDetection.severity === severityFilter;
+          // Check date range (new inserts are always recent)
+          const matchesDate = true;
+          // Check search
+          const matchesSearch = !search || newDetection.url_hash?.toLowerCase().includes(search.toLowerCase());
+
+          if (matchesSeverity && matchesDate && matchesSearch) {
+            setDetections(prev => [newDetection, ...prev].slice(0, PAGE_SIZE));
+            setTotalCount(prev => prev + 1);
+          }
+
+          toast({
+            title: 'New Detection',
+            description: `${newDetection.severity} threat detected`,
+          });
+
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [severityFilter, search, dateRange, toast, fetchStats]);
+
+  const clearFilters = () => {
+    setSeverityFilter('all');
+    setDateRange('7d');
+    setSearch('');
+    setPage(0);
+  };
+
+  const hasActiveFilters = severityFilter !== 'all' || dateRange !== '7d' || search !== '';
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
@@ -100,10 +161,23 @@ const DetectionsTab = () => {
             ))}
           </SelectContent>
         </Select>
+        <Select value={dateRange} onValueChange={v => { setDateRange(v); setPage(0); }}>
+          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {DATE_RANGES.map(d => (
+              <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search url hash..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
         </div>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="h-4 w-4 mr-1" /> Clear
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -143,7 +217,6 @@ const DetectionsTab = () => {
               </tbody>
             </table>
           </div>
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-3 border-t">
               <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({totalCount} total)</span>
