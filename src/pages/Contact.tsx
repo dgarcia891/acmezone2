@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-
-const WEBHOOK_URL = "https://n8n.srv946115.hstgr.cloud/form-test/contact-us";
+import { supabase } from "@/integrations/supabase/client";
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 20) + 1;
@@ -55,12 +54,11 @@ const Contact = () => {
 
     setLoading(true);
     try {
-      await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        mode: "no-cors",
-        body: JSON.stringify({ name, email, message, timestamp: new Date().toISOString(), source: window.location.origin }),
+      const { data, error } = await supabase.functions.invoke('contact-notify', {
+        body: { name, email, message, timestamp: new Date().toISOString(), source: window.location.origin },
       });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast({ title: "Request Sent", description: "Please check your inbox for follow-up." });
       setName(""); setEmail(""); setMessage("");
       resetCaptcha();
