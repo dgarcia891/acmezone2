@@ -18,7 +18,12 @@ const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
   tshirt: 2499,
 };
 
-async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
+const PRINTIFY_TITLE_MAX = 140;
+
+function sanitizeTitle(title: string | null | undefined) {
+  const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
+  return normalized.slice(0, PRINTIFY_TITLE_MAX);
+}
   const res = await fetch(`https://api.printify.com/v1${path}`, {
     ...options,
     headers: {
@@ -143,7 +148,7 @@ Deno.serve(async (req) => {
       const product = await printifyFetch(`/shops/${printify_shop_id}/products.json`, printify_api_key, {
         method: "POST",
         body: JSON.stringify({
-          title: listing.title,
+          title: sanitizeTitle(listing.title),
           description: listing.description,
           tags: listing.tags || [],
           blueprint_id: blueprintId,
