@@ -13,10 +13,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const BLUEPRINT_CONFIG: Record<string, { blueprint_id: number; print_provider_id: number }> = {
-  sticker: { blueprint_id: 1268, print_provider_id: 99 },
-  tshirt: { blueprint_id: 6, print_provider_id: 99 },
-};
+// No hardcoded defaults — blueprint_id and print_provider_id must be set per listing
 
 async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
   const res = await fetch(`https://api.printify.com/v1${path}`, {
@@ -104,7 +101,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const config = BLUEPRINT_CONFIG[listing.product_type] || BLUEPRINT_CONFIG.tshirt;
+      const blueprintId = Number(listing.printify_blueprint_id);
+      const printProviderId = Number(listing.printify_print_provider_id);
+      if (!blueprintId || !printProviderId) {
+        console.warn(`Missing blueprint/provider IDs for ${listing.product_type} listing ${listing.id}, skipping`);
+        results.push({
+          product_type: listing.product_type,
+          error: `Blueprint ID and Print Provider ID must be configured on the ${listing.product_type} listing before sending to Printify.`,
+        });
+        continue;
+      }
 
       // 1. Upload image to Printify
       console.log(`Uploading image for ${listing.product_type}...`);
@@ -119,14 +125,14 @@ Deno.serve(async (req) => {
       console.log(`Image uploaded: ${imageId}`);
 
       // 2. Get blueprint variants
-      console.log(`Fetching variants for blueprint ${config.blueprint_id}...`);
+      console.log(`Fetching variants for blueprint ${blueprintId}...`);
       const variants = await printifyFetch(
-        `/catalog/blueprints/${config.blueprint_id}/print_providers/${config.print_provider_id}/variants.json`,
+        `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
         printify_api_key
       );
       const variantIds = (variants.variants || []).map((v: any) => v.id);
       if (!variantIds.length) {
-        throw new Error(`No variants found for blueprint ${config.blueprint_id}`);
+        throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
 
       // 3. Create product
@@ -137,8 +143,8 @@ Deno.serve(async (req) => {
           title: listing.title,
           description: listing.description,
           tags: listing.tags || [],
-          blueprint_id: config.blueprint_id,
-          print_provider_id: config.print_provider_id,
+          blueprint_id: blueprintId,
+          print_provider_id: printProviderId,
           variants: variantIds.map((vid: number) => ({
             id: vid,
             price: 0, // price will be set manually or via Printify defaults
