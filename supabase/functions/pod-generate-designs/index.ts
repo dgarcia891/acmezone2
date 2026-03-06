@@ -186,22 +186,35 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
+    // Process designs in PARALLEL to avoid edge function timeout
+    const designTasks: Promise<{ key: string; promptKey: string; prompt: string; url: string | null }>[] = [];
+
     if ((product_type === "sticker" || product_type === "both") && sticker_prompt) {
-      updateData.sticker_design_prompt = sticker_prompt;
-      const storedUrl = await processDesign(
-        `Create a die-cut sticker design. The artwork MUST fill the ENTIRE canvas from edge to edge with absolutely NO margin, NO padding, and NO white border around it. The design should be a single cohesive graphic that bleeds to all four edges of the image. Make it bold, colorful, and print-ready for die-cut sticker production at 300 DPI. Use a solid pure white (#FFFFFF) background ONLY behind the artwork where needed for internal contrast. Do NOT leave any empty white space around the design. The graphic MUST occupy 95-100% of the total image area. Do NOT include any product mockup, shadow, border, frame, or checkered pattern. ${sticker_prompt}`,
-        `sticker-${idea_id}`
+      designTasks.push(
+        processDesign(
+          `Create a die-cut sticker design. The artwork MUST fill the ENTIRE canvas from edge to edge with absolutely NO margin, NO padding, and NO white border around it. The design should be a single cohesive graphic that bleeds to all four edges of the image. Make it bold, colorful, and print-ready for die-cut sticker production at 300 DPI. Use a solid pure white (#FFFFFF) background ONLY behind the artwork where needed for internal contrast. Do NOT leave any empty white space around the design. The graphic MUST occupy 95-100% of the total image area. Do NOT include any product mockup, shadow, border, frame, or checkered pattern. ${sticker_prompt}`,
+          `sticker-${idea_id}`
+        ).then(url => ({ key: "sticker_design_url", promptKey: "sticker_design_prompt", prompt: sticker_prompt, url }))
       );
-      if (storedUrl) updateData.sticker_design_url = storedUrl;
     }
 
     if ((product_type === "tshirt" || product_type === "both") && tshirt_prompt) {
-      updateData.tshirt_design_prompt = tshirt_prompt;
-      const storedUrl = await processDesign(
-        `Create a t-shirt graphic design. Output ONLY the graphic artwork centered on a solid pure white (#FFFFFF) background. The design should be bold, eye-catching, and suitable for screen printing or DTG. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white. ${tshirt_prompt}`,
-        `tshirt-${idea_id}`
+      designTasks.push(
+        processDesign(
+          `Create a t-shirt graphic design. Output ONLY the graphic artwork centered on a solid pure white (#FFFFFF) background. The design should be bold, eye-catching, and suitable for screen printing or DTG. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white. ${tshirt_prompt}`,
+          `tshirt-${idea_id}`
+        ).then(url => ({ key: "tshirt_design_url", promptKey: "tshirt_design_prompt", prompt: tshirt_prompt, url }))
       );
-      if (storedUrl) updateData.tshirt_design_url = storedUrl;
+    }
+
+    const results = await Promise.allSettled(designTasks);
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        updateData[result.value.promptKey] = result.value.prompt;
+        if (result.value.url) updateData[result.value.key] = result.value.url;
+      } else {
+        console.error("Design task failed:", result.reason);
+      }
     }
 
     const { data: idea, error: updateError } = await supabase
