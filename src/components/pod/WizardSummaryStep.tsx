@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ExternalLink, CheckCircle2, Loader2, ArrowLeft, Package } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useSendToPrintify } from "@/hooks/usePodListings";
@@ -56,6 +57,16 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
   const updateStatus = useUpdateIdeaStatus();
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
+  // Product type selection state
+  const hasSticker = !!idea?.sticker_design_url;
+  const hasTshirt = !!idea?.tshirt_design_url;
+  const [stickerSelected, setStickerSelected] = useState(hasSticker);
+  const [tshirtSelected, setTshirtSelected] = useState(hasTshirt);
+
+  const selectedTypes: string[] = [];
+  if (stickerSelected && hasSticker) selectedTypes.push("sticker");
+  if (tshirtSelected && hasTshirt) selectedTypes.push("tshirt");
+
   const statusInfo = STATUS_LABELS[idea?.status] || { label: idea?.status, emoji: "" };
 
   const viewUrl = printifyResults?.[0]?.printify_url || idea?.printify_product_url;
@@ -94,24 +105,75 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
             <p className="text-sm">{idea?.idea_text || "Untitled idea"}</p>
           </div>
 
-          {/* Designs */}
-          {(idea?.sticker_design_url || idea?.tshirt_design_url) && (
+          {/* Designs with selection checkboxes */}
+          {(hasSticker || hasTshirt) && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Designs</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                {idea?.status === "ready" ? "Select products to publish" : "Designs"}
+              </p>
               <div className="grid grid-cols-2 gap-3">
-                {idea?.sticker_design_url && (
-                  <div>
-                    <p className="text-[10px] text-muted-foreground mb-1">Sticker</p>
-                    <img src={idea.sticker_design_url} alt="Sticker design" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
+                {hasSticker && (
+                  <div className="relative">
+                    {idea?.status === "ready" && (
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Checkbox
+                          id="select-sticker"
+                          checked={stickerSelected}
+                          onCheckedChange={(v) => setStickerSelected(!!v)}
+                          aria-label="Include sticker"
+                        />
+                        <label htmlFor="select-sticker" className="text-xs font-medium cursor-pointer">
+                          Sticker
+                        </label>
+                      </div>
+                    )}
+                    {idea?.status !== "ready" && (
+                      <p className="text-[10px] text-muted-foreground mb-1">Sticker</p>
+                    )}
+                    <img
+                      src={idea.sticker_design_url}
+                      alt="Sticker design"
+                      className={`w-full rounded border bg-muted aspect-square object-contain ${
+                        idea?.status === "ready" && !stickerSelected
+                          ? "opacity-40 border-border"
+                          : "border-border"
+                      }`}
+                    />
                   </div>
                 )}
-                {idea?.tshirt_design_url && (
-                  <div>
-                    <p className="text-[10px] text-muted-foreground mb-1">T-Shirt</p>
-                    <img src={idea.tshirt_design_url} alt="T-Shirt design" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
+                {hasTshirt && (
+                  <div className="relative">
+                    {idea?.status === "ready" && (
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Checkbox
+                          id="select-tshirt"
+                          checked={tshirtSelected}
+                          onCheckedChange={(v) => setTshirtSelected(!!v)}
+                          aria-label="Include t-shirt"
+                        />
+                        <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">
+                          T-Shirt
+                        </label>
+                      </div>
+                    )}
+                    {idea?.status !== "ready" && (
+                      <p className="text-[10px] text-muted-foreground mb-1">T-Shirt</p>
+                    )}
+                    <img
+                      src={idea.tshirt_design_url}
+                      alt="T-Shirt design"
+                      className={`w-full rounded border bg-muted aspect-square object-contain ${
+                        idea?.status === "ready" && !tshirtSelected
+                          ? "opacity-40 border-border"
+                          : "border-border"
+                      }`}
+                    />
                   </div>
                 )}
               </div>
+              {idea?.status === "ready" && selectedTypes.length === 0 && (
+                <p className="text-xs text-destructive mt-2">Select at least one product type to publish.</p>
+              )}
             </div>
           )}
 
@@ -228,18 +290,21 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
         <div className="flex gap-3">
           {idea?.status === "ready" && (
             <Button
-              onClick={() => sendToPrintify.mutate(idea.id, {
-                onSuccess: (data) => {
-                  setPrintifyResults(data?.products || []);
-                  onIdeaUpdated?.({ status: "production" });
-                },
-              })}
-              disabled={sendToPrintify.isPending}
+              onClick={() => sendToPrintify.mutate(
+                { idea_id: idea.id, product_types: selectedTypes },
+                {
+                  onSuccess: (data) => {
+                    setPrintifyResults(data?.products || []);
+                    onIdeaUpdated?.({ status: "production" });
+                  },
+                }
+              )}
+              disabled={sendToPrintify.isPending || selectedTypes.length === 0}
             >
               {sendToPrintify.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
               ) : (
-                "Send to Printify"
+                `Send ${selectedTypes.length === 1 ? selectedTypes[0] : "both"} to Printify`
               )}
             </Button>
           )}

@@ -102,7 +102,12 @@ Deno.serve(async (req) => {
       .eq("idea_id", idea_id)
       .eq("is_approved", true);
     if (listingsError) throw listingsError;
-    if (!listings?.length) return json({ error: "No approved listings found" }, 400);
+    // Filter by product_types if provided
+    let filteredListings = listings || [];
+    if (product_types && Array.isArray(product_types) && product_types.length > 0) {
+      filteredListings = filteredListings.filter((l: any) => product_types.includes(l.product_type));
+    }
+    if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
 
     // Fetch Printify credentials
     const { data: settings } = await supabase
@@ -135,7 +140,7 @@ Deno.serve(async (req) => {
 
     const results: any[] = [];
 
-    for (const listing of listings) {
+    for (const listing of filteredListings) {
       const designUrl = listing.product_type === "sticker"
         ? idea.sticker_design_url
         : idea.tshirt_design_url;
