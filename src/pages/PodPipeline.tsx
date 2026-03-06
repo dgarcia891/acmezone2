@@ -161,7 +161,6 @@ const PodPipeline = () => {
 
               {step === "approve" && (
                 <ApprovalSuccess
-                  trelloCardUrl={currentIdea?.trello_card_url}
                   onReset={resetPipeline}
                 />
               )}
