@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
           print_provider_id: printProviderId,
           variants: variantIds.map((vid: number) => ({
             id: vid,
-            price: 0, // price will be set manually or via Printify defaults
+            price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
             is_enabled: true,
           })),
           print_areas: [{
