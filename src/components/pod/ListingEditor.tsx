@@ -3,11 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Plus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { X, Plus, ChevronDown, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useUpdateListing } from "@/hooks/usePodListings";
+
+interface Shop {
+  shop_id: string;
+  marketplace: string;
+  label: string;
+}
 
 interface Props {
   listing: any;
+  shops?: Shop[];
 }
 
 function CharCounter({ value, max }: { value: string; max: number }) {
@@ -20,7 +28,7 @@ function CharCounter({ value, max }: { value: string; max: number }) {
   );
 }
 
-export default function ListingEditor({ listing }: Props) {
+export default function ListingEditor({ listing, shops = [] }: Props) {
   const [title, setTitle] = useState(listing.title || "");
   const [description, setDescription] = useState(listing.description || "");
   const [tags, setTags] = useState<string[]>(listing.tags || []);
@@ -173,6 +181,63 @@ export default function ListingEditor({ listing }: Props) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Marketplace Preview */}
+      {shops.length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors w-full group">
+            <Eye className="h-3 w-3" />
+            <span>Marketplace Preview</span>
+            <ChevronDown className="h-3 w-3 ml-auto transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-2">
+            {shops.map((shop) => {
+              const isEbay = shop.marketplace.toLowerCase() === "ebay";
+              const isEtsy = shop.marketplace.toLowerCase() === "etsy";
+              const resolvedTitle = isEbay ? (ebayTitle || title) : isEtsy ? (etsyTitle || title) : title;
+              const charLimit = isEbay ? 80 : isEtsy ? 140 : null;
+              const isOver = charLimit ? resolvedTitle.length > charLimit : false;
+
+              const marketplaceColors: Record<string, string> = {
+                ebay: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+                etsy: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                shopify: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                default: "bg-primary/10 text-primary",
+              };
+              const badgeClass = marketplaceColors[shop.marketplace.toLowerCase()] || marketplaceColors.default;
+
+              return (
+                <div key={shop.shop_id} className="rounded-md border border-border bg-muted/30 p-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-medium">{shop.label}</span>
+                    <Badge className={`text-[9px] px-1.5 py-0 ${badgeClass}`}>{shop.marketplace}</Badge>
+                    <div className="ml-auto flex items-center gap-1">
+                      {charLimit && (
+                        <span className={`text-[10px] ${isOver ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          {resolvedTitle.length}/{charLimit}
+                        </span>
+                      )}
+                      {isOver ? (
+                        <AlertTriangle className="h-3 w-3 text-destructive" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-[11px]">
+                    <span className="text-muted-foreground">Title: </span>
+                    <span className={isOver ? "text-destructive" : ""}>{resolvedTitle || "—"}</span>
+                  </div>
+                  <div className="text-[11px]">
+                    <span className="text-muted-foreground">Description: </span>
+                    <span className="line-clamp-2">{description || "—"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );

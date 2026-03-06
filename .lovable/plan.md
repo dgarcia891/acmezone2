@@ -1,32 +1,32 @@
 
 
-# Plan: Show Per-Marketplace Listing Preview
+# Unified Admin Navigation
 
 ## Problem
-Currently the Listings step shows one card per product type (sticker/t-shirt) with Etsy and eBay title fields side by side. But the user can't see at a glance what each configured shop will actually receive — especially since the title, and potentially description, differ per marketplace.
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-## Approach
-Add a **"Marketplace Preview"** section below each `ListingEditor` card that renders a read-only preview card for each configured shop, showing the exact title that shop will receive (applying the marketplace-specific title and character limit rules). This keeps the current editing UX intact while adding visibility into what each store gets.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
 ## Changes
 
-### 1. `WizardListingsStep.tsx`
-- Pass the list of configured shops (primary + additional) down to each `ListingEditor`
-- Group by product type, then show per-shop preview beneath each editor
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-### 2. `ListingEditor.tsx`
-- Accept a new `shops` prop (array of `{ shop_id, marketplace, label }`)
-- Add a collapsible "Marketplace Preview" section at the bottom of each listing card
-- For each shop, display a compact read-only row showing:
-  - Shop label + marketplace badge
-  - The resolved title that shop will receive (ebay_title for eBay, etsy_title for Etsy, standard title for others)
-  - Character count with limit indicator
-- This gives immediate visual feedback: "eBay Shop → 78/80 chars ✓" vs "Etsy Shop → 137/140 chars ✓"
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-## Files Changed
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
 
-| File | Change |
-|---|---|
-| `src/components/pod/WizardListingsStep.tsx` | Pass shops array to ListingEditor |
-| `src/components/pod/ListingEditor.tsx` | Add marketplace preview section showing resolved titles per shop |
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 

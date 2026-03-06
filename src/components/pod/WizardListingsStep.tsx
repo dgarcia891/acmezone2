@@ -29,6 +29,14 @@ export default function WizardListingsStep({ idea, onBack, onApproved }: Props) 
   const primaryShopId = settingsData?.settings?.printify_shop_id;
   const additionalShops = settingsData?.additional_shops || [];
 
+  // Build shops array for marketplace preview
+  const shops = [
+    ...(primaryShopId ? [{ shop_id: primaryShopId, marketplace: "default", label: "Primary Shop" }] : []),
+    ...additionalShops
+      .filter((s: any) => s.is_active)
+      .map((s: any) => ({ shop_id: s.shop_id, marketplace: s.marketplace, label: s.label || `${s.marketplace} Shop` })),
+  ];
+
   const handleApprove = () => {
     approveListings.mutate(idea.id, {
       onSuccess: () => onApproved(),
@@ -98,7 +106,7 @@ export default function WizardListingsStep({ idea, onBack, onApproved }: Props) 
             </p>
           ) : (
             listings.map((listing: any) => (
-              <ListingEditor key={listing.id} listing={listing} />
+              <ListingEditor key={listing.id} listing={listing} shops={shops} />
             ))
           )}
         </CardContent>
