@@ -3,11 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Plus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { X, Plus, ChevronDown, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useUpdateListing } from "@/hooks/usePodListings";
+
+interface Shop {
+  shop_id: string;
+  marketplace: string;
+  label: string;
+}
 
 interface Props {
   listing: any;
+  shops?: Shop[];
 }
 
 function CharCounter({ value, max }: { value: string; max: number }) {
