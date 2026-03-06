@@ -76,3 +76,20 @@ export function useApproveListings() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export function useSendToPrintify() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (idea_id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Product sent to Printify!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}

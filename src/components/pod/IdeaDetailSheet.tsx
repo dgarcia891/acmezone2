@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, X, RefreshCw, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { useUpdateIdeaStatus, useUpdateIdeaNotes, useUpdateIdeaPriority, usePodLabels, useIdeaLabels, useToggleIdeaLabel } from "@/hooks/usePodKanban";
 import { usePodGenerateDesigns, usePodApprove, useRejectIdea } from "@/hooks/usePodPipeline";
-import { usePodListings, useGenerateListings, useUpdateListing, useApproveListings } from "@/hooks/usePodListings";
+import { usePodListings, useGenerateListings, useUpdateListing, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import ListingEditor from "./ListingEditor";
 
 const ALL_STATUSES = [
@@ -46,6 +46,7 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
   const { data: listings = [] } = usePodListings(idea?.id ?? null);
+  const sendToPrintify = useSendToPrintify();
 
   useEffect(() => {
     setNotes(idea?.notes || "");
@@ -228,6 +229,28 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
             />
           </div>
 
+          {/* Printify / Marketplace Links */}
+          {(idea.status === "production" || idea.status === "live") && (
+            <div className="space-y-2">
+              {idea.status === "live" && (
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-xs font-medium">Product is live!</span>
+                </div>
+              )}
+              {idea.printify_product_url && (
+                <a href={idea.printify_product_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> View on Printify
+                </a>
+              )}
+              {idea.listing_url && (
+                <a href={idea.listing_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> View {idea.listing_platform || "marketplace"} listing
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
             {idea.status === "pending" && (
@@ -256,7 +279,13 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
               </>
             )}
             {idea.status === "ready" && (
-              <Button size="sm" onClick={() => handleStatusChange("production")}>Send to Printify</Button>
+              <Button size="sm" onClick={() => sendToPrintify.mutate(idea.id)} disabled={sendToPrintify.isPending}>
+                {sendToPrintify.isPending ? (
+                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Sending to Printify…</>
+                ) : (
+                  "Send to Printify"
+                )}
+              </Button>
             )}
             {idea.status === "production" && (
               <Button size="sm" onClick={() => handleStatusChange("live")}>Mark as Live</Button>
