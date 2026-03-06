@@ -39,12 +39,22 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
+    // ---------- Load Remove.bg key from user settings ----------
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("removebg_api_key")
+      .eq("user_id", user.id)
+      .single();
+
+    const REMOVE_BG_API_KEY = settings?.removebg_api_key;
+    if (!REMOVE_BG_API_KEY) {
+      return json({ error: "Remove.bg API key is not configured. Please add it in POD Settings before generating designs." }, 400);
+    }
+
     const { idea_id, product_type, sticker_prompt, tshirt_prompt } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not found");
-
-    const REMOVE_BG_API_KEY = Deno.env.get("REMOVE_BG_API_KEY");
 
     // ---------- AI image generation ----------
     async function generateDesignImage(prompt: string): Promise<string | null> {
@@ -90,37 +100,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---------- Remove.bg background removal ----------
-    async function removeBackground(imageBytes: Uint8Array): Promise<Uint8Array | null> {
-      if (!REMOVE_BG_API_KEY) {
-        console.warn("REMOVE_BG_API_KEY not set – skipping background removal");
-        return null;
+    // ---------- Remove.bg background removal (strict – errors block pipeline) ----------
+    async function removeBackground(imageBytes: Uint8Array): Promise<Uint8Array> {
+      const formData = new FormData();
+      formData.append("image_file", new Blob([imageBytes], { type: "image/png" }), "design.png");
+      formData.append("size", "auto");
+
+      console.log(`Remove.bg: sending ${imageBytes.length} bytes for background removal`);
+
+      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": REMOVE_BG_API_KEY },
+        body: formData,
+      });
+
+      if (response.status === 403) {
+        const errorText = await response.text();
+        console.error(`Remove.bg auth failed: ${errorText}`);
+        throw new Error("Remove.bg API key is invalid. Please update it in POD Settings.");
       }
 
-      try {
-        const formData = new FormData();
-        formData.append("image_file", new Blob([imageBytes], { type: "image/png" }), "design.png");
-        formData.append("size", "auto");
-
-        const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-          method: "POST",
-          headers: { "X-Api-Key": REMOVE_BG_API_KEY },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(`Remove.bg failed (${response.status}): ${errorText}`);
-          return null;
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        console.log("Remove.bg success – transparent PNG received");
-        return new Uint8Array(arrayBuffer);
-      } catch (err) {
-        console.warn("Remove.bg call failed:", err);
-        return null;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Remove.bg failed (${response.status}): ${errorText}`);
+        throw new Error(`Remove.bg failed with status ${response.status}. Please check your API key and account.`);
       }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const result = new Uint8Array(arrayBuffer);
+      console.log(`Remove.bg success: input ${imageBytes.length} bytes → output ${result.length} bytes (transparent PNG)`);
+      return result;
     }
 
     // ---------- Decode base64 URL to bytes ----------
@@ -146,6 +155,7 @@ Deno.serve(async (req) => {
         }
 
         const { data: publicUrl } = supabase.storage.from("pod-assets").getPublicUrl(filePath);
+        console.log(`Uploaded transparent PNG: ${publicUrl.publicUrl}`);
         return publicUrl.publicUrl;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -164,11 +174,9 @@ Deno.serve(async (req) => {
         return base64Url;
       }
 
-      // Attempt background removal
+      // Background removal is REQUIRED – errors will propagate up
       const transparentBytes = await removeBackground(decoded.bytes);
-      const finalBytes = transparentBytes ?? decoded.bytes;
-
-      return await uploadDesignImage(finalBytes, filename);
+      return await uploadDesignImage(transparentBytes, filename);
     }
 
     // ---------- Build update payload ----------
@@ -181,7 +189,7 @@ Deno.serve(async (req) => {
     if ((product_type === "sticker" || product_type === "both") && sticker_prompt) {
       updateData.sticker_design_prompt = sticker_prompt;
       const storedUrl = await processDesign(
-        `Create a sticker design. Output ONLY the graphic artwork centered on a solid pure white (#FFFFFF) background. The design should be clean, bold, and print-ready for die-cut stickers. Do NOT include any product mockup, shadow, border, or frame. No checkered pattern. Just the artwork on white. ${sticker_prompt}`,
+        `Create a die-cut sticker design. The artwork MUST fill the ENTIRE canvas from edge to edge with absolutely NO margin, NO padding, and NO white border around it. The design should be a single cohesive graphic that bleeds to all four edges of the image. Make it bold, colorful, and print-ready for die-cut sticker production at 300 DPI. Use a solid pure white (#FFFFFF) background ONLY behind the artwork where needed for internal contrast. Do NOT leave any empty white space around the design. The graphic MUST occupy 95-100% of the total image area. Do NOT include any product mockup, shadow, border, frame, or checkered pattern. ${sticker_prompt}`,
         `sticker-${idea_id}`
       );
       if (storedUrl) updateData.sticker_design_url = storedUrl;

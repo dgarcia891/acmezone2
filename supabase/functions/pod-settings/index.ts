@@ -67,6 +67,40 @@ Deno.serve(async (req) => {
 
       return json({ settings: masked });
 
+    } else if (req.method === "PUT") {
+      // Validate Remove.bg API key
+      const body = await req.json();
+      const keyToValidate = body.removebg_api_key;
+
+      if (!keyToValidate) {
+        return json({ error: "No API key provided for validation" }, 400);
+      }
+
+      try {
+        const response = await fetch("https://api.remove.bg/v1.0/account", {
+          headers: { "X-Api-Key": keyToValidate },
+        });
+
+        if (response.status === 403) {
+          const errorData = await response.text();
+          console.error("Remove.bg key validation failed:", errorData);
+          return json({ valid: false, error: "API key is invalid. Please check your Remove.bg dashboard." }, 400);
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Remove.bg validation error:", errorData);
+          return json({ valid: false, error: `Validation failed with status ${response.status}` }, 400);
+        }
+
+        const accountData = await response.json();
+        console.log("Remove.bg key validated. Account:", JSON.stringify(accountData));
+        return json({ valid: true, credits: accountData?.data?.attributes?.credits });
+      } catch (err) {
+        console.error("Remove.bg validation network error:", err);
+        return json({ valid: false, error: "Could not reach Remove.bg to validate the key" }, 500);
+      }
+
     } else if (req.method === "POST") {
       const body = await req.json();
 

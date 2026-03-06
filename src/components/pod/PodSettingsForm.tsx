@@ -4,12 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2 } from "lucide-react";
-import { usePodSettings, useSavePodSettings } from "@/hooks/usePodPipeline";
+import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck } from "lucide-react";
+import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey } from "@/hooks/usePodPipeline";
 
 export default function PodSettingsForm() {
   const { data: settings, isLoading } = usePodSettings();
   const saveMutation = useSavePodSettings();
+  const validateMutation = useValidateRemoveBgKey();
 
   const [form, setForm] = useState({
     printify_api_key: "",
@@ -29,12 +30,23 @@ export default function PodSettingsForm() {
 
   const update = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const body: Record<string, string> = {};
     Object.entries(form).forEach(([k, v]) => {
       if (v) body[k] = v;
     });
     if (Object.keys(body).length === 0) return;
+
+    // If a Remove.bg key is being saved, validate it first
+    if (body.removebg_api_key) {
+      try {
+        await validateMutation.mutateAsync(body.removebg_api_key);
+      } catch {
+        // Validation failed – toast already shown by the mutation
+        return;
+      }
+    }
+
     saveMutation.mutate(body);
   };
 
@@ -45,6 +57,8 @@ export default function PodSettingsForm() {
   if (isLoading) {
     return <div className="space-y-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>;
   }
+
+  const isSaving = saveMutation.isPending || validateMutation.isPending;
 
   return (
     <Card>
@@ -98,12 +112,15 @@ export default function PodSettingsForm() {
               Remove.bg API Key <StatusIcon has={settings?.has_removebg_api_key} />
             </label>
             <Input type="password" placeholder="Enter Remove.bg API Key" value={form.removebg_api_key} onChange={(e) => update("removebg_api_key", e.target.value)} />
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" /> Key will be validated against Remove.bg before saving
+            </p>
           </div>
         </div>
 
-        <Button className="w-full" onClick={handleSave} disabled={saveMutation.isPending}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Settings
+        <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          {validateMutation.isPending ? "Validating key..." : "Save Settings"}
         </Button>
       </CardContent>
     </Card>
