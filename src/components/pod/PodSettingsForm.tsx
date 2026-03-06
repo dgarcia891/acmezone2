@@ -4,17 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, LayoutGrid, Printer, Eraser, CheckCircle2, XCircle, Plug, Save, Loader2 } from "lucide-react";
-import { usePodSettings, useSavePodSettings, useTestTrello } from "@/hooks/usePodPipeline";
+import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2 } from "lucide-react";
+import { usePodSettings, useSavePodSettings } from "@/hooks/usePodPipeline";
 
 export default function PodSettingsForm() {
   const { data: settings, isLoading } = usePodSettings();
   const saveMutation = useSavePodSettings();
-  const testTrello = useTestTrello();
 
   const [form, setForm] = useState({
-    trello_api_key: "",
-    trello_token: "",
     printify_api_key: "",
     printify_shop_id: "",
     removebg_api_key: "",
@@ -23,8 +20,6 @@ export default function PodSettingsForm() {
   useEffect(() => {
     if (settings) {
       setForm({
-        trello_api_key: "",
-        trello_token: "",
         printify_api_key: "",
         printify_shop_id: settings.printify_shop_id || "",
         removebg_api_key: "",
@@ -68,42 +63,6 @@ export default function PodSettingsForm() {
             <span className="font-medium">Gemini 3 Flash</span> and design generation uses{" "}
             <span className="font-medium">Nano Banana Pro</span>. These are built-in and require no API keys. Usage is billed through your Lovable AI balance.
           </p>
-        </div>
-
-        {/* Trello */}
-        <div>
-          <h3 className="flex items-center gap-2 font-medium mb-3">
-            <LayoutGrid className="h-4 w-4" /> Trello
-          </h3>
-          <Separator className="mb-4" />
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm flex items-center gap-2 mb-1">
-                Trello API Key <StatusIcon has={settings?.has_trello_api_key} />
-              </label>
-              <Input type="password" placeholder="Enter Trello API Key" value={form.trello_api_key} onChange={(e) => update("trello_api_key", e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm flex items-center gap-2 mb-1">
-                Trello Token <StatusIcon has={settings?.has_trello_token} />
-              </label>
-              <Input type="password" placeholder="Enter Trello Token" value={form.trello_token} onChange={(e) => update("trello_token", e.target.value)} />
-            </div>
-            <Button variant="outline" size="sm" onClick={() => testTrello.mutate()} disabled={testTrello.isPending}>
-              {testTrello.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plug className="h-4 w-4 mr-1" />}
-              Test Connection
-            </Button>
-            {testTrello.isSuccess && (
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4" /> Connected to board: {(testTrello.data as any)?.board_name}
-              </p>
-            )}
-            {testTrello.isError && (
-              <p className="text-sm text-destructive flex items-center gap-1">
-                <XCircle className="h-4 w-4" /> {(testTrello.error as Error)?.message}
-              </p>
-            )}
-          </div>
         </div>
 
         {/* Printify */}

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 import { useUpdateIdeaStatus, useUpdateIdeaNotes, useUpdateIdeaPriority, usePodLabels, useIdeaLabels, useToggleIdeaLabel } from "@/hooks/usePodKanban";
@@ -232,13 +232,6 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
               <Button size="sm" onClick={() => handleStatusChange("live")}>Mark as Live</Button>
             )}
           </div>
-
-          {/* Trello Link */}
-          {idea.trello_card_url && (
-            <a href={idea.trello_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-              <ExternalLink className="h-3 w-3" /> Trello Card
-            </a>
-          )}
 
           {/* Timestamps */}
           <div className="text-[10px] text-muted-foreground space-y-0.5">
