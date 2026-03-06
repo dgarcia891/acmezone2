@@ -13,7 +13,10 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// No hardcoded defaults — blueprint_id and print_provider_id must be set per listing
+const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
+  sticker: 499,
+  tshirt: 2499,
+};
 
 async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
   const res = await fetch(`https://api.printify.com/v1${path}`, {
