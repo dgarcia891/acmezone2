@@ -45,25 +45,30 @@ const PodPipeline = () => {
   const handleGenerate = () => {
     if (!currentIdea) return;
     setStep("generate");
+    const types = productType === "both" ? ["sticker", "tshirt"] : [productType];
+    setLoadingTypes(new Set(types));
     generateMutation.mutate({
       idea_id: currentIdea.id,
       product_type: productType,
       sticker_prompt: currentIdea.sticker_design_prompt || currentIdea.analysis?.sticker_design_prompt,
       tshirt_prompt: currentIdea.tshirt_design_prompt || currentIdea.analysis?.tshirt_design_prompt,
     }, {
-      onSuccess: (res) => setCurrentIdea(res.idea),
+      onSuccess: (res) => { setCurrentIdea(res.idea); setLoadingTypes(new Set()); },
+      onError: () => setLoadingTypes(new Set()),
     });
   };
 
   const handleRegenerate = (type: "sticker" | "tshirt", customPrompt?: string) => {
     if (!currentIdea) return;
+    setLoadingTypes((prev) => new Set([...prev, type]));
     generateMutation.mutate({
       idea_id: currentIdea.id,
       product_type: type,
       sticker_prompt: type === "sticker" ? (customPrompt || currentIdea.sticker_design_prompt) : undefined,
       tshirt_prompt: type === "tshirt" ? (customPrompt || currentIdea.tshirt_design_prompt) : undefined,
     }, {
-      onSuccess: (res) => setCurrentIdea(res.idea),
+      onSuccess: (res) => { setCurrentIdea(res.idea); setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }); },
+      onError: () => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }),
     });
   };
 
