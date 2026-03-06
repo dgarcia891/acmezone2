@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id } = await req.json();
+    const { idea_id, product_types } = await req.json();
     if (!idea_id) return json({ error: "idea_id is required" }, 400);
 
     // Fetch idea
