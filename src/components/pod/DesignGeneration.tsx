@@ -141,7 +141,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
         <Button variant="outline" onClick={onReject} disabled={anyLoading || isApproving}>
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject
         </Button>
-        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-primary hover:bg-primary/90">
           <Send className="h-4 w-4 mr-2" /> Approve Design
         </Button>
       </div>
