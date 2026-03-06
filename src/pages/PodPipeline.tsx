@@ -10,7 +10,7 @@ import DesignGeneration from "@/components/pod/DesignGeneration";
 import ApprovalSuccess from "@/components/pod/ApprovalSuccess";
 import PodHistoryTable from "@/components/pod/PodHistoryTable";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
-import { usePodAnalyze, usePodGenerateDesigns, usePodApprove, useRejectIdea } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, usePodApprove, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion } from "@/hooks/usePodPipeline";
 
 const PodPipeline = () => {
   const [step, setStep] = useState<PipelineStep>("input");
@@ -21,6 +21,9 @@ const PodPipeline = () => {
   const generateMutation = usePodGenerateDesigns();
   const approveMutation = usePodApprove();
   const rejectMutation = useRejectIdea();
+  const { data: versions = [] } = useDesignVersions(currentIdea?.id ?? null);
+  const selectVersionMutation = useSelectDesignVersion();
+  const deleteVersionMutation = useDeleteDesignVersion();
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
     setProductType(data.product_type);
@@ -74,6 +77,20 @@ const PodPipeline = () => {
     });
   };
 
+  const handleSelectVersion = (versionId: string, productType: string) => {
+    if (!currentIdea) return;
+    selectVersionMutation.mutate({ versionId, ideaId: currentIdea.id, productType }, {
+      onSuccess: (version: any) => {
+        const urlField = productType === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+        setCurrentIdea((prev: any) => ({ ...prev, [urlField]: version.image_url }));
+      },
+    });
+  };
+
+  const handleDeleteVersion = (versionId: string) => {
+    deleteVersionMutation.mutate(versionId);
+  };
+
   const resetPipeline = () => {
     setStep("input");
     setCurrentIdea(null);
@@ -121,6 +138,11 @@ const PodPipeline = () => {
                   onRegenerate={handleRegenerate}
                   isLoading={generateMutation.isPending}
                   isApproving={approveMutation.isPending}
+                  versions={versions}
+                  onSelectVersion={handleSelectVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                  isSelectingVersion={selectVersionMutation.isPending}
+                  isDeletingVersion={deleteVersionMutation.isPending}
                 />
               )}
 
