@@ -76,6 +76,45 @@ Only output valid JSON, no markdown.`;
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }
+// Search terms to find relevant blueprints for each product type
+const PRODUCT_SEARCH: Record<string, string[]> = {
+  sticker: ["sticker", "kiss-cut", "kiss cut"],
+  tshirt: ["unisex", "t-shirt", "tee", "bella", "3001"],
+};
+
+async function discoverPrintifyDefaults(apiKey: string): Promise<Record<string, { blueprint_id: string; print_provider_id: string }>> {
+  const res = await fetch("https://api.printify.com/v1/catalog/blueprints.json", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Printify catalog error ${res.status}`);
+  const blueprints: any[] = await res.json();
+
+  const results: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+
+  for (const [productType, keywords] of Object.entries(PRODUCT_SEARCH)) {
+    // Find a matching blueprint
+    const match = blueprints.find((bp: any) =>
+      keywords.some((kw) => bp.title?.toLowerCase().includes(kw))
+    );
+    if (!match) continue;
+
+    // Get print providers for this blueprint
+    const ppRes = await fetch(`https://api.printify.com/v1/catalog/blueprints/${match.id}/print_providers.json`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!ppRes.ok) continue;
+    const providers: any[] = await ppRes.json();
+    if (providers.length === 0) continue;
+
+    // Pick the first provider
+    results[productType] = {
+      blueprint_id: String(match.id),
+      print_provider_id: String(providers[0].id),
+    };
+  }
+
+  return results;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -117,6 +156,24 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
 
+    // Fetch Printify credentials to auto-populate blueprint/provider IDs
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key, printify_shop_id")
+      .eq("user_id", user.id)
+      .single();
+
+    // Try to discover valid blueprint/provider combos from Printify catalog
+    let printifyDefaults: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+    if (settings?.printify_api_key) {
+      try {
+        printifyDefaults = await discoverPrintifyDefaults(settings.printify_api_key);
+        console.log("Discovered Printify defaults:", JSON.stringify(printifyDefaults));
+      } catch (e) {
+        console.warn("Could not auto-discover Printify catalog:", e.message);
+      }
+    }
+
     // Delete existing listings for this idea (regenerate scenario)
     await supabase.from("az_pod_listings").delete().eq("idea_id", idea_id);
 
@@ -132,6 +189,7 @@ Deno.serve(async (req) => {
       if (!t.url) continue;
 
       const content = await generateListing(t.type, idea, t.prompt || "", LOVABLE_API_KEY);
+      const defaults = printifyDefaults[t.type] || {};
 
       const { data: listing, error: insertError } = await supabase
         .from("az_pod_listings")
@@ -144,6 +202,8 @@ Deno.serve(async (req) => {
           seo_keywords: content.seo_keywords || [],
           etsy_title: content.etsy_title || null,
           ebay_title: content.ebay_title || null,
+          printify_blueprint_id: defaults.blueprint_id || null,
+          printify_print_provider_id: defaults.print_provider_id || null,
         })
         .select()
         .single();
