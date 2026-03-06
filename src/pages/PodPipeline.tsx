@@ -115,16 +115,22 @@ const PodPipeline = () => {
   const handleGenerate = () => {
     if (!wizardIdea) return;
     setStep("generate");
-    const types = productType === "both" ? ["sticker", "tshirt"] : [productType];
+    const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
     setLoadingTypes(new Set(types));
-    generateMutation.mutate({
-      idea_id: wizardIdea.id,
-      product_type: productType,
-      sticker_prompt: wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt,
-      tshirt_prompt: wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt,
-    }, {
-      onSuccess: (res) => { setWizardIdea(res.idea); setLoadingTypes(new Set()); },
-      onError: () => setLoadingTypes(new Set()),
+    // Fire each type independently so one doesn't block the other
+    types.forEach((type) => {
+      generateMutation.mutate({
+        idea_id: wizardIdea.id,
+        product_type: type,
+        sticker_prompt: type === "sticker" ? (wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt) : undefined,
+        tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
+      }, {
+        onSuccess: (res) => {
+          setWizardIdea((prev: any) => ({ ...prev, ...res.idea }));
+          setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
+        },
+        onError: () => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }),
+      });
     });
   };
 
@@ -232,6 +238,7 @@ const PodPipeline = () => {
                   onApprove={handleApproveDesign}
                   onRegenerate={handleRegenerate}
                   onGenerate={handleGenerate}
+                  onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
