@@ -76,6 +76,45 @@ Only output valid JSON, no markdown.`;
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }
+// Search terms to find relevant blueprints for each product type
+const PRODUCT_SEARCH: Record<string, string[]> = {
+  sticker: ["sticker", "kiss-cut", "kiss cut"],
+  tshirt: ["unisex", "t-shirt", "tee", "bella", "3001"],
+};
+
+async function discoverPrintifyDefaults(apiKey: string): Promise<Record<string, { blueprint_id: string; print_provider_id: string }>> {
+  const res = await fetch("https://api.printify.com/v1/catalog/blueprints.json", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Printify catalog error ${res.status}`);
+  const blueprints: any[] = await res.json();
+
+  const results: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+
+  for (const [productType, keywords] of Object.entries(PRODUCT_SEARCH)) {
+    // Find a matching blueprint
+    const match = blueprints.find((bp: any) =>
+      keywords.some((kw) => bp.title?.toLowerCase().includes(kw))
+    );
+    if (!match) continue;
+
+    // Get print providers for this blueprint
+    const ppRes = await fetch(`https://api.printify.com/v1/catalog/blueprints/${match.id}/print_providers.json`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!ppRes.ok) continue;
+    const providers: any[] = await ppRes.json();
+    if (providers.length === 0) continue;
+
+    // Pick the first provider
+    results[productType] = {
+      blueprint_id: String(match.id),
+      print_provider_id: String(providers[0].id),
+    };
+  }
+
+  return results;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
