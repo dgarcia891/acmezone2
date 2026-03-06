@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import KanbanColumn, { type ColumnDef } from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
-import IdeaDetailSheet from "./IdeaDetailSheet";
 import { usePodIdeas } from "@/hooks/usePodPipeline";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 
@@ -18,11 +17,13 @@ const COLUMNS: ColumnDef[] = [
   { status: "live", label: "Live", emoji: "🚀" },
 ];
 
-export default function KanbanBoard() {
+interface Props {
+  onCardClick: (idea: any) => void;
+}
+
+export default function KanbanBoard({ onCardClick }: Props) {
   const { data: ideas = [] } = usePodIdeas();
   const updateStatus = useUpdateIdeaStatus();
-  const [selectedIdea, setSelectedIdea] = useState<any>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [rejectedOpen, setRejectedOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -53,54 +54,44 @@ export default function KanbanBoard() {
     setActiveId(null);
     const { active, over } = event;
     if (!over) return;
-
     const ideaId = active.id as string;
-    // over.id is the column status (droppable id)
     const newStatus = over.id as string;
     const idea = ideas.find((i: any) => i.id === ideaId);
     if (!idea || idea.status === newStatus) return;
-
     updateStatus.mutate({ id: ideaId, status: newStatus });
-  };
-
-  const handleCardClick = (idea: any) => {
-    setSelectedIdea(idea);
-    setSheetOpen(true);
   };
 
   const activeIdea = activeId ? ideas.find((i: any) => i.id === activeId) : null;
   const rejectedIdeas = groupedIdeas["rejected"] || [];
 
   return (
-    <>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={(e) => setActiveId(e.active.id as string)}
-        onDragEnd={handleDragEnd}
-      >
-        <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-4 min-w-max">
-            {COLUMNS.map((col) => (
-              <KanbanColumn
-                key={col.status}
-                column={col}
-                ideas={groupedIdeas[col.status] || []}
-                onCardClick={handleCardClick}
-              />
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(e) => setActiveId(e.active.id as string)}
+      onDragEnd={handleDragEnd}
+    >
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4 min-w-max">
+          {COLUMNS.map((col) => (
+            <KanbanColumn
+              key={col.status}
+              column={col}
+              ideas={groupedIdeas[col.status] || []}
+              onCardClick={onCardClick}
+            />
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
 
-        <DragOverlay>
-          {activeIdea ? (
-            <div className="w-[260px]">
-              <KanbanCard idea={activeIdea} onClick={() => {}} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      <DragOverlay>
+        {activeIdea ? (
+          <div className="w-[260px]">
+            <KanbanCard idea={activeIdea} onClick={() => {}} />
+          </div>
+        ) : null}
+      </DragOverlay>
 
       {/* Rejected section */}
       {rejectedIdeas.length > 0 && (
@@ -116,21 +107,12 @@ export default function KanbanBoard() {
           {rejectedOpen && (
             <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {rejectedIdeas.map((idea: any) => (
-                <KanbanCard key={idea.id} idea={idea} onClick={() => handleCardClick(idea)} />
+                <KanbanCard key={idea.id} idea={idea} onClick={() => onCardClick(idea)} />
               ))}
             </div>
           )}
         </div>
       )}
-
-      <IdeaDetailSheet
-        idea={selectedIdea}
-        open={sheetOpen}
-        onOpenChange={(open) => {
-          setSheetOpen(open);
-          if (!open) setSelectedIdea(null);
-        }}
-      />
-    </>
+    </DndContext>
   );
 }
