@@ -45,13 +45,13 @@ const PodPipeline = () => {
     });
   };
 
-  const handleRegenerate = (type: "sticker" | "tshirt") => {
+  const handleRegenerate = (type: "sticker" | "tshirt", customPrompt?: string) => {
     if (!currentIdea) return;
     generateMutation.mutate({
       idea_id: currentIdea.id,
       product_type: type,
-      sticker_prompt: type === "sticker" ? currentIdea.sticker_design_prompt : undefined,
-      tshirt_prompt: type === "tshirt" ? currentIdea.tshirt_design_prompt : undefined,
+      sticker_prompt: type === "sticker" ? (customPrompt || currentIdea.sticker_design_prompt) : undefined,
+      tshirt_prompt: type === "tshirt" ? (customPrompt || currentIdea.tshirt_design_prompt) : undefined,
     }, {
       onSuccess: (res) => setCurrentIdea(res.idea),
     });
