@@ -2,13 +2,17 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
+import { Plus, X, RefreshCw, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { useUpdateIdeaStatus, useUpdateIdeaNotes, useUpdateIdeaPriority, usePodLabels, useIdeaLabels, useToggleIdeaLabel } from "@/hooks/usePodKanban";
 import { usePodGenerateDesigns, usePodApprove, useRejectIdea } from "@/hooks/usePodPipeline";
+import { usePodListings, useGenerateListings, useUpdateListing, useApproveListings } from "@/hooks/usePodListings";
+import ListingEditor from "./ListingEditor";
 
 const ALL_STATUSES = [
   { value: "pending", label: "📥 New" },
@@ -39,6 +43,9 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
   const { data: allLabels = [] } = usePodLabels();
   const { data: ideaLabelIds = [] } = useIdeaLabels(idea?.id ?? null);
   const toggleLabel = useToggleIdeaLabel();
+  const generateListings = useGenerateListings();
+  const approveListings = useApproveListings();
+  const { data: listings = [] } = usePodListings(idea?.id ?? null);
 
   useEffect(() => {
     setNotes(idea?.notes || "");
@@ -68,6 +75,14 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
       sticker_prompt: idea.sticker_design_prompt,
       tshirt_prompt: idea.tshirt_design_prompt,
     });
+  };
+
+  const handleApproveDesign = () => {
+    generateListings.mutate(idea.id);
+  };
+
+  const handleApproveListings = () => {
+    approveListings.mutate(idea.id);
   };
 
   return (
@@ -171,6 +186,19 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
             </div>
           )}
 
+          {/* Listings Content (when status is listings or later) */}
+          {listings.length > 0 && (
+            <div>
+              <Separator className="mb-3" />
+              <label className="text-xs font-medium text-muted-foreground mb-2 block">Listing Content</label>
+              <div className="space-y-4">
+                {listings.map((listing: any) => (
+                  <ListingEditor key={listing.id} listing={listing} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Analysis */}
           {analysisKeys.length > 0 && (
             <div>
@@ -208,12 +236,24 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
               </Button>
             )}
             {idea.status === "designing" && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange("listings")}>
-                Approve Design
+              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleApproveDesign} disabled={generateListings.isPending}>
+                {generateListings.isPending ? (
+                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating Listings…</>
+                ) : (
+                  "Approve Design"
+                )}
               </Button>
             )}
             {idea.status === "listings" && (
-              <Button size="sm" onClick={() => handleStatusChange("ready")}>Mark Ready</Button>
+              <>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleApproveListings} disabled={approveListings.isPending}>
+                  {approveListings.isPending ? "Approving…" : "Approve Listings"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => generateListings.mutate(idea.id)} disabled={generateListings.isPending}>
+                  <RefreshCw className={`h-3 w-3 mr-1 ${generateListings.isPending ? "animate-spin" : ""}`} />
+                  Regenerate
+                </Button>
+              </>
             )}
             {idea.status === "ready" && (
               <Button size="sm" onClick={() => handleStatusChange("production")}>Send to Printify</Button>
