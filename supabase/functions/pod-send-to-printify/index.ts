@@ -187,8 +187,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if any products were actually created
+    const successResults = results.filter((r: any) => r.printify_product_id);
+    if (successResults.length === 0) {
+      const errors = results.map((r: any) => r.error).filter(Boolean).join("; ");
+      return json({ error: errors || "No products could be created. Ensure Blueprint ID and Print Provider ID are configured on each listing." }, 400);
+    }
+
     // Update idea with Printify data and set status to production
-    const firstResult = results[0];
+    const firstResult = successResults[0];
     await supabase
       .from("az_pod_ideas")
       .update({
