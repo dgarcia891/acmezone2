@@ -85,8 +85,64 @@ export function usePodSettings() {
       const { data, error } = await supabase.functions.invoke("pod-settings", { method: "GET" });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data?.settings;
+      return { settings: data?.settings, additional_shops: data?.additional_shops || [] };
     },
+  });
+}
+
+export function useAddShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { shop_id: string; marketplace: string; label?: string }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "add_shop", ...body },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+      toast.success("Shop added successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useRemoveShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "remove_shop", id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+      toast.success("Shop removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useToggleShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "toggle_shop", id, is_active },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 }
 

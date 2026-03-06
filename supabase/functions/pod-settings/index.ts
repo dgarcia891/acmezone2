@@ -40,11 +40,19 @@ Deno.serve(async (req) => {
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
     if (req.method === "GET") {
+      // Fetch main settings
       const { data: settings } = await supabase
         .from("az_pod_settings")
         .select("*")
         .eq("user_id", user.id)
         .single();
+
+      // Fetch additional shops
+      const { data: shops } = await supabase
+        .from("az_pod_printify_shops")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
 
       const masked = settings ? {
         trello_api_key: settings.trello_api_key ? "••••••••" : "",
@@ -65,7 +73,7 @@ Deno.serve(async (req) => {
         has_removebg_api_key: false,
       };
 
-      return json({ settings: masked });
+      return json({ settings: masked, additional_shops: shops || [] });
 
     } else if (req.method === "PUT") {
       // Validate Remove.bg API key
@@ -104,6 +112,46 @@ Deno.serve(async (req) => {
     } else if (req.method === "POST") {
       const body = await req.json();
 
+      // Handle additional shop operations
+      if (body.action === "add_shop") {
+        const { shop_id, marketplace, label } = body;
+        if (!shop_id || !marketplace) {
+          return json({ error: "shop_id and marketplace are required" }, 400);
+        }
+        const { data, error } = await supabase
+          .from("az_pod_printify_shops")
+          .insert({ user_id: user.id, shop_id, marketplace, label: label || null })
+          .select()
+          .single();
+        if (error) throw error;
+        return json({ success: true, shop: data });
+      }
+
+      if (body.action === "remove_shop") {
+        const { id } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      if (body.action === "toggle_shop") {
+        const { id, is_active } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update({ is_active })
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      // Default: save main settings
       const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
       if (body.trello_api_key) updateData.trello_api_key = body.trello_api_key;
       if (body.trello_token) updateData.trello_token = body.trello_token;

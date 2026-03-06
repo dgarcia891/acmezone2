@@ -18,12 +18,29 @@ const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
   tshirt: 2499,
 };
 
-const PRINTIFY_TITLE_MAX = 140;
+const MARKETPLACE_TITLE_LIMITS: Record<string, number> = {
+  ebay: 80,
+  etsy: 140,
+  shopify: 140,
+  default: 140,
+};
 
-function sanitizeTitle(title: string | null | undefined) {
+function sanitizeTitle(title: string | null | undefined, maxLen = 140) {
   const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
-  return normalized.slice(0, PRINTIFY_TITLE_MAX);
+  return normalized.slice(0, maxLen);
 }
+
+function getTitleForMarketplace(listing: any, marketplace: string): string {
+  const limit = MARKETPLACE_TITLE_LIMITS[marketplace] || 140;
+  if (marketplace === "ebay" && listing.ebay_title) {
+    return sanitizeTitle(listing.ebay_title, limit);
+  }
+  if (marketplace === "etsy" && listing.etsy_title) {
+    return sanitizeTitle(listing.etsy_title, limit);
+  }
+  return sanitizeTitle(listing.title, limit);
+}
+
 async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
   const res = await fetch(`https://api.printify.com/v1${path}`, {
     ...options,
@@ -97,7 +114,25 @@ Deno.serve(async (req) => {
       return json({ error: "Printify API key and Shop ID are required. Configure them in Settings." }, 400);
     }
 
+    // Fetch additional shops
+    const { data: additionalShops } = await supabase
+      .from("az_pod_printify_shops")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_active", true);
+
     const { printify_api_key, printify_shop_id } = settings;
+
+    // Build shop list: primary + additional
+    const shops = [
+      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop" },
+      ...(additionalShops || []).map((s: any) => ({
+        shop_id: s.shop_id,
+        marketplace: s.marketplace,
+        label: s.label || `${s.marketplace} Shop`,
+      })),
+    ];
+
     const results: any[] = [];
 
     for (const listing of listings) {
@@ -121,7 +156,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // 1. Upload image to Printify
+      // Upload image once per listing (shared across shops)
       console.log(`Uploading image for ${listing.product_type}...`);
       const uploadResult = await printifyFetch("/uploads/images.json", printify_api_key, {
         method: "POST",
@@ -133,7 +168,7 @@ Deno.serve(async (req) => {
       const imageId = uploadResult.id;
       console.log(`Image uploaded: ${imageId}`);
 
-      // 2. Get blueprint variants
+      // Get variants once (same blueprint/provider for all shops)
       console.log(`Fetching variants for blueprint ${blueprintId}...`);
       const variants = await printifyFetch(
         `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
@@ -144,50 +179,68 @@ Deno.serve(async (req) => {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
 
-      // 3. Create product
-      console.log(`Creating product on Printify...`);
-      const product = await printifyFetch(`/shops/${printify_shop_id}/products.json`, printify_api_key, {
-        method: "POST",
-        body: JSON.stringify({
-          title: sanitizeTitle(listing.title),
-          description: listing.description,
-          tags: listing.tags || [],
-          blueprint_id: blueprintId,
-          print_provider_id: printProviderId,
-          variants: variantIds.map((vid: number) => ({
-            id: vid,
-            price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
-            is_enabled: true,
-          })),
-          print_areas: [{
-            variant_ids: variantIds,
-            placeholders: [{
-              position: "front",
-              images: [{
-                id: imageId,
-                x: 0.5,
-                y: 0.5,
-                scale: 1,
-                angle: 0,
-              }],
-            }],
-          }],
-        }),
-      });
-      console.log(`Product created as draft: ${product.id}`);
+      // Create product on each shop
+      for (const shop of shops) {
+        const title = getTitleForMarketplace(listing, shop.marketplace);
+        console.log(`Creating product on shop ${shop.shop_id} (${shop.marketplace}): "${title}"`);
 
-      results.push({
-        product_type: listing.product_type,
-        printify_product_id: product.id,
-        printify_url: `https://printify.com/app/editor/${product.id}`,
-        title: product.title || listing.title,
-        images: (product.images || []).map((img: any) => ({
-          src: img.src,
-          is_default: img.is_default,
-        })),
-        variants_count: (product.variants || []).length,
-        variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
-      });
+        try {
+          const product = await printifyFetch(`/shops/${shop.shop_id}/products.json`, printify_api_key, {
+            method: "POST",
+            body: JSON.stringify({
+              title,
+              description: listing.description,
+              tags: listing.tags || [],
+              blueprint_id: blueprintId,
+              print_provider_id: printProviderId,
+              variants: variantIds.map((vid: number) => ({
+                id: vid,
+                price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
+                is_enabled: true,
+              })),
+              print_areas: [{
+                variant_ids: variantIds,
+                placeholders: [{
+                  position: "front",
+                  images: [{
+                    id: imageId,
+                    x: 0.5,
+                    y: 0.5,
+                    scale: 1,
+                    angle: 0,
+                  }],
+                }],
+              }],
+            }),
+          });
+          console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
+
+          results.push({
+            product_type: listing.product_type,
+            printify_product_id: product.id,
+            printify_url: `https://printify.com/app/editor/${product.id}`,
+            title: product.title || listing.title,
+            shop_id: shop.shop_id,
+            marketplace: shop.marketplace,
+            shop_label: shop.label,
+            images: (product.images || []).map((img: any) => ({
+              src: img.src,
+              is_default: img.is_default,
+            })),
+            variants_count: (product.variants || []).length,
+            variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
+          });
+        } catch (shopError) {
+          console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);
+          results.push({
+            product_type: listing.product_type,
+            shop_id: shop.shop_id,
+            marketplace: shop.marketplace,
+            shop_label: shop.label,
+            error: `Failed to create on ${shop.label}: ${shopError.message}`,
+          });
+        }
+      }
     }
 
     // Check if any products were actually created
@@ -197,13 +250,13 @@ Deno.serve(async (req) => {
       return json({ error: errors || "No products could be created. Ensure Blueprint ID and Print Provider ID are configured on each listing." }, 400);
     }
 
-    // Update idea with Printify data and set status to production
-    const firstResult = successResults[0];
+    // Update idea with primary shop's Printify data and set status to production
+    const primaryResult = successResults.find((r: any) => r.marketplace === "default") || successResults[0];
     await supabase
       .from("az_pod_ideas")
       .update({
-        printify_product_id: firstResult?.printify_product_id || null,
-        printify_product_url: firstResult?.printify_url || null,
+        printify_product_id: primaryResult?.printify_product_id || null,
+        printify_product_url: primaryResult?.printify_url || null,
         status: "production",
         updated_at: new Date().toISOString(),
       })

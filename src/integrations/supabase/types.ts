@@ -309,6 +309,36 @@ export type Database = {
           },
         ]
       }
+      az_pod_printify_shops: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string | null
+          marketplace: string
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          marketplace?: string
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          marketplace?: string
+          shop_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       az_pod_settings: {
         Row: {
           created_at: string | null
