@@ -124,6 +124,36 @@ export type Database = {
           },
         ]
       }
+      az_pod_idea_labels: {
+        Row: {
+          idea_id: string
+          label_id: string
+        }
+        Insert: {
+          idea_id: string
+          label_id: string
+        }
+        Update: {
+          idea_id?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_idea_labels_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "az_pod_idea_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       az_pod_ideas: {
         Row: {
           analysis: Json | null
@@ -131,6 +161,12 @@ export type Database = {
           id: string
           idea_text: string | null
           image_url: string | null
+          listing_platform: string | null
+          listing_url: string | null
+          notes: string | null
+          printify_product_id: string | null
+          printify_product_url: string | null
+          priority: string | null
           product_type: string | null
           reject_reason: string | null
           status: string | null
@@ -149,6 +185,12 @@ export type Database = {
           id?: string
           idea_text?: string | null
           image_url?: string | null
+          listing_platform?: string | null
+          listing_url?: string | null
+          notes?: string | null
+          printify_product_id?: string | null
+          printify_product_url?: string | null
+          priority?: string | null
           product_type?: string | null
           reject_reason?: string | null
           status?: string | null
@@ -167,6 +209,12 @@ export type Database = {
           id?: string
           idea_text?: string | null
           image_url?: string | null
+          listing_platform?: string | null
+          listing_url?: string | null
+          notes?: string | null
+          printify_product_id?: string | null
+          printify_product_url?: string | null
+          priority?: string | null
           product_type?: string | null
           reject_reason?: string | null
           status?: string | null
@@ -178,6 +226,27 @@ export type Database = {
           tshirt_design_url?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      az_pod_labels: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
