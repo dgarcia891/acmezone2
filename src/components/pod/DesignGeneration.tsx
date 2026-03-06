@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ThumbsDown, Send, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import DesignGallery from "@/components/pod/DesignGallery";
+import type { DesignVersion } from "@/hooks/usePodPipeline";
 
 interface Props {
   idea: any;
@@ -12,6 +14,11 @@ interface Props {
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
   isLoading: boolean;
   isApproving: boolean;
+  versions?: DesignVersion[];
+  onSelectVersion?: (versionId: string, productType: string) => void;
+  onDeleteVersion?: (versionId: string) => void;
+  isSelectingVersion?: boolean;
+  isDeletingVersion?: boolean;
 }
 
 const statusMessages = [
@@ -55,8 +62,12 @@ function LoadingSpinner() {
   );
 }
 
-function DesignCard({ label, url, prompt, onRegenerate, isLoading }: {
+function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
   label: string; url?: string | null; prompt?: string; onRegenerate: (customPrompt?: string) => void; isLoading: boolean;
+  versions?: DesignVersion[]; productType: "sticker" | "tshirt";
+  onSelectVersion?: (versionId: string, productType: string) => void;
+  onDeleteVersion?: (versionId: string) => void;
+  isSelectingVersion?: boolean; isDeletingVersion?: boolean;
 }) {
   const [editedPrompt, setEditedPrompt] = useState(prompt || "");
   const [showPrompt, setShowPrompt] = useState(false);
@@ -96,20 +107,32 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading }: {
           <RefreshCw className="h-3 w-3 mr-1" />
           Regenerate{editedPrompt !== prompt ? " with edits" : ""}
         </Button>
+        {versions && onSelectVersion && onDeleteVersion && (
+          <DesignGallery
+            versions={versions}
+            productType={productType}
+            onSelect={(versionId) => onSelectVersion(versionId, productType)}
+            onDelete={onDeleteVersion}
+            isSelecting={isSelectingVersion || false}
+            isDeleting={isDeletingVersion || false}
+          />
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, isLoading, isApproving }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, isLoading, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(productType === "both" || productType === "sticker") && (
-          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt} onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={isLoading} />
+          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt} onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={isLoading}
+            versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
-          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt} onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={isLoading} />
+          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt} onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={isLoading}
+            versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>
       <div className="flex justify-end gap-3">
