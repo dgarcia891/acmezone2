@@ -9,6 +9,7 @@ import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 interface Props {
   idea: any;
   onClose: () => void;
+  onIdeaUpdated?: (updated: Partial<any>) => void;
 }
 
 const STATUS_LABELS: Record<string, { label: string; emoji: string }> = {
@@ -17,7 +18,7 @@ const STATUS_LABELS: Record<string, { label: string; emoji: string }> = {
   live: { label: "Live", emoji: "🚀" },
 };
 
-export default function WizardSummaryStep({ idea, onClose }: Props) {
+export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Props) {
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
 
@@ -99,7 +100,9 @@ export default function WizardSummaryStep({ idea, onClose }: Props) {
         </Button>
         <div className="flex gap-3">
           {idea?.status === "ready" && (
-            <Button onClick={() => sendToPrintify.mutate(idea.id)} disabled={sendToPrintify.isPending}>
+            <Button onClick={() => sendToPrintify.mutate(idea.id, {
+              onSuccess: () => onIdeaUpdated?.({ status: "production" }),
+            })} disabled={sendToPrintify.isPending}>
               {sendToPrintify.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
               ) : (
@@ -108,7 +111,9 @@ export default function WizardSummaryStep({ idea, onClose }: Props) {
             </Button>
           )}
           {idea?.status === "production" && (
-            <Button onClick={() => updateStatus.mutate({ id: idea.id, status: "live" })}>
+            <Button onClick={() => updateStatus.mutate({ id: idea.id, status: "live" }, {
+              onSuccess: () => onIdeaUpdated?.({ status: "live" }),
+            })}>
               Mark as Live
             </Button>
           )}
