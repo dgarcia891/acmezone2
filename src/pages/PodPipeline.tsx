@@ -231,6 +231,7 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onApprove={handleApproveDesign}
                   onRegenerate={handleRegenerate}
+                  onGenerate={handleGenerate}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}

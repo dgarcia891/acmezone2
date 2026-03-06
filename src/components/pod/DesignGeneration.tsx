@@ -91,7 +91,7 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, pro
           <div className="aspect-square w-full rounded-lg bg-muted flex flex-col items-center justify-center gap-2">
             <ImageIcon className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground text-center px-4">
-              Image generation failed — design prompt saved for manual generation
+              No design yet — use Regenerate below to generate one
             </p>
           </div>
         )}
