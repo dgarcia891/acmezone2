@@ -4,19 +4,43 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck } from "lucide-react";
-import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey } from "@/hooks/usePodPipeline";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store } from "lucide-react";
+import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAdditionalShops, useAddShop, useRemoveShop, useToggleShop } from "@/hooks/usePodPipeline";
+
+const MARKETPLACE_OPTIONS = [
+  { value: "ebay", label: "eBay", description: "80 char title limit" },
+  { value: "etsy", label: "Etsy", description: "140 char title limit" },
+  { value: "shopify", label: "Shopify", description: "No title limit" },
+  { value: "other", label: "Other", description: "Standard 140 char limit" },
+];
+
+const MARKETPLACE_COLORS: Record<string, string> = {
+  ebay: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  etsy: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  shopify: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  other: "bg-muted text-muted-foreground",
+};
 
 export default function PodSettingsForm() {
-  const { data: settings, isLoading } = usePodSettings();
+  const { data: settingsData, isLoading } = usePodSettings();
+  const settings = settingsData?.settings;
+  const additionalShops = settingsData?.additional_shops || [];
   const saveMutation = useSavePodSettings();
   const validateMutation = useValidateRemoveBgKey();
+  const addShopMutation = useAddShop();
+  const removeShopMutation = useRemoveShop();
+  const toggleShopMutation = useToggleShop();
 
   const [form, setForm] = useState({
     printify_api_key: "",
     printify_shop_id: "",
     removebg_api_key: "",
   });
+
+  const [newShop, setNewShop] = useState({ shop_id: "", marketplace: "", label: "" });
 
   useEffect(() => {
     if (settings) {
@@ -37,17 +61,22 @@ export default function PodSettingsForm() {
     });
     if (Object.keys(body).length === 0) return;
 
-    // If a Remove.bg key is being saved, validate it first
     if (body.removebg_api_key) {
       try {
         await validateMutation.mutateAsync(body.removebg_api_key);
       } catch {
-        // Validation failed – toast already shown by the mutation
         return;
       }
     }
 
     saveMutation.mutate(body);
+  };
+
+  const handleAddShop = () => {
+    if (!newShop.shop_id || !newShop.marketplace) return;
+    addShopMutation.mutate(newShop, {
+      onSuccess: () => setNewShop({ shop_id: "", marketplace: "", label: "" }),
+    });
   };
 
   function StatusIcon({ has }: { has: boolean }) {
@@ -94,9 +123,93 @@ export default function PodSettingsForm() {
             </div>
             <div>
               <label className="text-sm flex items-center gap-2 mb-1">
-                Printify Shop ID <StatusIcon has={settings?.has_printify_shop_id} />
+                Primary Shop ID <StatusIcon has={settings?.has_printify_shop_id} />
               </label>
               <Input type="text" placeholder="Enter Printify Shop ID" value={form.printify_shop_id} onChange={(e) => update("printify_shop_id", e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">This is your default/primary Printify shop.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Shops */}
+        <div>
+          <h3 className="flex items-center gap-2 font-medium mb-3">
+            <Store className="h-4 w-4" /> Additional Shops
+          </h3>
+          <Separator className="mb-4" />
+          <p className="text-xs text-muted-foreground mb-3">
+            Add Printify shops linked to specific marketplaces. Products will be posted to all active shops with marketplace-appropriate titles.
+          </p>
+
+          {/* Existing shops list */}
+          {additionalShops.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {additionalShops.map((shop: any) => (
+                <div key={shop.id} className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
+                  <Switch
+                    checked={shop.is_active}
+                    onCheckedChange={(checked) => toggleShopMutation.mutate({ id: shop.id, is_active: checked })}
+                    className="shrink-0"
+                  />
+                  <Badge className={`text-[10px] shrink-0 ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                    {shop.marketplace}
+                  </Badge>
+                  <span className="text-xs font-mono truncate flex-1">{shop.shop_id}</span>
+                  {shop.label && <span className="text-xs text-muted-foreground truncate">{shop.label}</span>}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => removeShopMutation.mutate(shop.id)}
+                    disabled={removeShopMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new shop */}
+          <div className="space-y-2 p-3 rounded-md border border-dashed border-border">
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Shop ID"
+                value={newShop.shop_id}
+                onChange={(e) => setNewShop((p) => ({ ...p, shop_id: e.target.value }))}
+                className="text-xs h-8"
+              />
+              <Select value={newShop.marketplace} onValueChange={(v) => setNewShop((p) => ({ ...p, marketplace: v }))}>
+                <SelectTrigger className="text-xs h-8">
+                  <SelectValue placeholder="Marketplace" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MARKETPLACE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span>{opt.label}</span>
+                      <span className="text-muted-foreground ml-1">({opt.description})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Label (optional, e.g. 'My eBay Store')"
+                value={newShop.label}
+                onChange={(e) => setNewShop((p) => ({ ...p, label: e.target.value }))}
+                className="text-xs h-8 flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs shrink-0"
+                onClick={handleAddShop}
+                disabled={!newShop.shop_id || !newShop.marketplace || addShopMutation.isPending}
+              >
+                {addShopMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                Add Shop
+              </Button>
             </div>
           </div>
         </div>

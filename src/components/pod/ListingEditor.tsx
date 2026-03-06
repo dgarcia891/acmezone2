@@ -10,6 +10,16 @@ interface Props {
   listing: any;
 }
 
+function CharCounter({ value, max }: { value: string; max: number }) {
+  const len = value.length;
+  const over = len > max;
+  return (
+    <span className={`text-[10px] ${over ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+      {len}/{max}{over && " ⚠ over limit"}
+    </span>
+  );
+}
+
 export default function ListingEditor({ listing }: Props) {
   const [title, setTitle] = useState(listing.title || "");
   const [description, setDescription] = useState(listing.description || "");
@@ -105,7 +115,10 @@ export default function ListingEditor({ listing }: Props) {
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Etsy Title</label>
+          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 flex items-center justify-between">
+            <span>Etsy Title</span>
+            <CharCounter value={etsyTitle} max={140} />
+          </label>
           <Input
             value={etsyTitle}
             onChange={(e) => setEtsyTitle(e.target.value)}
@@ -114,12 +127,15 @@ export default function ListingEditor({ listing }: Props) {
           />
         </div>
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">eBay Title</label>
+          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 flex items-center justify-between">
+            <span>eBay Title</span>
+            <CharCounter value={ebayTitle} max={80} />
+          </label>
           <Input
             value={ebayTitle}
             onChange={(e) => setEbayTitle(e.target.value)}
             onBlur={() => ebayTitle !== listing.ebay_title && save({ ebay_title: ebayTitle })}
-            className="text-xs h-7"
+            className={`text-xs h-7 ${ebayTitle.length > 80 ? "border-destructive" : ""}`}
           />
         </div>
       </div>
