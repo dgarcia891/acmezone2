@@ -174,15 +174,19 @@ Deno.serve(async (req) => {
           }],
         }),
       });
-      console.log(`Product created: ${product.id}`);
-
-      // Product created as draft — admin will publish manually in Printify
-      console.log(`Product created as draft (not published): ${product.id}`);
+      console.log(`Product created as draft: ${product.id}`);
 
       results.push({
         product_type: listing.product_type,
         printify_product_id: product.id,
         printify_url: `https://printify.com/app/editor/${product.id}`,
+        title: product.title || listing.title,
+        images: (product.images || []).map((img: any) => ({
+          src: img.src,
+          is_default: img.is_default,
+        })),
+        variants_count: (product.variants || []).length,
+        variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
       });
     }
 
