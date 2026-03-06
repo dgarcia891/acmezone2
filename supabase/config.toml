@@ -35,3 +35,18 @@ verify_jwt = false
 
 [functions.approve-correction]
 verify_jwt = false
+
+[functions.pod-analyze]
+verify_jwt = false
+
+[functions.pod-generate-designs]
+verify_jwt = false
+
+[functions.pod-approve]
+verify_jwt = false
+
+[functions.pod-settings]
+verify_jwt = false
+
+[functions.pod-test-trello]
+verify_jwt = false
