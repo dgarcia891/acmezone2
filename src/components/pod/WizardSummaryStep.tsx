@@ -9,6 +9,7 @@ import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 interface Props {
   idea: any;
   onClose: () => void;
+  onIdeaUpdated?: (updated: Partial<any>) => void;
 }
 
 const STATUS_LABELS: Record<string, { label: string; emoji: string }> = {
