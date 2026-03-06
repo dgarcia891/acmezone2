@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store } from "lucide-react";
-import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAdditionalShops, useAddShop, useRemoveShop, useToggleShop } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop } from "@/hooks/usePodPipeline";
 
 const MARKETPLACE_OPTIONS = [
   { value: "ebay", label: "eBay", description: "80 char title limit" },
