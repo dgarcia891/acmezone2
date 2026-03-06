@@ -16,6 +16,8 @@ export default function ListingEditor({ listing }: Props) {
   const [tags, setTags] = useState<string[]>(listing.tags || []);
   const [etsyTitle, setEtsyTitle] = useState(listing.etsy_title || "");
   const [ebayTitle, setEbayTitle] = useState(listing.ebay_title || "");
+  const [blueprintId, setBlueprintId] = useState(listing.printify_blueprint_id || "");
+  const [printProviderId, setPrintProviderId] = useState(listing.printify_print_provider_id || "");
   const [newTag, setNewTag] = useState("");
   const updateListing = useUpdateListing();
 
@@ -25,6 +27,8 @@ export default function ListingEditor({ listing }: Props) {
     setTags(listing.tags || []);
     setEtsyTitle(listing.etsy_title || "");
     setEbayTitle(listing.ebay_title || "");
+    setBlueprintId(listing.printify_blueprint_id || "");
+    setPrintProviderId(listing.printify_print_provider_id || "");
   }, [listing.id]);
 
   const save = (updates: Record<string, any>) => {
@@ -115,6 +119,30 @@ export default function ListingEditor({ listing }: Props) {
             value={ebayTitle}
             onChange={(e) => setEbayTitle(e.target.value)}
             onBlur={() => ebayTitle !== listing.ebay_title && save({ ebay_title: ebayTitle })}
+            className="text-xs h-7"
+          />
+        </div>
+      </div>
+
+      {/* Printify Configuration */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Blueprint ID</label>
+          <Input
+            value={blueprintId}
+            onChange={(e) => setBlueprintId(e.target.value)}
+            onBlur={() => blueprintId !== (listing.printify_blueprint_id || "") && save({ printify_blueprint_id: blueprintId || null })}
+            placeholder="e.g. 1268"
+            className="text-xs h-7"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Print Provider ID</label>
+          <Input
+            value={printProviderId}
+            onChange={(e) => setPrintProviderId(e.target.value)}
+            onBlur={() => printProviderId !== (listing.printify_print_provider_id || "") && save({ printify_print_provider_id: printProviderId || null })}
+            placeholder="e.g. 99"
             className="text-xs h-7"
           />
         </div>

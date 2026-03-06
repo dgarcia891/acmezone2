@@ -40,7 +40,7 @@ export function useGenerateListings() {
 export function useUpdateListing() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; tags?: string[]; etsy_title?: string; ebay_title?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; tags?: string[]; etsy_title?: string; ebay_title?: string; printify_blueprint_id?: string | null; printify_print_provider_id?: string | null }) => {
       const { error } = await supabase
         .from("az_pod_listings" as any)
         .update({ ...updates, updated_at: new Date().toISOString() } as any)
