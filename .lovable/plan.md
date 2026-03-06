@@ -1,32 +1,34 @@
 
 
-# Unified Admin Navigation
+# Plan: Display Printify Response Data and Improve "View in Printify" Button
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+## What Changes
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### 1. Edge Function — Capture more data from Printify response (`pod-send-to-printify/index.ts`)
+The Printify `POST /products` response returns `images` (mockup URLs), `variants` (with pricing/sizes), and `tags`. Currently we only extract `product.id`. We will also capture:
+- `images` array (mockup image URLs)
+- `variants` count and enabled count
+- Product title as confirmed by Printify
 
-## Changes
+Include this extra data in the response back to the client alongside the existing `printify_product_id` and `printify_url`.
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+### 2. Hook — Pass mutation response data through (`usePodListings.ts`)
+Update `useSendToPrintify` so the `onSuccess` callback in the component receives the full response data (it already returns `data`, but the component's `onSuccess` currently ignores it). No change needed in the hook itself — the component just needs to use it.
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+### 3. Summary Step UI — Display response and prominent button (`WizardSummaryStep.tsx`)
+- **Store mutation response** in local state after "Send to Printify" succeeds
+- **Display Printify response card** showing:
+  - Product type and Printify product ID
+  - Number of variants created
+  - Mockup images returned by Printify (displayed in a grid)
+  - Product title as confirmed
+- **Move "View in Printify" button** to top-right of the card header as a prominent `Button` (not a subtle text link), styled with the `outline` variant and an `ExternalLink` icon
+- Remove the old small "View on Printify" text link from the links section
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
+## Files Changed
 
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+| File | Change |
+|------|--------|
+| `supabase/functions/pod-send-to-printify/index.ts` | Extract `images`, `variants` count, and `title` from Printify product response; include in results array |
+| `src/components/pod/WizardSummaryStep.tsx` | Add local state for Printify response; render response card with mockup images and product details; move "View in Printify" to a prominent button in the card header |
 
