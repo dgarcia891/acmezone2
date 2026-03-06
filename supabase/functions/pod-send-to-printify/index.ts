@@ -176,18 +176,8 @@ Deno.serve(async (req) => {
       });
       console.log(`Product created: ${product.id}`);
 
-      // 4. Publish the product
-      console.log(`Publishing product...`);
-      await printifyFetch(`/shops/${printify_shop_id}/products/${product.id}/publish.json`, printify_api_key, {
-        method: "POST",
-        body: JSON.stringify({
-          title: true,
-          description: true,
-          images: true,
-          variants: true,
-          tags: true,
-        }),
-      });
+      // Product created as draft — admin will publish manually in Printify
+      console.log(`Product created as draft (not published): ${product.id}`);
 
       results.push({
         product_type: listing.product_type,
