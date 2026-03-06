@@ -107,6 +107,22 @@ export function useSavePodSettings() {
   });
 }
 
+export function useValidateRemoveBgKey() {
+  return useMutation({
+    mutationFn: async (apiKey: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        method: "PUT",
+        body: { removebg_api_key: apiKey },
+      });
+      if (error) throw error;
+      if (data?.valid === false) throw new Error(data.error || "Invalid API key");
+      toast.success(`Remove.bg key verified ✓ (${data?.credits?.free ?? "?"} free credits remaining)`);
+      return data;
+    },
+    onError: (err: Error) => toast.error(`Remove.bg key validation failed: ${err.message}`),
+  });
+}
+
 
 export function useRejectIdea() {
   const qc = useQueryClient();
