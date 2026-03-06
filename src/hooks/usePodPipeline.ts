@@ -148,7 +148,7 @@ export function useDesignVersions(ideaId: string | null) {
         .eq("idea_id", ideaId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as DesignVersion[];
+      return (data || []) as unknown as DesignVersion[];
     },
     enabled: !!ideaId,
   });
