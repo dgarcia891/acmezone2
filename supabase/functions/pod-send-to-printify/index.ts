@@ -13,8 +13,17 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// No hardcoded defaults — blueprint_id and print_provider_id must be set per listing
+const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
+  sticker: 499,
+  tshirt: 2499,
+};
 
+const PRINTIFY_TITLE_MAX = 140;
+
+function sanitizeTitle(title: string | null | undefined) {
+  const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
+  return normalized.slice(0, PRINTIFY_TITLE_MAX);
+}
 async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
   const res = await fetch(`https://api.printify.com/v1${path}`, {
     ...options,
@@ -140,14 +149,14 @@ Deno.serve(async (req) => {
       const product = await printifyFetch(`/shops/${printify_shop_id}/products.json`, printify_api_key, {
         method: "POST",
         body: JSON.stringify({
-          title: listing.title,
+          title: sanitizeTitle(listing.title),
           description: listing.description,
           tags: listing.tags || [],
           blueprint_id: blueprintId,
           print_provider_id: printProviderId,
           variants: variantIds.map((vid: number) => ({
             id: vid,
-            price: 0, // price will be set manually or via Printify defaults
+            price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
             is_enabled: true,
           })),
           print_areas: [{
