@@ -12,7 +12,7 @@ interface Props {
   onReject: () => void;
   onApprove: () => void;
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
-  isLoading: boolean;
+  loadingTypes: Set<string>;
   isApproving: boolean;
   versions?: DesignVersion[];
   onSelectVersion?: (versionId: string, productType: string) => void;
@@ -122,24 +122,25 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, pro
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, isLoading, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+  const anyLoading = loadingTypes.size > 0;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(productType === "both" || productType === "sticker") && (
-          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt} onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={isLoading}
+          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt} onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
             versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
-          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt} onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={isLoading}
+          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt} onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
             versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onReject} disabled={isLoading || isApproving}>
+        <Button variant="outline" onClick={onReject} disabled={anyLoading || isApproving}>
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject
         </Button>
-        <Button onClick={onApprove} disabled={isLoading || isApproving} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-green-600 hover:bg-green-700">
           <Send className="h-4 w-4 mr-2" /> Approve Design
         </Button>
       </div>
