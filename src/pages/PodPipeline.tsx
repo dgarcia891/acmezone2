@@ -21,6 +21,7 @@ const PodPipeline = () => {
   const [step, setStep] = useState<PipelineStep>("input");
   const [currentIdea, setCurrentIdea] = useState<any>(null);
   const [productType, setProductType] = useState("both");
+  const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
