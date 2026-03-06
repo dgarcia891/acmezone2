@@ -238,6 +238,7 @@ const PodPipeline = () => {
                   onApprove={handleApproveDesign}
                   onRegenerate={handleRegenerate}
                   onGenerate={handleGenerate}
+                  onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
