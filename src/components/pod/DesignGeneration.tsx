@@ -12,6 +12,7 @@ interface Props {
   onReject: () => void;
   onApprove: () => void;
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
+  onGenerate?: () => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
   versions?: DesignVersion[];
