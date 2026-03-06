@@ -1,32 +1,47 @@
 
 
-# Unified Admin Navigation
+# Plan: Add Remove.bg Background Removal to Design Generation
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+## What Changes
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+**Single file**: `supabase/functions/pod-generate-designs/index.ts`
 
-## Changes
+### 1. Improve AI Prompts
+- **T-shirt prompt**: Request isolated artwork on a **solid pure white (#FFFFFF) background** — no mockups, no fabric, no frames, no checkered patterns
+- **Sticker prompt**: Same approach — artwork on solid white background, clean edges
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+### 2. Add Remove.bg Post-Processing Step
+After the AI generates an image (base64), before uploading to storage:
+1. Decode the base64 image to binary
+2. Send it to the **Remove.bg API** (`https://api.remove.bg/v1.0/removebg`) using the existing `REMOVE_BG_API_KEY` secret
+3. Receive back a transparent PNG
+4. Upload the transparent PNG to storage
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+### 3. Fallback Behavior
+- If Remove.bg fails (rate limit, API error, key missing), log a warning and upload the original image as-is (current behavior preserved)
+- The user still gets a design, just without background removal
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
+### 4. Force PNG Format
+- Always save as `.png` with `content-type: image/png` to preserve alpha transparency
 
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+### Flow Summary
+
+```text
+AI generates image (white bg)
+        │
+        ▼
+  Remove.bg API call
+        │
+   ┌────┴────┐
+   │ Success  │  Failure
+   ▼          ▼
+ transparent  original
+   PNG        image
+   │          │
+   └────┬─────┘
+        ▼
+  Upload to pod-assets
+```
+
+No database changes, no new secrets, no UI changes needed.
 
