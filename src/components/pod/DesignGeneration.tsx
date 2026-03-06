@@ -12,6 +12,7 @@ interface Props {
   onReject: () => void;
   onApprove: () => void;
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
+  onGenerate?: () => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
   versions?: DesignVersion[];
@@ -90,7 +91,7 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, pro
           <div className="aspect-square w-full rounded-lg bg-muted flex flex-col items-center justify-center gap-2">
             <ImageIcon className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground text-center px-4">
-              Image generation failed — design prompt saved for manual generation
+              No design yet — use Regenerate below to generate one
             </p>
           </div>
         )}
@@ -140,7 +141,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
         <Button variant="outline" onClick={onReject} disabled={anyLoading || isApproving}>
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject
         </Button>
-        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-primary hover:bg-primary/90">
           <Send className="h-4 w-4 mr-2" /> Approve Design
         </Button>
       </div>

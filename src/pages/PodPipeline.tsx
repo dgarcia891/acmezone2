@@ -65,6 +65,25 @@ const PodPipeline = () => {
     }
   }, [wizardOpen, wizardIdea?.id]);
 
+  // Auto-trigger design generation when entering generate step with no existing designs
+  const [autoGenTriggered, setAutoGenTriggered] = useState(false);
+  useEffect(() => {
+    if (
+      step === "generate" &&
+      wizardIdea &&
+      !wizardIdea.sticker_design_url &&
+      !wizardIdea.tshirt_design_url &&
+      loadingTypes.size === 0 &&
+      !autoGenTriggered
+    ) {
+      setAutoGenTriggered(true);
+      handleGenerate();
+    }
+    if (step !== "generate") {
+      setAutoGenTriggered(false);
+    }
+  }, [step, wizardIdea?.id]);
+
   const openWizardForNew = () => {
     setWizardIdea(null);
     setWizardOpen(true);
@@ -212,6 +231,7 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onApprove={handleApproveDesign}
                   onRegenerate={handleRegenerate}
+                  onGenerate={handleGenerate}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
