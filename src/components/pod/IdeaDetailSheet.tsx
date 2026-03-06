@@ -233,13 +233,6 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
             )}
           </div>
 
-          {/* Trello Link */}
-          {idea.trello_card_url && (
-            <a href={idea.trello_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-              <ExternalLink className="h-3 w-3" /> Trello Card
-            </a>
-          )}
-
           {/* Timestamps */}
           <div className="text-[10px] text-muted-foreground space-y-0.5">
             <p>Created {idea.created_at ? formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }) : "—"}</p>

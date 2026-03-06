@@ -140,7 +140,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject
         </Button>
         <Button onClick={onApprove} disabled={isLoading || isApproving} className="bg-green-600 hover:bg-green-700">
-          <Send className="h-4 w-4 mr-2" /> Approve & Send to Trello
+          <Send className="h-4 w-4 mr-2" /> Approve
         </Button>
       </div>
     </div>
