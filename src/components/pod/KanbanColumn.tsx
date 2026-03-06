@@ -21,7 +21,7 @@ export default function KanbanColumn({ column, ideas, onCardClick }: KanbanColum
 
   return (
     <div
-      className={`flex flex-col w-[280px] min-w-[280px] rounded-lg border border-border bg-muted/30 ${isOver ? "ring-2 ring-primary/40" : ""}`}
+      className={`flex flex-col w-[280px] min-w-[280px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] ${isOver ? "ring-2 ring-primary/40" : ""}`}
     >
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
         <span className="text-base">{column.emoji}</span>
