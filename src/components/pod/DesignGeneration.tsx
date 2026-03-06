@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsDown, Send, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { ThumbsDown, Send, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp, XCircle } from "lucide-react";
 import DesignGallery from "@/components/pod/DesignGallery";
 import type { DesignVersion } from "@/hooks/usePodPipeline";
 
@@ -13,6 +13,7 @@ interface Props {
   onApprove: () => void;
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
   onGenerate?: () => void;
+  onCancel?: (type: "sticker" | "tshirt") => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
   versions?: DesignVersion[];
@@ -46,7 +47,7 @@ function ElapsedTimer() {
   );
 }
 
-function LoadingSpinner() {
+function LoadingSpinner({ onCancel }: { onCancel?: () => void }) {
   const [msgIndex, setMsgIndex] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,12 +60,18 @@ function LoadingSpinner() {
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
       <p className="text-sm text-muted-foreground animate-pulse">{statusMessages[msgIndex]}</p>
       <ElapsedTimer />
+      {onCancel && (
+        <Button variant="ghost" size="sm" onClick={onCancel} className="text-xs text-destructive hover:text-destructive mt-1">
+          <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
+        </Button>
+      )}
     </div>
   );
 }
 
-function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
+function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
   label: string; url?: string | null; prompt?: string; onRegenerate: (customPrompt?: string) => void; isLoading: boolean;
+  onCancel?: () => void;
   versions?: DesignVersion[]; productType: "sticker" | "tshirt";
   onSelectVersion?: (versionId: string, productType: string) => void;
   onDeleteVersion?: (versionId: string) => void;
@@ -84,7 +91,7 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, pro
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <LoadingSpinner />
+          <LoadingSpinner onCancel={onCancel} />
         ) : url ? (
           <img src={url} alt={label} className="rounded-lg object-contain w-full aspect-square bg-muted" />
         ) : (
@@ -123,17 +130,21 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, versions, pro
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
   const anyLoading = loadingTypes.size > 0;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(productType === "both" || productType === "sticker") && (
-          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt} onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
+          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt}
+            onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
+            onCancel={onCancel ? () => onCancel("sticker") : undefined}
             versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
-          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt} onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
+          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt}
+            onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
+            onCancel={onCancel ? () => onCancel("tshirt") : undefined}
             versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>
