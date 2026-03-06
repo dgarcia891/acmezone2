@@ -151,7 +151,7 @@ const PodPipeline = () => {
                   onApprove={handleApprove}
                   onRegenerate={handleRegenerate}
                   isLoading={generateMutation.isPending}
-                  isApproving={approveMutation.isPending}
+                  isApproving={generateListings.isPending}
                   versions={versions}
                   onSelectVersion={handleSelectVersion}
                   onDeleteVersion={handleDeleteVersion}
