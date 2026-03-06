@@ -2,17 +2,21 @@ import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/PipelineStepIndicator";
 import IdeaInputForm from "@/components/pod/IdeaInputForm";
 import AnalysisReview from "@/components/pod/AnalysisReview";
 import DesignGeneration from "@/components/pod/DesignGeneration";
 import ApprovalSuccess from "@/components/pod/ApprovalSuccess";
-import PodHistoryTable from "@/components/pod/PodHistoryTable";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
+import KanbanBoard from "@/components/pod/KanbanBoard";
 import { usePodAnalyze, usePodGenerateDesigns, usePodApprove, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion } from "@/hooks/usePodPipeline";
+import { LayoutGrid, PlusCircle, Settings } from "lucide-react";
+
+type ViewMode = "board" | "new" | "settings";
 
 const PodPipeline = () => {
+  const [view, setView] = useState<ViewMode>("board");
   const [step, setStep] = useState<PipelineStep>("input");
   const [currentIdea, setCurrentIdea] = useState<any>(null);
   const [productType, setProductType] = useState("both");
@@ -102,17 +106,26 @@ const PodPipeline = () => {
       <Helmet><title>POD Pipeline | acme.zone</title></Helmet>
       <Header />
       <main className="flex-1">
-        <div className="container mx-auto py-8 px-4 max-w-5xl">
-          <h1 className="text-3xl font-bold mb-8">POD Pipeline</h1>
+        <div className="container mx-auto py-8 px-4 max-w-7xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h1 className="text-3xl font-bold">POD Pipeline</h1>
+            <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
+              <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
+                <LayoutGrid className="h-3.5 w-3.5" /> Board
+              </ToggleGroupItem>
+              <ToggleGroupItem value="new" aria-label="New idea" className="gap-1.5 text-xs">
+                <PlusCircle className="h-3.5 w-3.5" /> New Idea
+              </ToggleGroupItem>
+              <ToggleGroupItem value="settings" aria-label="Settings" className="gap-1.5 text-xs">
+                <Settings className="h-3.5 w-3.5" /> Settings
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
-          <Tabs defaultValue="pipeline">
-            <TabsList>
-              <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
+          {view === "board" && <KanbanBoard />}
 
-            <TabsContent value="pipeline" className="mt-6">
+          {view === "new" && (
+            <div>
               <PipelineStepIndicator current={step} />
 
               {step === "input" && (
@@ -152,16 +165,10 @@ const PodPipeline = () => {
                   onReset={resetPipeline}
                 />
               )}
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="history" className="mt-6">
-              <PodHistoryTable />
-            </TabsContent>
-
-            <TabsContent value="settings" className="mt-6">
-              <PodSettingsForm />
-            </TabsContent>
-          </Tabs>
+          {view === "settings" && <PodSettingsForm />}
         </div>
       </main>
       <Footer />
