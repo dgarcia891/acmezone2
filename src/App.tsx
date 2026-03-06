@@ -27,6 +27,7 @@ import InsightReelSuccess from "./pages/InsightReelSuccess";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import PodPipeline from "./pages/PodPipeline";
 import { Navigate } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -85,6 +86,11 @@ const App = () => (
                   </ProtectedRoute>
                 } />
                 <Route path="/hydra-guard/admin" element={<Navigate to="/admin" replace />} />
+                <Route path="/pod-pipeline" element={
+                  <ProtectedRoute>
+                    <PodPipeline />
+                  </ProtectedRoute>
+                } />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
