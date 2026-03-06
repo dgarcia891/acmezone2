@@ -250,6 +250,65 @@ export type Database = {
         }
         Relationships: []
       }
+      az_pod_listings: {
+        Row: {
+          created_at: string | null
+          description: string
+          ebay_title: string | null
+          etsy_title: string | null
+          id: string
+          idea_id: string
+          is_approved: boolean | null
+          printify_blueprint_id: string | null
+          printify_print_provider_id: string | null
+          product_type: string
+          seo_keywords: string[] | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          ebay_title?: string | null
+          etsy_title?: string | null
+          id?: string
+          idea_id: string
+          is_approved?: boolean | null
+          printify_blueprint_id?: string | null
+          printify_print_provider_id?: string | null
+          product_type: string
+          seo_keywords?: string[] | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          ebay_title?: string | null
+          etsy_title?: string | null
+          id?: string
+          idea_id?: string
+          is_approved?: boolean | null
+          printify_blueprint_id?: string | null
+          printify_print_provider_id?: string | null
+          product_type?: string
+          seo_keywords?: string[] | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_listings_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       az_pod_settings: {
         Row: {
           created_at: string | null
