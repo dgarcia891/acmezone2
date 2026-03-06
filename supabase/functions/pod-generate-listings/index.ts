@@ -117,6 +117,24 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
 
+    // Fetch Printify credentials to auto-populate blueprint/provider IDs
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key, printify_shop_id")
+      .eq("user_id", user.id)
+      .single();
+
+    // Try to discover valid blueprint/provider combos from Printify catalog
+    let printifyDefaults: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+    if (settings?.printify_api_key) {
+      try {
+        printifyDefaults = await discoverPrintifyDefaults(settings.printify_api_key);
+        console.log("Discovered Printify defaults:", JSON.stringify(printifyDefaults));
+      } catch (e) {
+        console.warn("Could not auto-discover Printify catalog:", e.message);
+      }
+    }
+
     // Delete existing listings for this idea (regenerate scenario)
     await supabase.from("az_pod_listings").delete().eq("idea_id", idea_id);
 
@@ -132,6 +150,7 @@ Deno.serve(async (req) => {
       if (!t.url) continue;
 
       const content = await generateListing(t.type, idea, t.prompt || "", LOVABLE_API_KEY);
+      const defaults = printifyDefaults[t.type] || {};
 
       const { data: listing, error: insertError } = await supabase
         .from("az_pod_listings")
@@ -144,6 +163,8 @@ Deno.serve(async (req) => {
           seo_keywords: content.seo_keywords || [],
           etsy_title: content.etsy_title || null,
           ebay_title: content.ebay_title || null,
+          printify_blueprint_id: defaults.blueprint_id || null,
+          printify_print_provider_id: defaults.print_provider_id || null,
         })
         .select()
         .single();
