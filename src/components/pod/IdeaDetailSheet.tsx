@@ -11,12 +11,10 @@ import { useUpdateIdeaStatus, useUpdateIdeaNotes, useUpdateIdeaPriority, usePodL
 import { usePodGenerateDesigns, usePodApprove, useRejectIdea } from "@/hooks/usePodPipeline";
 
 const ALL_STATUSES = [
-  { value: "pending", label: "📥 New Ideas" },
-  { value: "analyzed", label: "🔍 Analyzing" },
-  { value: "designs_generated", label: "📋 Review" },
-  { value: "approved", label: "✅ Approved" },
+  { value: "pending", label: "📥 New" },
   { value: "designing", label: "🎨 Designing" },
-  { value: "qc", label: "🖼️ QC" },
+  { value: "listings", label: "📝 Listings" },
+  { value: "ready", label: "✅ Ready" },
   { value: "production", label: "📦 Production" },
   { value: "live", label: "🚀 Live" },
   { value: "rejected", label: "❌ Rejected" },
@@ -204,32 +202,29 @@ export default function IdeaDetailSheet({ idea, open, onOpenChange }: Props) {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            {(idea.status === "pending" || idea.status === "analyzed") && (
+            {idea.status === "pending" && (
               <Button size="sm" onClick={handleGenerate} disabled={generateMutation.isPending}>
-                {generateMutation.isPending ? "Generating…" : "Generate Designs"}
+                {generateMutation.isPending ? "Starting Pipeline…" : "Start Pipeline"}
               </Button>
             )}
-            {idea.status === "designs_generated" && (
-              <>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => approveMutation.mutate(idea.id)} disabled={approveMutation.isPending}>
-                  Approve
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate({ id: idea.id })} disabled={rejectMutation.isPending}>
-                  Reject
-                </Button>
-              </>
+            {idea.status === "designing" && (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange("listings")}>
+                Approve Design
+              </Button>
             )}
-            {idea.status === "approved" && (
-              <Button size="sm" onClick={() => handleStatusChange("designing")}>Start Designing</Button>
+            {idea.status === "listings" && (
+              <Button size="sm" onClick={() => handleStatusChange("ready")}>Mark Ready</Button>
             )}
-            {idea.status === "qc" && (
-              <>
-                <Button size="sm" onClick={() => handleStatusChange("production")}>Send to Production</Button>
-                <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate({ id: idea.id })}>Reject</Button>
-              </>
+            {idea.status === "ready" && (
+              <Button size="sm" onClick={() => handleStatusChange("production")}>Send to Printify</Button>
             )}
             {idea.status === "production" && (
               <Button size="sm" onClick={() => handleStatusChange("live")}>Mark as Live</Button>
+            )}
+            {idea.status !== "rejected" && idea.status !== "live" && (
+              <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate({ id: idea.id })} disabled={rejectMutation.isPending}>
+                Reject
+              </Button>
             )}
           </div>
 

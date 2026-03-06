@@ -11,10 +11,16 @@ import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-500",
+  designing: "bg-blue-500",
+  listings: "bg-purple-500",
+  ready: "bg-green-500",
+  production: "bg-yellow-500 text-black",
+  live: "bg-emerald-600",
+  rejected: "bg-destructive",
+  // Legacy statuses
   analyzed: "bg-blue-500",
   designs_generated: "bg-yellow-500 text-black",
   approved: "bg-green-500",
-  rejected: "bg-destructive",
 };
 
 export default function PodHistoryTable() {

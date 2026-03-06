@@ -72,7 +72,7 @@ export function usePodApprove() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pod-ideas"] });
-      toast.success("Approved & sent to Trello!");
+      toast.success("Design approved!");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -107,17 +107,6 @@ export function useSavePodSettings() {
   });
 }
 
-export function useTestTrello() {
-  return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("pod-test-trello", { body: {} });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-}
 
 export function useRejectIdea() {
   const qc = useQueryClient();
