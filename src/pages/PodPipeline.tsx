@@ -106,6 +106,7 @@ const PodPipeline = () => {
     setStep("input");
     setCurrentIdea(null);
     setProductType("both");
+    setLoadingTypes(new Set());
   };
 
   return (
@@ -156,7 +157,7 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onApprove={handleApprove}
                   onRegenerate={handleRegenerate}
-                  isLoading={generateMutation.isPending}
+                  loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
                   onSelectVersion={handleSelectVersion}
