@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ExternalLink, CheckCircle2, Loader2, ArrowLeft, Package } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useSendToPrintify } from "@/hooks/usePodListings";
@@ -62,6 +63,7 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
   const hasTshirt = !!idea?.tshirt_design_url;
   const [stickerSelected, setStickerSelected] = useState(hasSticker);
   const [tshirtSelected, setTshirtSelected] = useState(hasTshirt);
+  const [publishAfterSend, setPublishAfterSend] = useState(false);
 
   const selectedTypes: string[] = [];
   if (stickerSelected && hasSticker) selectedTypes.push("sticker");
@@ -289,24 +291,36 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
         </Button>
         <div className="flex gap-3">
           {idea?.status === "ready" && (
-            <Button
-              onClick={() => sendToPrintify.mutate(
-                { idea_id: idea.id, product_types: selectedTypes },
-                {
-                  onSuccess: (data) => {
-                    setPrintifyResults(data?.products || []);
-                    onIdeaUpdated?.({ status: "production" });
-                  },
-                }
-              )}
-              disabled={sendToPrintify.isPending || selectedTypes.length === 0}
-            >
-              {sendToPrintify.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
-              ) : (
-                `Send ${selectedTypes.length === 1 ? selectedTypes[0] : "both"} to Printify`
-              )}
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="publish-toggle"
+                  checked={publishAfterSend}
+                  onCheckedChange={setPublishAfterSend}
+                />
+                <label htmlFor="publish-toggle" className="text-xs cursor-pointer select-none">
+                  {publishAfterSend ? "Publish immediately" : "Save as draft"}
+                </label>
+              </div>
+              <Button
+                onClick={() => sendToPrintify.mutate(
+                  { idea_id: idea.id, product_types: selectedTypes, publish: publishAfterSend },
+                  {
+                    onSuccess: (data) => {
+                      setPrintifyResults(data?.products || []);
+                      onIdeaUpdated?.({ status: "production" });
+                    },
+                  }
+                )}
+                disabled={sendToPrintify.isPending || selectedTypes.length === 0}
+              >
+                {sendToPrintify.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
+                ) : (
+                  `Send ${selectedTypes.length === 1 ? selectedTypes[0] : "both"} to Printify`
+                )}
+              </Button>
+            </div>
           )}
           {idea?.status === "production" && (
             <Button onClick={() => updateStatus.mutate({ id: idea.id, status: "live" }, {
