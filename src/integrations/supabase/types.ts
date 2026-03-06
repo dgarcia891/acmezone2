@@ -83,6 +83,99 @@ export type Database = {
         }
         Relationships: []
       }
+      az_pod_ideas: {
+        Row: {
+          analysis: Json | null
+          created_at: string | null
+          id: string
+          idea_text: string | null
+          image_url: string | null
+          product_type: string | null
+          reject_reason: string | null
+          status: string | null
+          sticker_design_prompt: string | null
+          sticker_design_url: string | null
+          trello_card_id: string | null
+          trello_card_url: string | null
+          tshirt_design_prompt: string | null
+          tshirt_design_url: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          idea_text?: string | null
+          image_url?: string | null
+          product_type?: string | null
+          reject_reason?: string | null
+          status?: string | null
+          sticker_design_prompt?: string | null
+          sticker_design_url?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
+          tshirt_design_prompt?: string | null
+          tshirt_design_url?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          idea_text?: string | null
+          image_url?: string | null
+          product_type?: string | null
+          reject_reason?: string | null
+          status?: string | null
+          sticker_design_prompt?: string | null
+          sticker_design_url?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
+          tshirt_design_prompt?: string | null
+          tshirt_design_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_pod_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          printify_api_key: string | null
+          printify_shop_id: string | null
+          removebg_api_key: string | null
+          trello_api_key: string | null
+          trello_token: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          printify_api_key?: string | null
+          printify_shop_id?: string | null
+          removebg_api_key?: string | null
+          trello_api_key?: string | null
+          trello_token?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          printify_api_key?: string | null
+          printify_shop_id?: string | null
+          removebg_api_key?: string | null
+          trello_api_key?: string | null
+          trello_token?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       az_products: {
         Row: {
           category: string
