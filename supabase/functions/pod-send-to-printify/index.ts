@@ -24,6 +24,7 @@ function sanitizeTitle(title: string | null | undefined) {
   const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
   return normalized.slice(0, PRINTIFY_TITLE_MAX);
 }
+async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
   const res = await fetch(`https://api.printify.com/v1${path}`, {
     ...options,
     headers: {
