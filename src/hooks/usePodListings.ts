@@ -80,8 +80,8 @@ export function useApproveListings() {
 export function useSendToPrintify() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ idea_id, product_types }: { idea_id: string; product_types?: string[] }) => {
-      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id, product_types } });
+    mutationFn: async ({ idea_id, product_types, publish }: { idea_id: string; product_types?: string[]; publish?: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id, product_types, publish } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;

@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id, product_types } = await req.json();
+    const { idea_id, product_types, publish } = await req.json();
     if (!idea_id) return json({ error: "idea_id is required" }, 400);
 
     // Fetch idea
@@ -220,6 +220,28 @@ Deno.serve(async (req) => {
           });
           console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
 
+          // Publish if requested
+          let published = false;
+          if (publish) {
+            try {
+              await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}/publish.json`, printify_api_key, {
+                method: "POST",
+                body: JSON.stringify({
+                  title: true,
+                  description: true,
+                  images: true,
+                  variants: true,
+                  tags: true,
+                  keyFeatures: true,
+                  shipping_template: true,
+                }),
+              });
+              published = true;
+              console.log(`Product published on ${shop.marketplace}: ${product.id}`);
+            } catch (pubErr) {
+              console.error(`Failed to publish on ${shop.marketplace}:`, pubErr);
+            }
+          }
           results.push({
             product_type: listing.product_type,
             printify_product_id: product.id,
@@ -234,6 +256,7 @@ Deno.serve(async (req) => {
             })),
             variants_count: (product.variants || []).length,
             variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
+            published,
           });
         } catch (shopError) {
           console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);
