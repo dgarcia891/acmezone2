@@ -83,6 +83,47 @@ export type Database = {
         }
         Relationships: []
       }
+      az_pod_design_versions: {
+        Row: {
+          created_at: string | null
+          id: string
+          idea_id: string
+          image_url: string
+          is_selected: boolean | null
+          product_type: string
+          prompt: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          idea_id: string
+          image_url: string
+          is_selected?: boolean | null
+          product_type: string
+          prompt?: string | null
+          version_number?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          idea_id?: string
+          image_url?: string
+          is_selected?: boolean | null
+          product_type?: string
+          prompt?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_design_versions_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       az_pod_ideas: {
         Row: {
           analysis: Json | null
