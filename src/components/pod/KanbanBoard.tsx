@@ -10,12 +10,10 @@ import { usePodIdeas } from "@/hooks/usePodPipeline";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 
 const COLUMNS: ColumnDef[] = [
-  { status: "pending", label: "New Ideas", emoji: "📥" },
-  { status: "analyzed", label: "Analyzing", emoji: "🔍" },
-  { status: "designs_generated", label: "Review", emoji: "📋" },
-  { status: "approved", label: "Approved", emoji: "✅" },
+  { status: "pending", label: "New", emoji: "📥" },
   { status: "designing", label: "Designing", emoji: "🎨" },
-  { status: "qc", label: "QC", emoji: "🖼️" },
+  { status: "listings", label: "Listings", emoji: "📝" },
+  { status: "ready", label: "Ready", emoji: "✅" },
   { status: "production", label: "Production", emoji: "📦" },
   { status: "live", label: "Live", emoji: "🚀" },
 ];
@@ -36,10 +34,17 @@ export default function KanbanBoard() {
     const map: Record<string, any[]> = {};
     COLUMNS.forEach((c) => (map[c.status] = []));
     map["rejected"] = [];
+    const statusMap: Record<string, string> = {
+      "analyzed": "designing",
+      "designs_generated": "designing",
+      "approved": "ready",
+      "qc": "ready",
+    };
     ideas.forEach((idea: any) => {
       const s = idea.status || "pending";
-      if (!map[s]) map[s] = [];
-      map[s].push(idea);
+      const mappedStatus = statusMap[s] || s;
+      if (!map[mappedStatus]) map[mappedStatus] = [];
+      map[mappedStatus].push(idea);
     });
     return map;
   }, [ideas]);

@@ -39,12 +39,13 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id } = await req.json();
+    const { idea_id, status } = await req.json();
+    const newStatus = status || "approved";
 
     const { data: updatedIdea, error: updateError } = await supabase
       .from("az_pod_ideas")
       .update({
-        status: "approved",
+        status: newStatus,
         updated_at: new Date().toISOString()
       })
       .eq("id", idea_id)
