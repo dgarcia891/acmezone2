@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<string, { label: string; emoji: string }> = {
   live: { label: "Live", emoji: "🚀" },
 };
 
-export default function WizardSummaryStep({ idea, onClose }: Props) {
+export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Props) {
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
 
