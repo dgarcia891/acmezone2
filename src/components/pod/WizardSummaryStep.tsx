@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, CheckCircle2, Loader2, ArrowLeft } from "lucide-react";
+import { ExternalLink, CheckCircle2, Loader2, ArrowLeft, Package } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
+
+interface PrintifyProductResult {
+  product_type: string;
+  printify_product_id: string;
+  printify_url: string;
+  title: string;
+  images: { src: string; is_default: boolean }[];
+  variants_count: number;
+  variants_enabled: number;
+}
 
 interface Props {
   idea: any;
@@ -21,18 +32,35 @@ const STATUS_LABELS: Record<string, { label: string; emoji: string }> = {
 export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Props) {
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
+  const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
   const statusInfo = STATUS_LABELS[idea?.status] || { label: idea?.status, emoji: "" };
 
+  const viewUrl = printifyResults?.[0]?.printify_url || idea?.printify_product_url;
+
   return (
     <div className="space-y-6">
+      {/* Header with View in Printify button */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Idea Summary</CardTitle>
-            <Badge variant="outline" className="text-sm">
-              {statusInfo.emoji} {statusInfo.label}
-            </Badge>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">Idea Summary</CardTitle>
+              <Badge variant="outline" className="text-sm">
+                {statusInfo.emoji} {statusInfo.label}
+              </Badge>
+            </div>
+            {viewUrl && (
+              <Button
+                variant="default"
+                size="sm"
+                className="shrink-0"
+                onClick={() => window.open(viewUrl, "_blank")}
+              >
+                View in Printify
+                <ExternalLink className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -50,13 +78,13 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
                 {idea?.sticker_design_url && (
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">Sticker</p>
-                    <img src={idea.sticker_design_url} alt="Sticker" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
+                    <img src={idea.sticker_design_url} alt="Sticker design" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
                   </div>
                 )}
                 {idea?.tshirt_design_url && (
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">T-Shirt</p>
-                    <img src={idea.tshirt_design_url} alt="T-Shirt" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
+                    <img src={idea.tshirt_design_url} alt="T-Shirt design" className="w-full rounded border border-border bg-muted aspect-square object-contain" />
                   </div>
                 )}
               </div>
@@ -71,19 +99,12 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
             </div>
           )}
 
-          {/* Links */}
-          <div className="space-y-2">
-            {idea?.printify_product_url && (
-              <a href={idea.printify_product_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
-                <ExternalLink className="h-3.5 w-3.5" /> View on Printify
-              </a>
-            )}
-            {idea?.listing_url && (
-              <a href={idea.listing_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
-                <ExternalLink className="h-3.5 w-3.5" /> View {idea.listing_platform || "marketplace"} listing
-              </a>
-            )}
-          </div>
+          {/* Marketplace link (not Printify - that's now a button) */}
+          {idea?.listing_url && (
+            <a href={idea.listing_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+              <ExternalLink className="h-3.5 w-3.5" /> View {idea.listing_platform || "marketplace"} listing
+            </a>
+          )}
 
           {/* Timestamps */}
           <div className="text-[10px] text-muted-foreground space-y-0.5">
@@ -93,6 +114,59 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
         </CardContent>
       </Card>
 
+      {/* Printify Response Card */}
+      {printifyResults && printifyResults.length > 0 && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base">Printify Products Created</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {printifyResults.map((result) => (
+              <div key={result.printify_product_id} className="space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <p className="text-sm font-medium">{result.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {result.product_type} · {result.variants_enabled}/{result.variants_count} variants enabled
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {result.printify_product_id}
+                  </Badge>
+                </div>
+
+                {/* Mockup images */}
+                {result.images.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Mockups</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {result.images.map((img, idx) => (
+                        <div key={idx} className="relative">
+                          <img
+                            src={img.src}
+                            alt={`Mockup ${idx + 1}`}
+                            className="w-full rounded border border-border bg-muted aspect-square object-cover"
+                            loading="lazy"
+                          />
+                          {img.is_default && (
+                            <Badge variant="default" className="absolute top-1 left-1 text-[8px] px-1 py-0">
+                              Default
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       <div className="flex justify-between gap-3">
         <Button variant="ghost" onClick={onClose}>
@@ -100,9 +174,15 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
         </Button>
         <div className="flex gap-3">
           {idea?.status === "ready" && (
-            <Button onClick={() => sendToPrintify.mutate(idea.id, {
-              onSuccess: () => onIdeaUpdated?.({ status: "production" }),
-            })} disabled={sendToPrintify.isPending}>
+            <Button
+              onClick={() => sendToPrintify.mutate(idea.id, {
+                onSuccess: (data) => {
+                  setPrintifyResults(data?.products || []);
+                  onIdeaUpdated?.({ status: "production" });
+                },
+              })}
+              disabled={sendToPrintify.isPending}
+            >
               {sendToPrintify.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
               ) : (
