@@ -11,6 +11,7 @@ import ApprovalSuccess from "@/components/pod/ApprovalSuccess";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
 import { usePodAnalyze, usePodGenerateDesigns, usePodApprove, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion } from "@/hooks/usePodPipeline";
+import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings } from "lucide-react";
 
 type ViewMode = "board" | "new" | "settings";
@@ -28,6 +29,7 @@ const PodPipeline = () => {
   const { data: versions = [] } = useDesignVersions(currentIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
+  const generateListings = useGenerateListings();
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
     setProductType(data.product_type);
@@ -66,9 +68,8 @@ const PodPipeline = () => {
 
   const handleApprove = () => {
     if (!currentIdea) return;
-    approveMutation.mutate(currentIdea.id, {
-      onSuccess: (res) => {
-        setCurrentIdea(res.idea);
+    generateListings.mutate(currentIdea.id, {
+      onSuccess: () => {
         setStep("approve");
       },
     });
