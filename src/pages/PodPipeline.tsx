@@ -58,6 +58,7 @@ const PodPipeline = () => {
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
   const generateListings = useGenerateListings();
+  const dropDesignMutation = useDropDesign();
 
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
@@ -212,6 +213,21 @@ const PodPipeline = () => {
     if (!wizardIdea) return;
     rejectMutation.mutate({ id: wizardIdea.id }, {
       onSuccess: () => closeWizard(),
+    });
+  };
+
+  const handleDropDesign = (type: "sticker" | "tshirt") => {
+    if (!wizardIdea) return;
+    // If only one type exists, dropping it rejects the whole idea
+    if (productType !== "both") {
+      handleReject();
+      return;
+    }
+    dropDesignMutation.mutate({ id: wizardIdea.id, dropType: type }, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setProductType(res.remainingType);
+      },
     });
   };
 
