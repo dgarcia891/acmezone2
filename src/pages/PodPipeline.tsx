@@ -269,12 +269,26 @@ const PodPipeline = () => {
                   isSelectingVersion={selectVersionMutation.isPending}
                   isDeletingVersion={deleteVersionMutation.isPending}
                 />
+               )}
+
+              {step === "remove_bg" && wizardIdea && (
+                <BackgroundRemovalStep
+                  idea={wizardIdea}
+                  productType={productType}
+                  onRemoveBg={handleRemoveBg}
+                  onApprove={handleApproveAfterBg}
+                  onReject={handleReject}
+                  onBack={() => setStep("generate")}
+                  isRemoving={removeBgMutation.isPending}
+                  isApproving={generateListings.isPending}
+                  bgRemoved={bgRemoved}
+                />
               )}
 
               {step === "listings" && wizardIdea && (
                 <WizardListingsStep
                   idea={wizardIdea}
-                  onBack={() => setStep("generate")}
+                  onBack={() => setStep("remove_bg")}
                   onApproved={() => {
                     setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
                     setStep("summary");
