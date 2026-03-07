@@ -306,6 +306,7 @@ const PodPipeline = () => {
                   onRegenerate={handleRegenerate}
                   onGenerate={handleGenerate}
                   onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
+                  onDropDesign={handleDropDesign}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
@@ -324,6 +325,7 @@ const PodPipeline = () => {
                   onApprove={handleApproveAfterBg}
                   onReject={handleReject}
                   onBack={() => setStep("generate")}
+                  onDropDesign={handleDropDesign}
                   isRemoving={removeBgMutation.isPending}
                   isApproving={generateListings.isPending}
                   bgRemoved={bgRemoved}
@@ -334,6 +336,8 @@ const PodPipeline = () => {
                 <WizardListingsStep
                   idea={wizardIdea}
                   onBack={() => setStep("remove_bg")}
+                  onReject={handleReject}
+                  onDropDesign={handleDropDesign}
                   onApproved={() => {
                     setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
                     setStep("summary");
