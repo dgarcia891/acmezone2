@@ -138,7 +138,7 @@ const PodPipeline = () => {
     setTimeout(() => setWizardOpen(true), 0);
   };
 
-  const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
+  const handleAnalyze = (data: { idea_text: string; images?: Array<{ base64: string; media_type: string }>; product_type: string }) => {
     setProductType(data.product_type);
     analyzeMutation.mutate(data, {
       onSuccess: (res) => {

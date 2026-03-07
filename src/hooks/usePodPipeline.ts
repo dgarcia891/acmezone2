@@ -30,7 +30,7 @@ export function usePodIdeas() {
 export function usePodAnalyze() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { idea_text: string; image_base64?: string; image_media_type?: string }) => {
+    mutationFn: async (body: { idea_text: string; images?: Array<{ base64: string; media_type: string }>; image_base64?: string; image_media_type?: string }) => {
       const { data, error } = await supabase.functions.invoke("pod-analyze", { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
