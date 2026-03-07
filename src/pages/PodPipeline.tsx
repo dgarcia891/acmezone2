@@ -35,7 +35,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
     case "ready":
     case "production":
     case "live":
-      return "summary";
+      return "listings";
     default:
       return "input";
   }
