@@ -62,11 +62,14 @@ const PodPipeline = () => {
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
     if (wizardOpen && wizardIdea) {
-      setStep(statusToStep(wizardIdea.status));
+      const derivedStep = statusToStep(wizardIdea.status);
+      setStep(derivedStep);
       setProductType(wizardIdea.product_type || "both");
+      setBgRemoved(wizardIdea.status === "bg_removed");
     } else if (wizardOpen && !wizardIdea) {
       setStep("input");
       setProductType("both");
+      setBgRemoved(false);
     }
   }, [wizardOpen, wizardIdea?.id]);
 
