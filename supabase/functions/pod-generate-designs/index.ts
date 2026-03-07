@@ -39,18 +39,6 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    // ---------- Load Remove.bg key from user settings ----------
-    const { data: settings } = await supabase
-      .from("az_pod_settings")
-      .select("removebg_api_key")
-      .eq("user_id", user.id)
-      .single();
-
-    const REMOVE_BG_API_KEY = settings?.removebg_api_key;
-    if (!REMOVE_BG_API_KEY) {
-      return json({ error: "Remove.bg API key is not configured. Please add it in POD Settings before generating designs." }, 400);
-    }
-
     const { idea_id, product_type, sticker_prompt, tshirt_prompt } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -147,7 +135,6 @@ Deno.serve(async (req) => {
 
     // ---------- Build update payload ----------
     const updateData: Record<string, any> = {
-      product_type,
       status: "designs_generated",
       updated_at: new Date().toISOString()
     };
@@ -177,7 +164,12 @@ Deno.serve(async (req) => {
     for (const result of results) {
       if (result.status === "fulfilled") {
         updateData[result.value.promptKey] = result.value.prompt;
-        if (result.value.url) updateData[result.value.key] = result.value.url;
+        if (result.value.url) {
+          updateData[result.value.key] = result.value.url;
+          // Also save as raw URL for before/after comparison
+          const rawKey = result.value.key.replace("_design_url", "_raw_url");
+          updateData[rawKey] = result.value.url;
+        }
       } else {
         console.error("Design task failed:", result.reason);
       }
