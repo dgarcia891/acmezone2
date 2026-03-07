@@ -380,19 +380,9 @@ const PodPipeline = () => {
                 <WizardListingsStep
                   idea={wizardIdea}
                   onBack={() => setStep("results")}
+                  onClose={closeWizard}
                   onReject={handleReject}
                   onDropDesign={handleDropDesign}
-                  onApproved={() => {
-                    setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
-                    setStep("summary");
-                  }}
-                />
-              )}
-
-              {step === "summary" && wizardIdea && (
-                <WizardSummaryStep
-                  idea={wizardIdea}
-                  onClose={closeWizard}
                   onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))}
                 />
               )}
