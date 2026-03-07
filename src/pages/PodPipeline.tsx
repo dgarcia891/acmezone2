@@ -7,11 +7,12 @@ import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/Pipel
 import IdeaInputForm from "@/components/pod/IdeaInputForm";
 import AnalysisReview from "@/components/pod/AnalysisReview";
 import DesignGeneration from "@/components/pod/DesignGeneration";
+import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -27,6 +28,8 @@ function statusToStep(status: string | null | undefined): PipelineStep {
     case "analyzed":
     case "designs_generated":
       return "generate";
+    case "bg_removed":
+      return "remove_bg";
     case "listings":
       return "listings";
     case "ready":
@@ -45,10 +48,12 @@ const PodPipeline = () => {
   const [step, setStep] = useState<PipelineStep>("input");
   const [productType, setProductType] = useState("both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
+  const [bgRemoved, setBgRemoved] = useState(false);
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
+  const removeBgMutation = usePodRemoveBg();
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
@@ -57,11 +62,14 @@ const PodPipeline = () => {
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
     if (wizardOpen && wizardIdea) {
-      setStep(statusToStep(wizardIdea.status));
+      const derivedStep = statusToStep(wizardIdea.status);
+      setStep(derivedStep);
       setProductType(wizardIdea.product_type || "both");
+      setBgRemoved(wizardIdea.status === "bg_removed");
     } else if (wizardOpen && !wizardIdea) {
       setStep("input");
       setProductType("both");
+      setBgRemoved(false);
     }
   }, [wizardOpen, wizardIdea?.id]);
 
@@ -100,6 +108,7 @@ const PodPipeline = () => {
     setStep("input");
     setProductType("both");
     setLoadingTypes(new Set());
+    setBgRemoved(false);
   };
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
@@ -149,6 +158,22 @@ const PodPipeline = () => {
   };
 
   const handleApproveDesign = () => {
+    if (!wizardIdea) return;
+    setBgRemoved(false);
+    setStep("remove_bg");
+  };
+
+  const handleRemoveBg = () => {
+    if (!wizardIdea) return;
+    removeBgMutation.mutate(wizardIdea.id, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setBgRemoved(true);
+      },
+    });
+  };
+
+  const handleApproveAfterBg = () => {
     if (!wizardIdea) return;
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
@@ -247,12 +272,26 @@ const PodPipeline = () => {
                   isSelectingVersion={selectVersionMutation.isPending}
                   isDeletingVersion={deleteVersionMutation.isPending}
                 />
+               )}
+
+              {step === "remove_bg" && wizardIdea && (
+                <BackgroundRemovalStep
+                  idea={wizardIdea}
+                  productType={productType}
+                  onRemoveBg={handleRemoveBg}
+                  onApprove={handleApproveAfterBg}
+                  onReject={handleReject}
+                  onBack={() => setStep("generate")}
+                  isRemoving={removeBgMutation.isPending}
+                  isApproving={generateListings.isPending}
+                  bgRemoved={bgRemoved}
+                />
               )}
 
               {step === "listings" && wizardIdea && (
                 <WizardListingsStep
                   idea={wizardIdea}
-                  onBack={() => setStep("generate")}
+                  onBack={() => setStep("remove_bg")}
                   onApproved={() => {
                     setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
                     setStep("summary");

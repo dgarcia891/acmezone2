@@ -100,38 +100,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---------- Remove.bg background removal (strict – errors block pipeline) ----------
-    async function removeBackground(imageBytes: Uint8Array): Promise<Uint8Array> {
-      const formData = new FormData();
-      formData.append("image_file", new Blob([imageBytes], { type: "image/png" }), "design.png");
-      formData.append("size", "auto");
-
-      console.log(`Remove.bg: sending ${imageBytes.length} bytes for background removal`);
-
-      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-        method: "POST",
-        headers: { "X-Api-Key": REMOVE_BG_API_KEY },
-        body: formData,
-      });
-
-      if (response.status === 403) {
-        const errorText = await response.text();
-        console.error(`Remove.bg auth failed: ${errorText}`);
-        throw new Error("Remove.bg API key is invalid. Please update it in POD Settings.");
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Remove.bg failed (${response.status}): ${errorText}`);
-        throw new Error(`Remove.bg failed with status ${response.status}. Please check your API key and account.`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const result = new Uint8Array(arrayBuffer);
-      console.log(`Remove.bg success: input ${imageBytes.length} bytes → output ${result.length} bytes (transparent PNG)`);
-      return result;
-    }
-
     // ---------- Decode base64 URL to bytes ----------
     function decodeBase64Image(base64Url: string): { bytes: Uint8Array; mimeType: string } | null {
       if (!base64Url.startsWith("data:")) return null;
@@ -144,7 +112,7 @@ Deno.serve(async (req) => {
     // ---------- Upload to storage (always PNG) ----------
     async function uploadDesignImage(imageBytes: Uint8Array, filename: string): Promise<string | null> {
       try {
-        const filePath = `pod-designs/${filename}.png`;
+        const filePath = `pod-designs/${filename}-raw.png`;
         const { error: uploadError } = await supabase.storage
           .from("pod-assets")
           .upload(filePath, imageBytes, { contentType: "image/png", upsert: true });
@@ -155,7 +123,7 @@ Deno.serve(async (req) => {
         }
 
         const { data: publicUrl } = supabase.storage.from("pod-assets").getPublicUrl(filePath);
-        console.log(`Uploaded transparent PNG: ${publicUrl.publicUrl}`);
+        console.log(`Uploaded raw design: ${publicUrl.publicUrl}`);
         return publicUrl.publicUrl;
       } catch (err) {
         console.error("Upload failed:", err);
@@ -163,7 +131,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---------- Full pipeline: generate → remove bg → upload ----------
+    // ---------- Full pipeline: generate → upload (NO bg removal) ----------
     async function processDesign(prompt: string, filename: string): Promise<string | null> {
       const base64Url = await generateDesignImage(prompt);
       if (!base64Url) return null;
@@ -174,9 +142,7 @@ Deno.serve(async (req) => {
         return base64Url;
       }
 
-      // Background removal is REQUIRED – errors will propagate up
-      const transparentBytes = await removeBackground(decoded.bytes);
-      return await uploadDesignImage(transparentBytes, filename);
+      return await uploadDesignImage(decoded.bytes, filename);
     }
 
     // ---------- Build update payload ----------
