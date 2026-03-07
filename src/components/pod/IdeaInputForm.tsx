@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,27 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMediaType, setImageMediaType] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+
+  // Pre-load image from defaultValues (variant flow)
+  useEffect(() => {
+    if (!defaultValues?.image_url) return;
+    setImageLoading(true);
+    fetch(defaultValues.image_url)
+      .then((res) => res.blob())
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setImagePreview(result);
+          setImageBase64(result.split(",")[1]);
+          setImageMediaType(blob.type || "image/png");
+          setImageLoading(false);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => setImageLoading(false));
+  }, [defaultValues?.image_url]);
 
   const handleFile = (file: File) => {
     const reader = new FileReader();
