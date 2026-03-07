@@ -146,6 +146,24 @@ export function useToggleShop() {
   });
 }
 
+export function useSetShopAutoPublish() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, auto_publish }: { id: string; auto_publish: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "set_shop_auto_publish", id, auto_publish },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useSavePodSettings() {
   const qc = useQueryClient();
   return useMutation({

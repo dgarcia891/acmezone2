@@ -311,6 +311,7 @@ export type Database = {
       }
       az_pod_printify_shops: {
         Row: {
+          auto_publish: boolean | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -320,6 +321,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_publish?: boolean | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -329,6 +331,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_publish?: boolean | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -341,6 +344,7 @@ export type Database = {
       }
       az_pod_settings: {
         Row: {
+          auto_publish: boolean | null
           created_at: string | null
           id: string
           printify_api_key: string | null
@@ -352,6 +356,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_publish?: boolean | null
           created_at?: string | null
           id?: string
           printify_api_key?: string | null
@@ -363,6 +368,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_publish?: boolean | null
           created_at?: string | null
           id?: string
           printify_api_key?: string | null

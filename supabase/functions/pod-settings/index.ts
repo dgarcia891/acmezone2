@@ -40,14 +40,12 @@ Deno.serve(async (req) => {
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
     if (req.method === "GET") {
-      // Fetch main settings
       const { data: settings } = await supabase
         .from("az_pod_settings")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
-      // Fetch additional shops
       const { data: shops } = await supabase
         .from("az_pod_printify_shops")
         .select("*")
@@ -60,6 +58,7 @@ Deno.serve(async (req) => {
         printify_api_key: settings.printify_api_key ? "••••••••" : "",
         printify_shop_id: settings.printify_shop_id || "",
         removebg_api_key: settings.removebg_api_key ? "••••••••" : "",
+        auto_publish: settings.auto_publish ?? false,
         has_trello_api_key: !!settings.trello_api_key,
         has_trello_token: !!settings.trello_token,
         has_printify_api_key: !!settings.printify_api_key,
@@ -67,7 +66,7 @@ Deno.serve(async (req) => {
         has_removebg_api_key: !!settings.removebg_api_key,
       } : {
         trello_api_key: "", trello_token: "", printify_api_key: "",
-        printify_shop_id: "", removebg_api_key: "",
+        printify_shop_id: "", removebg_api_key: "", auto_publish: false,
         has_trello_api_key: false, has_trello_token: false,
         has_printify_api_key: false, has_printify_shop_id: false,
         has_removebg_api_key: false,
@@ -76,7 +75,6 @@ Deno.serve(async (req) => {
       return json({ settings: masked, additional_shops: shops || [] });
 
     } else if (req.method === "PUT") {
-      // Validate Remove.bg API key
       const body = await req.json();
       const keyToValidate = body.removebg_api_key;
 
@@ -120,7 +118,7 @@ Deno.serve(async (req) => {
         }
         const { data, error } = await supabase
           .from("az_pod_printify_shops")
-          .insert({ user_id: user.id, shop_id, marketplace, label: label || null })
+          .insert({ user_id: user.id, shop_id, marketplace, label: label || null, auto_publish: false })
           .select()
           .single();
         if (error) throw error;
@@ -151,6 +149,19 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      // Handle per-shop auto_publish toggle
+      if (body.action === "set_shop_auto_publish") {
+        const { id, auto_publish } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update({ auto_publish })
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
       // Default: save main settings
       const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
       if (body.trello_api_key) updateData.trello_api_key = body.trello_api_key;
@@ -158,6 +169,7 @@ Deno.serve(async (req) => {
       if (body.printify_api_key) updateData.printify_api_key = body.printify_api_key;
       if (body.printify_shop_id !== undefined) updateData.printify_shop_id = body.printify_shop_id;
       if (body.removebg_api_key) updateData.removebg_api_key = body.removebg_api_key;
+      if (body.auto_publish !== undefined) updateData.auto_publish = body.auto_publish;
 
       const { error } = await supabase
         .from("az_pod_settings")

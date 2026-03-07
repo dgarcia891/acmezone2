@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
     if ((product_type === "tshirt" || product_type === "both") && tshirt_prompt) {
       designTasks.push(
         processDesign(
-          `Create a t-shirt graphic design. Output ONLY the graphic artwork centered on a solid pure white (#FFFFFF) background. The design should be bold, eye-catching, and suitable for screen printing or DTG. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white. ${tshirt_prompt}`,
+          `Create a t-shirt graphic design at high resolution (4500x5400 pixels or similar print-ready dimensions). The artwork MUST be LARGE and PROMINENT, filling at least 70-80% of the canvas. Make the design bold, oversized, and visually impactful — NOT small or centered in a tiny area. Output ONLY the graphic artwork on a solid pure white (#FFFFFF) background. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white, filling the majority of the canvas. ${tshirt_prompt}`,
           `tshirt-${idea_id}`
         ).then(url => ({ key: "tshirt_design_url", promptKey: "tshirt_design_prompt", prompt: tshirt_prompt, url }))
       );

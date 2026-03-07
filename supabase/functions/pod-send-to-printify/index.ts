@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id, product_types, publish } = await req.json();
+    // Accept per-shop publish overrides instead of a single boolean
+    const { idea_id, product_types, publish_overrides } = await req.json();
     if (!idea_id) return json({ error: "idea_id is required" }, 400);
 
     // Fetch idea
@@ -102,24 +103,24 @@ Deno.serve(async (req) => {
       .eq("idea_id", idea_id)
       .eq("is_approved", true);
     if (listingsError) throw listingsError;
-    // Filter by product_types if provided
+
     let filteredListings = listings || [];
     if (product_types && Array.isArray(product_types) && product_types.length > 0) {
       filteredListings = filteredListings.filter((l: any) => product_types.includes(l.product_type));
     }
     if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
 
-    // Fetch Printify credentials
+    // Fetch Printify credentials + primary auto_publish
     const { data: settings } = await supabase
       .from("az_pod_settings")
-      .select("printify_api_key, printify_shop_id")
+      .select("printify_api_key, printify_shop_id, auto_publish")
       .eq("user_id", user.id)
       .single();
     if (!settings?.printify_api_key || !settings?.printify_shop_id) {
       return json({ error: "Printify API key and Shop ID are required. Configure them in Settings." }, 400);
     }
 
-    // Fetch additional shops
+    // Fetch additional shops (including auto_publish)
     const { data: additionalShops } = await supabase
       .from("az_pod_printify_shops")
       .select("*")
@@ -128,15 +129,19 @@ Deno.serve(async (req) => {
 
     const { printify_api_key, printify_shop_id } = settings;
 
-    // Build shop list: primary + additional
+    // Build shop list: primary + additional, each with their own auto_publish default
     const shops = [
-      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop" },
+      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false },
       ...(additionalShops || []).map((s: any) => ({
         shop_id: s.shop_id,
         marketplace: s.marketplace,
         label: s.label || `${s.marketplace} Shop`,
+        auto_publish: s.auto_publish ?? false,
       })),
     ];
+
+    // publish_overrides is a Record<shop_id, boolean> that allows per-shop override at send time
+    const overrides: Record<string, boolean> = publish_overrides || {};
 
     const results: any[] = [];
 
@@ -153,7 +158,6 @@ Deno.serve(async (req) => {
       const blueprintId = Number(listing.printify_blueprint_id);
       const printProviderId = Number(listing.printify_print_provider_id);
       if (!blueprintId || !printProviderId) {
-        console.warn(`Missing blueprint/provider IDs for ${listing.product_type} listing ${listing.id}, skipping`);
         results.push({
           product_type: listing.product_type,
           error: `Blueprint ID and Print Provider ID must be configured on the ${listing.product_type} listing before sending to Printify.`,
@@ -161,7 +165,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Upload image once per listing (shared across shops)
+      // Upload image once per listing
       console.log(`Uploading image for ${listing.product_type}...`);
       const uploadResult = await printifyFetch("/uploads/images.json", printify_api_key, {
         method: "POST",
@@ -173,7 +177,7 @@ Deno.serve(async (req) => {
       const imageId = uploadResult.id;
       console.log(`Image uploaded: ${imageId}`);
 
-      // Get variants once (same blueprint/provider for all shops)
+      // Get variants once
       console.log(`Fetching variants for blueprint ${blueprintId}...`);
       const variants = await printifyFetch(
         `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
@@ -184,10 +188,15 @@ Deno.serve(async (req) => {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
 
-      // Create product on each shop
+      // Create product on each shop with per-shop publish decision
       for (const shop of shops) {
+        // Determine publish: override > shop default
+        const shouldPublish = shop.shop_id in overrides
+          ? overrides[shop.shop_id]
+          : shop.auto_publish;
+
         const title = getTitleForMarketplace(listing, shop.marketplace);
-        console.log(`Creating product on shop ${shop.shop_id} (${shop.marketplace}): "${title}"`);
+        console.log(`Creating product on shop ${shop.shop_id} (${shop.marketplace}), publish=${shouldPublish}: "${title}"`);
 
         try {
           const product = await printifyFetch(`/shops/${shop.shop_id}/products.json`, printify_api_key, {
@@ -220,9 +229,9 @@ Deno.serve(async (req) => {
           });
           console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
 
-          // Publish if requested
+          // Publish if this shop's setting says so
           let published = false;
-          if (publish) {
+          if (shouldPublish) {
             try {
               await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}/publish.json`, printify_api_key, {
                 method: "POST",
@@ -271,14 +280,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if any products were actually created
     const successResults = results.filter((r: any) => r.printify_product_id);
     if (successResults.length === 0) {
       const errors = results.map((r: any) => r.error).filter(Boolean).join("; ");
       return json({ error: errors || "No products could be created. Ensure Blueprint ID and Print Provider ID are configured on each listing." }, 400);
     }
 
-    // Update idea with primary shop's Printify data and set status to production
     const primaryResult = successResults.find((r: any) => r.marketplace === "default") || successResults[0];
     await supabase
       .from("az_pod_ideas")
