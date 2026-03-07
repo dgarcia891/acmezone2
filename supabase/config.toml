@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.pod-test-trello]
 verify_jwt = false
+
+[functions.sa-report-user]
+verify_jwt = false
