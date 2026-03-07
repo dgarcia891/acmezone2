@@ -1,43 +1,32 @@
 
 
-## Combine Steps 5 & 6: "Listings" + "Summary" → Single "Finalize" Step
+# Unified Admin Navigation
 
-### Current State
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-- **Step 5 (Listings)**: Shows AI-generated listing content (titles, descriptions, tags) with edit/regenerate capability. "Approve Listings" button advances to Step 6.
-- **Step 6 (Summary)**: Shows idea summary, design selection checkboxes, per-shop publish/draft toggles, "Send to Printify" button, and post-publish results (mockups, Mark as Live).
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-These two steps share context and forcing an extra click between them adds friction without adding value.
+## Changes
 
-### Proposed Combined Step: "Finalize"
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-One unified step with two sections stacked vertically:
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-1. **Listing Content Section** (from current Step 5) — editable listings with regenerate button, "Publishing To" shop badges
-2. **Publish Section** (from current Step 6) — design selection checkboxes, per-shop publish/draft toggles, "Send to Printify" button, post-publish mockup results, "Mark as Live"
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
 
-The "Approve Listings" button is removed as a separate gate. Instead, "Send to Printify" serves as the single approval action (it will call both `approveListings` and `sendToPrintify` in sequence).
-
-### Changes Required
-
-| File | Change |
-|---|---|
-| `PipelineStepIndicator.tsx` | Remove `"summary"` step. Rename `"listings"` label to `"Finalize"`. Update from 6 steps to 5. |
-| `WizardListingsStep.tsx` | Merge in all Summary UI (design selection, shop toggles, Printify send, post-publish results, Mark as Live). Remove the separate "Approve Listings" button — publishing now implies approval. |
-| `WizardSummaryStep.tsx` | Delete file. |
-| `PodPipeline.tsx` | Remove `"summary"` step handling. Remove `onApproved` callback that transitions to summary. The `"listings"` step now handles everything through to "live" status. Update `statusToStep` mapping so `"ready"`, `"production"`, and `"live"` statuses all map to the `"listings"` step. |
-
-### Step Indicator (Before → After)
-
-```text
-Before: Analyze → Review → Generate → Review Designs → Listings → Summary
-After:  Analyze → Review → Generate → Review Designs → Finalize
-```
-
-### UX Flow in Combined Step
-
-- **Status "listings"**: Show editable listing content + regenerate. Below that, show design previews and shop toggles. "Send to Printify" button is primary action (disabled until listings exist).
-- **Status "ready"**: Same view but listings are locked/approved. Printify controls are prominent.
-- **Status "production"**: Show Printify results/mockups + "Mark as Live" button.
-- **Status "live"**: Show final summary with live badge and external links.
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 

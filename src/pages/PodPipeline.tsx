@@ -9,7 +9,7 @@ import AnalysisReview from "@/components/pod/AnalysisReview";
 import DesignGeneration from "@/components/pod/DesignGeneration";
 import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
-import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
+
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
 import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign } from "@/hooks/usePodPipeline";
@@ -35,7 +35,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
     case "ready":
     case "production":
     case "live":
-      return "summary";
+      return "listings";
     default:
       return "input";
   }
@@ -380,19 +380,9 @@ const PodPipeline = () => {
                 <WizardListingsStep
                   idea={wizardIdea}
                   onBack={() => setStep("results")}
+                  onClose={closeWizard}
                   onReject={handleReject}
                   onDropDesign={handleDropDesign}
-                  onApproved={() => {
-                    setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
-                    setStep("summary");
-                  }}
-                />
-              )}
-
-              {step === "summary" && wizardIdea && (
-                <WizardSummaryStep
-                  idea={wizardIdea}
-                  onClose={closeWizard}
                   onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))}
                 />
               )}
