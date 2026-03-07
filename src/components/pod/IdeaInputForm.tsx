@@ -6,6 +6,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, X, Sparkles } from "lucide-react";
 
+interface ImageItem {
+  preview: string;
+  base64: string;
+  media_type: string;
+}
+
 interface DefaultValues {
   idea_text?: string;
   product_type?: string;
@@ -13,7 +19,11 @@ interface DefaultValues {
 }
 
 interface Props {
-  onSubmit: (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => void;
+  onSubmit: (data: {
+    idea_text: string;
+    images?: Array<{ base64: string; media_type: string }>;
+    product_type: string;
+  }) => void;
   isLoading: boolean;
   defaultValues?: DefaultValues | null;
 }
@@ -21,9 +31,7 @@ interface Props {
 export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Props) {
   const [ideaText, setIdeaText] = useState(defaultValues?.idea_text || "");
   const [productType, setProductType] = useState(defaultValues?.product_type || "both");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imageMediaType, setImageMediaType] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [imageLoading, setImageLoading] = useState(false);
 
@@ -37,9 +45,11 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          setImagePreview(result);
-          setImageBase64(result.split(",")[1]);
-          setImageMediaType(blob.type || "image/png");
+          setImages([{
+            preview: result,
+            base64: result.split(",")[1],
+            media_type: blob.type || "image/png",
+          }]);
           setImageLoading(false);
         };
         reader.readAsDataURL(blob);
@@ -51,17 +61,28 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      setImagePreview(result);
-      setImageBase64(result.split(",")[1]);
-      setImageMediaType(file.type);
+      setImages((prev) => [
+        ...prev,
+        {
+          preview: result,
+          base64: result.split(",")[1],
+          media_type: file.type,
+        },
+      ]);
     };
     reader.readAsDataURL(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("image/")) handleFile(file);
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    files.forEach(handleFile);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (isLoading) {
@@ -94,37 +115,64 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Image (optional)</label>
-          {imagePreview ? (
-            <div className="relative inline-block">
-              <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg" />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute -top-2 -right-2 h-6 w-6"
-                onClick={() => { setImagePreview(null); setImageBase64(null); setImageMediaType(null); }}
+          <label className="text-sm font-medium mb-2 block">
+            Images (optional)
+          </label>
+
+          <div className="flex flex-wrap gap-3">
+            {/* Existing image thumbnails */}
+            {images.map((img, idx) => (
+              <div
+                key={idx}
+                className="relative w-28 h-28 rounded-lg overflow-hidden border border-border bg-muted"
               >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
+                <img
+                  src={img.preview}
+                  alt={`Upload ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
+                  onClick={() => removeImage(idx)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+
+            {/* Loading placeholder for variant pre-load */}
+            {imageLoading && (
+              <Skeleton className="w-28 h-28 rounded-lg" />
+            )}
+
+            {/* Always-visible upload zone */}
             <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
             >
-              <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Drag & drop an image here, or click to browse</p>
+              <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+              <p className="text-xs text-muted-foreground text-center px-1">
+                Add image
+              </p>
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    Array.from(e.target.files).forEach(handleFile);
+                  }
+                  e.target.value = "";
+                }}
               />
             </div>
-          )}
+          </div>
         </div>
 
         <div>
@@ -143,12 +191,18 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
         <Button
           className="w-full sm:w-auto"
           disabled={!ideaText.trim()}
-          onClick={() => onSubmit({
-            idea_text: ideaText,
-            image_base64: imageBase64 || undefined,
-            image_media_type: imageMediaType || undefined,
-            product_type: productType,
-          })}
+          onClick={() =>
+            onSubmit({
+              idea_text: ideaText,
+              images: images.length
+                ? images.map((img) => ({
+                    base64: img.base64,
+                    media_type: img.media_type,
+                  }))
+                : undefined,
+              product_type: productType,
+            })
+          }
         >
           <Sparkles className="h-4 w-4 mr-2" />
           Analyze Idea

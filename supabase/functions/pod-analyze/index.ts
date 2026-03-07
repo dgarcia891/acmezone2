@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_text, image_base64, image_media_type } = await req.json();
+    const { idea_text, images, image_base64, image_media_type } = await req.json();
     if (!idea_text?.trim()) return json({ error: "idea_text is required" }, 400);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -70,7 +70,20 @@ Deno.serve(async (req) => {
 The commercial_viability_score MUST be an integer from 1-10.`;
 
     const userContent: any[] = [{ type: "text", text: `Analyze this content idea for POD merchandise:\n\n${idea_text}` }];
-    if (image_base64 && image_media_type) {
+
+    // Support new multi-image array format
+    if (Array.isArray(images) && images.length > 0) {
+      for (const img of images) {
+        if (img.base64 && img.media_type) {
+          userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${img.media_type};base64,${img.base64}` }
+          });
+        }
+      }
+    }
+    // Backward compatibility: single image fields
+    else if (image_base64 && image_media_type) {
       userContent.push({
         type: "image_url",
         image_url: { url: `data:${image_media_type};base64,${image_base64}` }
@@ -105,12 +118,14 @@ The commercial_viability_score MUST be an integer from 1-10.`;
     const cleanedText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const analysis = JSON.parse(cleanedText);
 
+    const hasImages = (Array.isArray(images) && images.length > 0) || !!image_base64;
+
     const { data: idea, error: insertError } = await supabase
       .from("az_pod_ideas")
       .insert({
         user_id: user.id,
         idea_text,
-        image_url: image_base64 ? `uploaded_image` : null,
+        image_url: hasImages ? `uploaded_image` : null,
         product_type: "both",
         analysis,
         sticker_design_prompt: analysis.sticker_design_prompt,
