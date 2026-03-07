@@ -707,6 +707,80 @@ export type Database = {
         }
         Relationships: []
       }
+      sa_user_reports: {
+        Row: {
+          admin_notes: string | null
+          body_preview: string | null
+          created_at: string | null
+          description: string | null
+          extension_version: string | null
+          id: string
+          indicators: Json | null
+          promoted_pattern_id: string | null
+          report_type: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scan_result: Json | null
+          sender_email: string | null
+          severity: string | null
+          subject: string | null
+          updated_at: string | null
+          url: string
+          user_notes: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          body_preview?: string | null
+          created_at?: string | null
+          description?: string | null
+          extension_version?: string | null
+          id?: string
+          indicators?: Json | null
+          promoted_pattern_id?: string | null
+          report_type?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scan_result?: Json | null
+          sender_email?: string | null
+          severity?: string | null
+          subject?: string | null
+          updated_at?: string | null
+          url: string
+          user_notes?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          body_preview?: string | null
+          created_at?: string | null
+          description?: string | null
+          extension_version?: string | null
+          id?: string
+          indicators?: Json | null
+          promoted_pattern_id?: string | null
+          report_type?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scan_result?: Json | null
+          sender_email?: string | null
+          severity?: string | null
+          subject?: string | null
+          updated_at?: string | null
+          url?: string
+          user_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_user_reports_promoted_pattern_id_fkey"
+            columns: ["promoted_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "sa_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
