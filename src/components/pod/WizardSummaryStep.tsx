@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink, CheckCircle2, Loader2, ArrowLeft, Package } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { ExternalLink, CheckCircle2, Loader2, ArrowLeft, Package, Store } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
+import { usePodSettings } from "@/hooks/usePodPipeline";
 
 interface PrintifyProductResult {
   product_type: string;
@@ -56,6 +58,7 @@ function groupByMarketplace(results: PrintifyProductResult[]) {
 export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Props) {
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
+  const { data: settingsData } = usePodSettings();
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
   // Product type selection state
@@ -63,7 +66,39 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
   const hasTshirt = !!idea?.tshirt_design_url;
   const [stickerSelected, setStickerSelected] = useState(hasSticker);
   const [tshirtSelected, setTshirtSelected] = useState(hasTshirt);
-  const [publishAfterSend, setPublishAfterSend] = useState(false);
+
+  // Per-shop publish overrides: shop_id -> boolean
+  const [publishOverrides, setPublishOverrides] = useState<Record<string, boolean>>({});
+
+  // Build shop list from settings for the per-shop toggles
+  const primaryShopId = settingsData?.settings?.printify_shop_id || "";
+  const primaryAutoPublish = settingsData?.settings?.auto_publish ?? false;
+  const additionalShops = (settingsData?.additional_shops || []).filter((s: any) => s.is_active);
+
+  const allShops = [
+    ...(primaryShopId ? [{ shop_id: primaryShopId, marketplace: "default", label: "Primary Shop", auto_publish: primaryAutoPublish }] : []),
+    ...additionalShops.map((s: any) => ({
+      shop_id: s.shop_id,
+      marketplace: s.marketplace,
+      label: s.label || `${s.marketplace} Shop`,
+      auto_publish: s.auto_publish ?? false,
+    })),
+  ];
+
+  // Initialize overrides from shop defaults when settings load
+  useEffect(() => {
+    if (allShops.length > 0 && Object.keys(publishOverrides).length === 0) {
+      const defaults: Record<string, boolean> = {};
+      for (const shop of allShops) {
+        defaults[shop.shop_id] = shop.auto_publish;
+      }
+      setPublishOverrides(defaults);
+    }
+  }, [settingsData]);
+
+  const toggleShopPublish = (shopId: string, value: boolean) => {
+    setPublishOverrides((prev) => ({ ...prev, [shopId]: value }));
+  };
 
   const selectedTypes: string[] = [];
   if (stickerSelected && hasSticker) selectedTypes.push("sticker");
@@ -179,6 +214,37 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
             </div>
           )}
 
+          {/* Per-shop publish/draft toggles */}
+          {idea?.status === "ready" && allShops.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Store className="h-3.5 w-3.5" /> Publish settings per shop
+              </p>
+              <div className="space-y-2">
+                {allShops.map((shop) => (
+                  <div key={shop.shop_id} className="flex items-center justify-between gap-2 p-2 rounded-md border border-border bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge className={`text-[10px] shrink-0 ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                        {shop.marketplace === "default" ? "Primary" : shop.marketplace}
+                      </Badge>
+                      <span className="text-xs truncate">{shop.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Label className="text-xs text-muted-foreground cursor-pointer select-none">
+                        {publishOverrides[shop.shop_id] ? "Publish" : "Draft"}
+                      </Label>
+                      <Switch
+                        checked={publishOverrides[shop.shop_id] ?? shop.auto_publish}
+                        onCheckedChange={(v) => toggleShopPublish(shop.shop_id, v)}
+                        aria-label={`Publish toggle for ${shop.label}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Live status */}
           {idea?.status === "live" && (
             <div className="flex items-center gap-2 text-green-600">
@@ -291,36 +357,24 @@ export default function WizardSummaryStep({ idea, onClose, onIdeaUpdated }: Prop
         </Button>
         <div className="flex gap-3">
           {idea?.status === "ready" && (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="publish-toggle"
-                  checked={publishAfterSend}
-                  onCheckedChange={setPublishAfterSend}
-                />
-                <label htmlFor="publish-toggle" className="text-xs cursor-pointer select-none">
-                  {publishAfterSend ? "Publish immediately" : "Save as draft"}
-                </label>
-              </div>
-              <Button
-                onClick={() => sendToPrintify.mutate(
-                  { idea_id: idea.id, product_types: selectedTypes, publish: publishAfterSend },
-                  {
-                    onSuccess: (data) => {
-                      setPrintifyResults(data?.products || []);
-                      onIdeaUpdated?.({ status: "production" });
-                    },
-                  }
-                )}
-                disabled={sendToPrintify.isPending || selectedTypes.length === 0}
-              >
-                {sendToPrintify.isPending ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
-                ) : (
-                  `Send ${selectedTypes.length === 1 ? selectedTypes[0] : "both"} to Printify`
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={() => sendToPrintify.mutate(
+                { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides },
+                {
+                  onSuccess: (data) => {
+                    setPrintifyResults(data?.products || []);
+                    onIdeaUpdated?.({ status: "production" });
+                  },
+                }
+              )}
+              disabled={sendToPrintify.isPending || selectedTypes.length === 0}
+            >
+              {sendToPrintify.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
+              ) : (
+                `Send ${selectedTypes.length === 1 ? selectedTypes[0] : "both"} to Printify`
+              )}
+            </Button>
           )}
           {idea?.status === "production" && (
             <Button onClick={() => updateStatus.mutate({ id: idea.id, status: "live" }, {

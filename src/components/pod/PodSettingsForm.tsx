@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store } from "lucide-react";
-import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop, useSetShopAutoPublish } from "@/hooks/usePodPipeline";
 
 const MARKETPLACE_OPTIONS = [
   { value: "ebay", label: "eBay", description: "80 char title limit" },
@@ -33,6 +34,7 @@ export default function PodSettingsForm() {
   const addShopMutation = useAddShop();
   const removeShopMutation = useRemoveShop();
   const toggleShopMutation = useToggleShop();
+  const setAutoPublishMutation = useSetShopAutoPublish();
 
   const [form, setForm] = useState({
     printify_api_key: "",
@@ -40,6 +42,7 @@ export default function PodSettingsForm() {
     removebg_api_key: "",
   });
 
+  const [primaryAutoPublish, setPrimaryAutoPublish] = useState(false);
   const [newShop, setNewShop] = useState({ shop_id: "", marketplace: "", label: "" });
 
   useEffect(() => {
@@ -49,16 +52,19 @@ export default function PodSettingsForm() {
         printify_shop_id: settings.printify_shop_id || "",
         removebg_api_key: "",
       });
+      setPrimaryAutoPublish(settings.auto_publish ?? false);
     }
   }, [settings]);
 
   const update = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
 
   const handleSave = async () => {
-    const body: Record<string, string> = {};
+    const body: Record<string, any> = {};
     Object.entries(form).forEach(([k, v]) => {
       if (v) body[k] = v;
     });
+    // Always send auto_publish for primary shop
+    body.auto_publish = primaryAutoPublish;
     if (Object.keys(body).length === 0) return;
 
     if (body.removebg_api_key) {
@@ -128,6 +134,16 @@ export default function PodSettingsForm() {
               <Input type="text" placeholder="Enter Printify Shop ID" value={form.printify_shop_id} onChange={(e) => update("printify_shop_id", e.target.value)} />
               <p className="text-xs text-muted-foreground mt-1">This is your default/primary Printify shop.</p>
             </div>
+            <div className="flex items-center justify-between p-3 rounded-md border border-border bg-muted/30">
+              <div>
+                <Label className="text-sm font-medium">Auto-publish (Primary Shop)</Label>
+                <p className="text-xs text-muted-foreground">When enabled, products sent to this shop will be published immediately instead of saved as draft.</p>
+              </div>
+              <Switch
+                checked={primaryAutoPublish}
+                onCheckedChange={setPrimaryAutoPublish}
+              />
+            </div>
           </div>
         </div>
 
@@ -150,12 +166,22 @@ export default function PodSettingsForm() {
                     checked={shop.is_active}
                     onCheckedChange={(checked) => toggleShopMutation.mutate({ id: shop.id, is_active: checked })}
                     className="shrink-0"
+                    aria-label={`Toggle ${shop.label || shop.marketplace} active`}
                   />
                   <Badge className={`text-[10px] shrink-0 ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
                     {shop.marketplace}
                   </Badge>
                   <span className="text-xs font-mono truncate flex-1">{shop.shop_id}</span>
                   {shop.label && <span className="text-xs text-muted-foreground truncate">{shop.label}</span>}
+                  <div className="flex items-center gap-1 shrink-0 border-l border-border pl-2 ml-1">
+                    <span className="text-[10px] text-muted-foreground">{shop.auto_publish ? "Publish" : "Draft"}</span>
+                    <Switch
+                      checked={shop.auto_publish ?? false}
+                      onCheckedChange={(checked) => setAutoPublishMutation.mutate({ id: shop.id, auto_publish: checked })}
+                      className="shrink-0 scale-75"
+                      aria-label={`Auto-publish for ${shop.label || shop.marketplace}`}
+                    />
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
