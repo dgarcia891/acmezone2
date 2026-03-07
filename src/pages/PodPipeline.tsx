@@ -156,6 +156,22 @@ const PodPipeline = () => {
 
   const handleApproveDesign = () => {
     if (!wizardIdea) return;
+    setBgRemoved(false);
+    setStep("remove_bg");
+  };
+
+  const handleRemoveBg = () => {
+    if (!wizardIdea) return;
+    removeBgMutation.mutate(wizardIdea.id, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setBgRemoved(true);
+      },
+    });
+  };
+
+  const handleApproveAfterBg = () => {
+    if (!wizardIdea) return;
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
         setStep("listings");
