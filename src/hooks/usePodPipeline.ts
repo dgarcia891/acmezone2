@@ -298,3 +298,38 @@ export function useDeleteDesignVersion() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export function useDropDesign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dropType }: { id: string; dropType: "sticker" | "tshirt" }) => {
+      const remainingType = dropType === "sticker" ? "tshirt" : "sticker";
+      const nullFields: Record<string, any> = {
+        product_type: remainingType,
+        updated_at: new Date().toISOString(),
+      };
+      if (dropType === "sticker") {
+        nullFields.sticker_design_url = null;
+        nullFields.sticker_design_prompt = null;
+        nullFields.sticker_raw_url = null;
+      } else {
+        nullFields.tshirt_design_url = null;
+        nullFields.tshirt_design_prompt = null;
+        nullFields.tshirt_raw_url = null;
+      }
+      const { data, error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update(nullFields as any)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { idea: data, remainingType };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Design type removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}

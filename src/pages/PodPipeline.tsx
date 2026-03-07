@@ -12,7 +12,7 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
