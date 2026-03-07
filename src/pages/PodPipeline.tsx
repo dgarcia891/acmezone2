@@ -49,6 +49,7 @@ const PodPipeline = () => {
   const [productType, setProductType] = useState("both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
@@ -116,6 +117,25 @@ const PodPipeline = () => {
     setLoadingTypes(new Set());
     setBgRemoving(false);
     bgAutoTriggeredRef.current = false;
+    setVariantDefaults(null);
+  };
+
+  const handleCreateVariant = (sourceIdea: any) => {
+    const defaults = {
+      idea_text: sourceIdea.idea_text || "",
+      product_type: sourceIdea.product_type || "both",
+      image_url: sourceIdea.image_url || undefined,
+    };
+    setWizardOpen(false);
+    setWizardIdea(null);
+    setStep("input");
+    setProductType(defaults.product_type);
+    setLoadingTypes(new Set());
+    setBgRemoving(false);
+    bgAutoTriggeredRef.current = false;
+    setVariantDefaults(defaults);
+    // Re-open wizard on next tick so state is clean
+    setTimeout(() => setWizardOpen(true), 0);
   };
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
@@ -330,7 +350,7 @@ const PodPipeline = () => {
               <PipelineStepIndicator current={step} />
 
               {step === "input" && (
-                <IdeaInputForm onSubmit={handleAnalyze} isLoading={analyzeMutation.isPending} />
+                <IdeaInputForm onSubmit={handleAnalyze} isLoading={analyzeMutation.isPending} defaultValues={variantDefaults} />
               )}
 
               {step === "review" && wizardIdea?.analysis && (
@@ -384,6 +404,7 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onDropDesign={handleDropDesign}
                   onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))}
+                  onCreateVariant={handleCreateVariant}
                 />
               )}
             </div>

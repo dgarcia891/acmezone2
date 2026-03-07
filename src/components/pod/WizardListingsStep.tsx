@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store,
-  ThumbsDown, ExternalLink, Package
+  ThumbsDown, ExternalLink, Package, Copy
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
@@ -54,9 +54,10 @@ interface Props {
   onReject?: () => void;
   onDropDesign?: (type: "sticker" | "tshirt") => void;
   onIdeaUpdated?: (updated: Partial<any>) => void;
+  onCreateVariant?: (idea: any) => void;
 }
 
-export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated }: Props) {
+export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
@@ -430,6 +431,11 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
             <Button onClick={handleMarkAsLive} disabled={updateStatus.isPending}>
               {updateStatus.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Mark as Live
+            </Button>
+          )}
+          {isReadyOrBeyond && onCreateVariant && (
+            <Button variant="outline" onClick={() => onCreateVariant(idea)}>
+              <Copy className="h-4 w-4 mr-2" /> Create Variant
             </Button>
           )}
         </div>
