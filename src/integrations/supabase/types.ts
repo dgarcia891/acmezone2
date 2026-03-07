@@ -172,10 +172,12 @@ export type Database = {
           status: string | null
           sticker_design_prompt: string | null
           sticker_design_url: string | null
+          sticker_raw_url: string | null
           trello_card_id: string | null
           trello_card_url: string | null
           tshirt_design_prompt: string | null
           tshirt_design_url: string | null
+          tshirt_raw_url: string | null
           updated_at: string | null
           user_id: string
         }
@@ -196,10 +198,12 @@ export type Database = {
           status?: string | null
           sticker_design_prompt?: string | null
           sticker_design_url?: string | null
+          sticker_raw_url?: string | null
           trello_card_id?: string | null
           trello_card_url?: string | null
           tshirt_design_prompt?: string | null
           tshirt_design_url?: string | null
+          tshirt_raw_url?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -220,10 +224,12 @@ export type Database = {
           status?: string | null
           sticker_design_prompt?: string | null
           sticker_design_url?: string | null
+          sticker_raw_url?: string | null
           trello_card_id?: string | null
           trello_card_url?: string | null
           tshirt_design_prompt?: string | null
           tshirt_design_url?: string | null
+          tshirt_raw_url?: string | null
           updated_at?: string | null
           user_id?: string
         }
