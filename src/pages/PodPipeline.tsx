@@ -28,6 +28,8 @@ function statusToStep(status: string | null | undefined): PipelineStep {
     case "analyzed":
     case "designs_generated":
       return "generate";
+    case "bg_removed":
+      return "remove_bg";
     case "listings":
       return "listings";
     case "ready":
