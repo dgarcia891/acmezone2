@@ -18,6 +18,7 @@ import ProductManagement from '@/components/admin/ProductManagement';
 import DetectionsTab from '@/components/hydra-guard/DetectionsTab';
 import CorrectionsTab from '@/components/hydra-guard/CorrectionsTab';
 import PatternsTab from '@/components/hydra-guard/PatternsTab';
+import UserReportsTab from '@/components/hydra-guard/UserReportsTab';
 import { 
   Users, 
   Shield, 
@@ -31,7 +32,8 @@ import {
   Package,
   Eye,
   MessageSquare,
-  Database
+  Database,
+  FileWarning
 } from 'lucide-react';
 
 interface UserStats {
@@ -326,10 +328,12 @@ const Admin = () => {
                   <TabsTrigger value="detections" className="gap-2"><Eye className="h-4 w-4" />Detections</TabsTrigger>
                   <TabsTrigger value="corrections" className="gap-2"><MessageSquare className="h-4 w-4" />Corrections</TabsTrigger>
                   <TabsTrigger value="patterns" className="gap-2"><Database className="h-4 w-4" />Patterns</TabsTrigger>
+                  <TabsTrigger value="user-reports" className="gap-2"><FileWarning className="h-4 w-4" />User Reports</TabsTrigger>
                 </TabsList>
                 <TabsContent value="detections"><DetectionsTab /></TabsContent>
                 <TabsContent value="corrections"><CorrectionsTab /></TabsContent>
                 <TabsContent value="patterns"><PatternsTab /></TabsContent>
+                <TabsContent value="user-reports"><UserReportsTab /></TabsContent>
               </Tabs>
             </TabsContent>
 
