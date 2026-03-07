@@ -115,6 +115,14 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
+    // Preserve raw URLs before overwriting with transparent versions
+    if (idea.sticker_design_url) {
+      updateData.sticker_raw_url = idea.sticker_design_url;
+    }
+    if (idea.tshirt_design_url) {
+      updateData.tshirt_raw_url = idea.tshirt_design_url;
+    }
+
     const tasks: Promise<void>[] = [];
 
     if (idea.sticker_design_url) {

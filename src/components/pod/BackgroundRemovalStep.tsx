@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eraser, Send, ThumbsDown, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import { Eraser, Send, ThumbsDown, Loader2 } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface Props {
@@ -16,6 +15,14 @@ interface Props {
   bgRemoved: boolean;
 }
 
+const checkerboardStyle = {
+  backgroundImage:
+    "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
+  backgroundSize: "20px 20px",
+  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  backgroundColor: "white",
+};
+
 function DesignPreview({ label, url, checkerboard }: { label: string; url?: string | null; checkerboard?: boolean }) {
   if (!url) return null;
   return (
@@ -25,19 +32,29 @@ function DesignPreview({ label, url, checkerboard }: { label: string; url?: stri
       </CardHeader>
       <CardContent>
         <AspectRatio ratio={1}>
-          <div className={`w-full h-full rounded-lg overflow-hidden ${checkerboard ? "bg-[length:20px_20px]" : "bg-muted"}`}
-            style={checkerboard ? {
-              backgroundImage: "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
-              backgroundSize: "20px 20px",
-              backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-              backgroundColor: "white",
-            } : undefined}
+          <div
+            className={`w-full h-full rounded-lg overflow-hidden ${checkerboard ? "bg-[length:20px_20px]" : "bg-muted"}`}
+            style={checkerboard ? checkerboardStyle : undefined}
           >
             <img src={url} alt={label} className="w-full h-full object-contain" />
           </div>
         </AspectRatio>
       </CardContent>
     </Card>
+  );
+}
+
+function BeforeAfterComparison({ type, rawUrl, transparentUrl }: { type: string; rawUrl?: string | null; transparentUrl?: string | null }) {
+  if (!rawUrl && !transparentUrl) return null;
+  const label = type === "sticker" ? "Sticker" : "T-Shirt";
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <DesignPreview label="Before (Raw)" url={rawUrl} />
+        <DesignPreview label="After (Transparent)" url={transparentUrl} checkerboard />
+      </div>
+    </div>
   );
 }
 
@@ -51,19 +68,26 @@ export default function BackgroundRemovalStep({ idea, productType, onRemoveBg, o
         <h2 className="text-xl font-semibold">Background Removal</h2>
         <p className="text-sm text-muted-foreground">
           {bgRemoved
-            ? "Background removed successfully! Review the transparent designs below before approving."
+            ? "Background removed successfully! Compare the before & after below, then approve to generate listings."
             : "Review your raw designs below, then remove the backgrounds to create transparent production-ready PNGs."}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {hasSticker && (
-          <DesignPreview label={bgRemoved ? "Sticker (Transparent)" : "Sticker (Raw)"} url={idea.sticker_design_url} checkerboard={bgRemoved} />
-        )}
-        {hasTshirt && (
-          <DesignPreview label={bgRemoved ? "T-Shirt (Transparent)" : "T-Shirt (Raw)"} url={idea.tshirt_design_url} checkerboard={bgRemoved} />
-        )}
-      </div>
+      {bgRemoved ? (
+        <div className="space-y-6">
+          {hasSticker && (
+            <BeforeAfterComparison type="sticker" rawUrl={idea.sticker_raw_url} transparentUrl={idea.sticker_design_url} />
+          )}
+          {hasTshirt && (
+            <BeforeAfterComparison type="tshirt" rawUrl={idea.tshirt_raw_url} transparentUrl={idea.tshirt_design_url} />
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {hasSticker && <DesignPreview label="Sticker (Raw)" url={idea.sticker_design_url} />}
+          {hasTshirt && <DesignPreview label="T-Shirt (Raw)" url={idea.tshirt_design_url} />}
+        </div>
+      )}
 
       <div className="flex justify-between gap-3">
         <div className="flex gap-3">
