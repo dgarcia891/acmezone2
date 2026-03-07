@@ -14,6 +14,7 @@ interface Props {
   onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
   onGenerate?: () => void;
   onCancel?: (type: "sticker" | "tshirt") => void;
+  onDropDesign?: (type: "sticker" | "tshirt") => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
   versions?: DesignVersion[];
@@ -69,9 +70,11 @@ function LoadingSpinner({ onCancel }: { onCancel?: () => void }) {
   );
 }
 
-function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
+function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onDrop, canDrop, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
   label: string; url?: string | null; prompt?: string; onRegenerate: (customPrompt?: string) => void; isLoading: boolean;
   onCancel?: () => void;
+  onDrop?: () => void;
+  canDrop?: boolean;
   versions?: DesignVersion[]; productType: "sticker" | "tshirt";
   onSelectVersion?: (versionId: string, productType: string) => void;
   onDeleteVersion?: (versionId: string) => void;
@@ -86,8 +89,13 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, ver
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">{label}</CardTitle>
+        {canDrop && onDrop && !isLoading && (
+          <Button variant="ghost" size="sm" onClick={onDrop} className="text-xs text-destructive hover:text-destructive h-7 px-2">
+            <XCircle className="h-3.5 w-3.5 mr-1" /> Drop
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -130,8 +138,9 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, ver
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
   const anyLoading = loadingTypes.size > 0;
+  const canDrop = productType === "both";
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -139,18 +148,22 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
           <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt}
             onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
             onCancel={onCancel ? () => onCancel("sticker") : undefined}
+            onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
+            canDrop={canDrop}
             versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
           <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt}
             onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
             onCancel={onCancel ? () => onCancel("tshirt") : undefined}
+            onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
+            canDrop={canDrop}
             versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={onReject} disabled={anyLoading || isApproving}>
-          <ThumbsDown className="h-4 w-4 mr-2" /> Reject
+          <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
         </Button>
         <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-primary hover:bg-primary/90">
           <Send className="h-4 w-4 mr-2" /> Next: Remove Background

@@ -12,7 +12,7 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -58,6 +58,7 @@ const PodPipeline = () => {
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
   const generateListings = useGenerateListings();
+  const dropDesignMutation = useDropDesign();
 
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
@@ -215,6 +216,21 @@ const PodPipeline = () => {
     });
   };
 
+  const handleDropDesign = (type: "sticker" | "tshirt") => {
+    if (!wizardIdea) return;
+    // If only one type exists, dropping it rejects the whole idea
+    if (productType !== "both") {
+      handleReject();
+      return;
+    }
+    dropDesignMutation.mutate({ id: wizardIdea.id, dropType: type }, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setProductType(res.remainingType);
+      },
+    });
+  };
+
   const handleSelectVersion = (versionId: string, pt: string) => {
     if (!wizardIdea) return;
     selectVersionMutation.mutate({ versionId, ideaId: wizardIdea.id, productType: pt }, {
@@ -290,6 +306,7 @@ const PodPipeline = () => {
                   onRegenerate={handleRegenerate}
                   onGenerate={handleGenerate}
                   onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
+                  onDropDesign={handleDropDesign}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
                   versions={versions}
@@ -308,6 +325,7 @@ const PodPipeline = () => {
                   onApprove={handleApproveAfterBg}
                   onReject={handleReject}
                   onBack={() => setStep("generate")}
+                  onDropDesign={handleDropDesign}
                   isRemoving={removeBgMutation.isPending}
                   isApproving={generateListings.isPending}
                   bgRemoved={bgRemoved}
@@ -318,6 +336,8 @@ const PodPipeline = () => {
                 <WizardListingsStep
                   idea={wizardIdea}
                   onBack={() => setStep("remove_bg")}
+                  onReject={handleReject}
+                  onDropDesign={handleDropDesign}
                   onApproved={() => {
                     setWizardIdea((prev: any) => ({ ...prev, status: "ready" }));
                     setStep("summary");

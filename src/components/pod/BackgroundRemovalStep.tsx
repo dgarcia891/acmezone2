@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eraser, Send, ThumbsDown, Loader2 } from "lucide-react";
+import { Eraser, Send, ThumbsDown, Loader2, XCircle } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onApprove: () => void;
   onReject: () => void;
   onBack: () => void;
+  onDropDesign?: (type: "sticker" | "tshirt") => void;
   isRemoving: boolean;
   isApproving: boolean;
   bgRemoved: boolean;
@@ -44,12 +45,22 @@ function DesignPreview({ label, url, checkerboard }: { label: string; url?: stri
   );
 }
 
-function BeforeAfterComparison({ type, rawUrl, transparentUrl }: { type: string; rawUrl?: string | null; transparentUrl?: string | null }) {
+function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop }: {
+  type: string; rawUrl?: string | null; transparentUrl?: string | null;
+  canDrop?: boolean; onDrop?: () => void;
+}) {
   if (!rawUrl && !transparentUrl) return null;
   const label = type === "sticker" ? "Sticker" : "T-Shirt";
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
+        {canDrop && onDrop && (
+          <Button variant="ghost" size="sm" onClick={onDrop} className="text-xs text-destructive hover:text-destructive h-7 px-2">
+            <XCircle className="h-3.5 w-3.5 mr-1" /> Drop {label}
+          </Button>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <DesignPreview label="Before (Raw)" url={rawUrl} />
         <DesignPreview label="After (Transparent)" url={transparentUrl} checkerboard />
@@ -58,9 +69,10 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl }: { type: string;
   );
 }
 
-export default function BackgroundRemovalStep({ idea, productType, onRemoveBg, onApprove, onReject, onBack, isRemoving, isApproving, bgRemoved }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onRemoveBg, onApprove, onReject, onBack, onDropDesign, isRemoving, isApproving, bgRemoved }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
+  const canDrop = productType === "both";
 
   return (
     <div className="space-y-6">
@@ -76,16 +88,50 @@ export default function BackgroundRemovalStep({ idea, productType, onRemoveBg, o
       {bgRemoved ? (
         <div className="space-y-6">
           {hasSticker && (
-            <BeforeAfterComparison type="sticker" rawUrl={idea.sticker_raw_url} transparentUrl={idea.sticker_design_url} />
+            <BeforeAfterComparison
+              type="sticker"
+              rawUrl={idea.sticker_raw_url}
+              transparentUrl={idea.sticker_design_url}
+              canDrop={canDrop}
+              onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
+            />
           )}
           {hasTshirt && (
-            <BeforeAfterComparison type="tshirt" rawUrl={idea.tshirt_raw_url} transparentUrl={idea.tshirt_design_url} />
+            <BeforeAfterComparison
+              type="tshirt"
+              rawUrl={idea.tshirt_raw_url}
+              transparentUrl={idea.tshirt_design_url}
+              canDrop={canDrop}
+              onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
+            />
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {hasSticker && <DesignPreview label="Sticker (Raw)" url={idea.sticker_design_url} />}
-          {hasTshirt && <DesignPreview label="T-Shirt (Raw)" url={idea.tshirt_design_url} />}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {hasSticker && (
+              <div className="relative">
+                <DesignPreview label="Sticker (Raw)" url={idea.sticker_design_url} />
+                {canDrop && onDropDesign && (
+                  <Button variant="ghost" size="sm" onClick={() => onDropDesign("sticker")}
+                    className="absolute top-2 right-2 text-xs text-destructive hover:text-destructive h-7 px-2">
+                    <XCircle className="h-3.5 w-3.5 mr-1" /> Drop
+                  </Button>
+                )}
+              </div>
+            )}
+            {hasTshirt && (
+              <div className="relative">
+                <DesignPreview label="T-Shirt (Raw)" url={idea.tshirt_design_url} />
+                {canDrop && onDropDesign && (
+                  <Button variant="ghost" size="sm" onClick={() => onDropDesign("tshirt")}
+                    className="absolute top-2 right-2 text-xs text-destructive hover:text-destructive h-7 px-2">
+                    <XCircle className="h-3.5 w-3.5 mr-1" /> Drop
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -95,7 +141,7 @@ export default function BackgroundRemovalStep({ idea, productType, onRemoveBg, o
             Back to Generate
           </Button>
           <Button variant="outline" onClick={onReject} disabled={isRemoving || isApproving}>
-            <ThumbsDown className="h-4 w-4 mr-2" /> Reject
+            <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
           </Button>
         </div>
         <div className="flex gap-3">

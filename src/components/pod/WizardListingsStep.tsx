@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store } from "lucide-react";
+import { RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store, ThumbsDown, XCircle } from "lucide-react";
 import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings } from "@/hooks/usePodListings";
 import { usePodSettings } from "@/hooks/usePodPipeline";
@@ -18,9 +18,11 @@ interface Props {
   idea: any;
   onBack: () => void;
   onApproved: () => void;
+  onReject?: () => void;
+  onDropDesign?: (type: "sticker" | "tshirt") => void;
 }
 
-export default function WizardListingsStep({ idea, onBack, onApproved }: Props) {
+export default function WizardListingsStep({ idea, onBack, onApproved, onReject, onDropDesign }: Props) {
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
@@ -113,9 +115,16 @@ export default function WizardListingsStep({ idea, onBack, onApproved }: Props) 
       </Card>
 
       <div className="flex justify-between gap-3">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Designs
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Designs
+          </Button>
+          {onReject && (
+            <Button variant="outline" onClick={onReject} disabled={approveListings.isPending}>
+              <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
+            </Button>
+          )}
+        </div>
         <div className="flex gap-3">
           <Button
             variant="outline"
