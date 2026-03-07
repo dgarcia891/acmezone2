@@ -143,15 +143,16 @@ const PodPipeline = () => {
       }, {
         onSuccess: (res) => {
           const idea = res.idea;
+          const cb = `?t=${Date.now()}`;
           const fields: Record<string, any> = { status: idea.status };
           if (type === "sticker") {
-            fields.sticker_design_url = idea.sticker_design_url;
+            fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
             fields.sticker_design_prompt = idea.sticker_design_prompt;
-            fields.sticker_raw_url = idea.sticker_raw_url;
+            fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
           } else {
-            fields.tshirt_design_url = idea.tshirt_design_url;
+            fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
             fields.tshirt_design_prompt = idea.tshirt_design_prompt;
-            fields.tshirt_raw_url = idea.tshirt_raw_url;
+            fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
           }
           setWizardIdea((prev: any) => ({ ...prev, ...fields }));
           setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
@@ -171,20 +172,21 @@ const PodPipeline = () => {
       sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
       tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
     }, {
-      onSuccess: (res) => {
-        const idea = res.idea;
-        const fields: Record<string, any> = { status: idea.status };
-        if (type === "sticker") {
-          fields.sticker_design_url = idea.sticker_design_url;
-          fields.sticker_design_prompt = idea.sticker_design_prompt;
-          fields.sticker_raw_url = idea.sticker_raw_url;
-        } else {
-          fields.tshirt_design_url = idea.tshirt_design_url;
-          fields.tshirt_design_prompt = idea.tshirt_design_prompt;
-          fields.tshirt_raw_url = idea.tshirt_raw_url;
-        }
-        setWizardIdea((prev: any) => ({ ...prev, ...fields }));
-        setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
+        onSuccess: (res) => {
+          const idea = res.idea;
+          const cb = `?t=${Date.now()}`;
+          const fields: Record<string, any> = { status: idea.status };
+          if (type === "sticker") {
+            fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
+            fields.sticker_design_prompt = idea.sticker_design_prompt;
+            fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
+          } else {
+            fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
+            fields.tshirt_design_prompt = idea.tshirt_design_prompt;
+            fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
+          }
+          setWizardIdea((prev: any) => ({ ...prev, ...fields }));
+          setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
       },
       onError: () => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }),
     });
