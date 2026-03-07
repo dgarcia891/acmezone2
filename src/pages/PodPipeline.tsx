@@ -128,68 +128,80 @@ const PodPipeline = () => {
     });
   };
 
-  const handleGenerate = () => {
-    if (!wizardIdea) return;
-    setStep("generate");
-    bgAutoTriggeredRef.current = false;
-    const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
-    setLoadingTypes(new Set(types));
-    types.forEach((type) => {
-      generateMutation.mutate({
-        idea_id: wizardIdea.id,
-        product_type: type,
-        sticker_prompt: type === "sticker" ? (wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt) : undefined,
-        tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
-      }, {
-        onSuccess: (res) => {
-          const idea = res.idea;
-          const cb = `?t=${Date.now()}`;
-          const fields: Record<string, any> = { status: idea.status };
-          if (type === "sticker") {
-            fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
-            fields.sticker_design_prompt = idea.sticker_design_prompt;
-            fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
-          } else {
-            fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
-            fields.tshirt_design_prompt = idea.tshirt_design_prompt;
-            fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
-          }
-          setWizardIdea((prev: any) => ({ ...prev, ...fields }));
-          setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
-        },
-        onError: () => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }),
-      });
-    });
+  const applyGeneratedDesignToWizardIdea = (type: "sticker" | "tshirt", idea: any) => {
+    const cb = `?t=${Date.now()}`;
+    const fields: Record<string, any> = { status: idea.status };
+
+    if (type === "sticker") {
+      fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
+      fields.sticker_design_prompt = idea.sticker_design_prompt;
+      fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
+    } else {
+      fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
+      fields.tshirt_design_prompt = idea.tshirt_design_prompt;
+      fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
+    }
+
+    setWizardIdea((prev: any) => ({ ...prev, ...fields }));
   };
 
-  const handleRegenerate = (type: "sticker" | "tshirt", customPrompt?: string) => {
+  const handleGenerate = async () => {
     if (!wizardIdea) return;
+
+    setStep("generate");
+    bgAutoTriggeredRef.current = false;
+
+    const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
+    setLoadingTypes(new Set(types));
+
+    await Promise.allSettled(
+      types.map(async (type) => {
+        try {
+          const res = await generateMutation.mutateAsync({
+            idea_id: wizardIdea.id,
+            product_type: type,
+            sticker_prompt: type === "sticker" ? (wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt) : undefined,
+            tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
+          });
+
+          if (res?.idea) {
+            applyGeneratedDesignToWizardIdea(type, res.idea);
+          }
+        } finally {
+          setLoadingTypes((prev) => {
+            const n = new Set(prev);
+            n.delete(type);
+            return n;
+          });
+        }
+      })
+    );
+  };
+
+  const handleRegenerate = async (type: "sticker" | "tshirt", customPrompt?: string) => {
+    if (!wizardIdea) return;
+
     bgAutoTriggeredRef.current = false;
     setLoadingTypes((prev) => new Set([...prev, type]));
-    generateMutation.mutate({
-      idea_id: wizardIdea.id,
-      product_type: type,
-      sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
-      tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
-    }, {
-        onSuccess: (res) => {
-          const idea = res.idea;
-          const cb = `?t=${Date.now()}`;
-          const fields: Record<string, any> = { status: idea.status };
-          if (type === "sticker") {
-            fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
-            fields.sticker_design_prompt = idea.sticker_design_prompt;
-            fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
-          } else {
-            fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
-            fields.tshirt_design_prompt = idea.tshirt_design_prompt;
-            fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
-          }
-          setWizardIdea((prev: any) => ({ ...prev, ...fields }));
-          setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
-      },
-      onError: () => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; }),
-    });
+
+    try {
+      const res = await generateMutation.mutateAsync({
+        idea_id: wizardIdea.id,
+        product_type: type,
+        sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
+        tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
+      });
+
+      if (res?.idea) {
+        applyGeneratedDesignToWizardIdea(type, res.idea);
+      }
+    } finally {
+      setLoadingTypes((prev) => {
+        const n = new Set(prev);
+        n.delete(type);
+        return n;
+      });
+    }
   };
 
   // Auto-trigger bg removal when all designs finish generating
