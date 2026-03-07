@@ -1,15 +1,14 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type PipelineStep = "input" | "review" | "generate" | "results" | "listings" | "summary";
+export type PipelineStep = "input" | "review" | "generate" | "results" | "listings";
 
 const steps: { key: PipelineStep; label: string; number: number }[] = [
   { key: "input", label: "Analyze", number: 1 },
   { key: "review", label: "Review", number: 2 },
   { key: "generate", label: "Generate", number: 3 },
   { key: "results", label: "Review Designs", number: 4 },
-  { key: "listings", label: "Listings", number: 5 },
-  { key: "summary", label: "Summary", number: 6 },
+  { key: "listings", label: "Finalize", number: 5 },
 ];
 
 const stepIndex = (s: PipelineStep) => steps.findIndex((x) => x.key === s);

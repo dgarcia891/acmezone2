@@ -9,7 +9,7 @@ import AnalysisReview from "@/components/pod/AnalysisReview";
 import DesignGeneration from "@/components/pod/DesignGeneration";
 import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
-import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
+
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
 import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign } from "@/hooks/usePodPipeline";
