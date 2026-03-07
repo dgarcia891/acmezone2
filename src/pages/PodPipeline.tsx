@@ -7,6 +7,7 @@ import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/Pipel
 import IdeaInputForm from "@/components/pod/IdeaInputForm";
 import AnalysisReview from "@/components/pod/AnalysisReview";
 import DesignGeneration from "@/components/pod/DesignGeneration";
+import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import WizardSummaryStep from "@/components/pod/WizardSummaryStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
