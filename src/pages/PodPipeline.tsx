@@ -105,6 +105,7 @@ const PodPipeline = () => {
     setStep("input");
     setProductType("both");
     setLoadingTypes(new Set());
+    setBgRemoved(false);
   };
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
