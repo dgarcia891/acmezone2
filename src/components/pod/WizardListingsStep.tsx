@@ -265,6 +265,41 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       )}
 
+      {/* Completed design previews (for ready/production/live) */}
+      {(hasSticker || hasTshirt) && isReadyOrBeyond && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Completed Designs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {hasSticker && (
+                <div>
+                  <p className="text-xs font-medium mb-1.5">Sticker</p>
+                  <img
+                    src={idea.sticker_design_url}
+                    alt="Completed sticker design"
+                    className="w-full rounded border border-border bg-muted aspect-square object-contain"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+              {hasTshirt && (
+                <div>
+                  <p className="text-xs font-medium mb-1.5">T-Shirt</p>
+                  <img
+                    src={idea.tshirt_design_url}
+                    alt="Completed t-shirt design"
+                    className="w-full rounded border border-border bg-muted aspect-square object-contain"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Per-shop publish/draft toggles */}
       {!isProduction && !isLive && allShops.length > 0 && (
         <Card>
