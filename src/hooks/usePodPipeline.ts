@@ -196,8 +196,7 @@ export function usePodRemoveBg() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
-
-
+export function useRejectIdea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
