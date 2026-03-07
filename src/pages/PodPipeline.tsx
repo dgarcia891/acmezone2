@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -29,7 +29,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
     case "designs_generated":
       return "generate";
     case "bg_removed":
-      return "remove_bg";
+      return "results";
     case "listings":
       return "listings";
     case "ready":
@@ -48,7 +48,7 @@ const PodPipeline = () => {
   const [step, setStep] = useState<PipelineStep>("input");
   const [productType, setProductType] = useState("both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
-  const [bgRemoved, setBgRemoved] = useState(false);
+  const [bgRemoving, setBgRemoving] = useState(false);
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
@@ -60,17 +60,22 @@ const PodPipeline = () => {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
 
+  // Track whether auto-bg-removal has been triggered for the current generation cycle
+  const bgAutoTriggeredRef = useRef(false);
+
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
     if (wizardOpen && wizardIdea) {
       const derivedStep = statusToStep(wizardIdea.status);
       setStep(derivedStep);
       setProductType(wizardIdea.product_type || "both");
-      setBgRemoved(wizardIdea.status === "bg_removed");
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
     } else if (wizardOpen && !wizardIdea) {
       setStep("input");
       setProductType("both");
-      setBgRemoved(false);
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
     }
   }, [wizardOpen, wizardIdea?.id]);
 
@@ -109,7 +114,8 @@ const PodPipeline = () => {
     setStep("input");
     setProductType("both");
     setLoadingTypes(new Set());
-    setBgRemoved(false);
+    setBgRemoving(false);
+    bgAutoTriggeredRef.current = false;
   };
 
   const handleAnalyze = (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => {
@@ -125,9 +131,9 @@ const PodPipeline = () => {
   const handleGenerate = () => {
     if (!wizardIdea) return;
     setStep("generate");
+    bgAutoTriggeredRef.current = false;
     const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
     setLoadingTypes(new Set(types));
-    // Fire each type independently so one doesn't block the other
     types.forEach((type) => {
       generateMutation.mutate({
         idea_id: wizardIdea.id,
@@ -136,7 +142,6 @@ const PodPipeline = () => {
         tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
       }, {
         onSuccess: (res) => {
-          // Only merge the fields for THIS type to prevent race condition overwrites
           const idea = res.idea;
           const fields: Record<string, any> = { status: idea.status };
           if (type === "sticker") {
@@ -158,6 +163,7 @@ const PodPipeline = () => {
 
   const handleRegenerate = (type: "sticker" | "tshirt", customPrompt?: string) => {
     if (!wizardIdea) return;
+    bgAutoTriggeredRef.current = false;
     setLoadingTypes((prev) => new Set([...prev, type]));
     generateMutation.mutate({
       idea_id: wizardIdea.id,
@@ -184,23 +190,50 @@ const PodPipeline = () => {
     });
   };
 
-  const handleApproveDesign = () => {
-    if (!wizardIdea) return;
-    setBgRemoved(false);
-    setStep("remove_bg");
-  };
+  // Auto-trigger bg removal when all designs finish generating
+  useEffect(() => {
+    if (
+      step === "generate" &&
+      loadingTypes.size === 0 &&
+      !bgRemoving &&
+      !bgAutoTriggeredRef.current &&
+      wizardIdea &&
+      (wizardIdea.sticker_design_url || wizardIdea.tshirt_design_url)
+    ) {
+      bgAutoTriggeredRef.current = true;
+      triggerBgRemoval();
+    }
+  }, [step, loadingTypes.size, wizardIdea?.sticker_design_url, wizardIdea?.tshirt_design_url]);
 
-  const handleRemoveBg = () => {
+  const triggerBgRemoval = () => {
     if (!wizardIdea) return;
+    setBgRemoving(true);
     removeBgMutation.mutate(wizardIdea.id, {
       onSuccess: (res) => {
         setWizardIdea(res.idea);
-        setBgRemoved(true);
+        setBgRemoving(false);
+        setStep("results");
+      },
+      onError: () => {
+        setBgRemoving(false);
       },
     });
   };
 
-  const handleApproveAfterBg = () => {
+  const handleApproveDesign = () => {
+    // If bg already removed (e.g. re-entering step), go straight to results
+    if (wizardIdea?.status === "bg_removed") {
+      setStep("results");
+      return;
+    }
+    // Otherwise trigger bg removal if not already running
+    if (!bgRemoving && !bgAutoTriggeredRef.current) {
+      bgAutoTriggeredRef.current = true;
+      triggerBgRemoval();
+    }
+  };
+
+  const handleApproveAfterReview = () => {
     if (!wizardIdea) return;
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
@@ -218,7 +251,6 @@ const PodPipeline = () => {
 
   const handleDropDesign = (type: "sticker" | "tshirt") => {
     if (!wizardIdea) return;
-    // If only one type exists, dropping it rejects the whole idea
     if (productType !== "both") {
       handleReject();
       return;
@@ -309,33 +341,31 @@ const PodPipeline = () => {
                   onDropDesign={handleDropDesign}
                   loadingTypes={loadingTypes}
                   isApproving={generateListings.isPending}
+                  isBgRemoving={bgRemoving}
                   versions={versions}
                   onSelectVersion={handleSelectVersion}
                   onDeleteVersion={handleDeleteVersion}
                   isSelectingVersion={selectVersionMutation.isPending}
                   isDeletingVersion={deleteVersionMutation.isPending}
                 />
-               )}
+              )}
 
-              {step === "remove_bg" && wizardIdea && (
+              {step === "results" && wizardIdea && (
                 <BackgroundRemovalStep
                   idea={wizardIdea}
                   productType={productType}
-                  onRemoveBg={handleRemoveBg}
-                  onApprove={handleApproveAfterBg}
+                  onApprove={handleApproveAfterReview}
                   onReject={handleReject}
                   onBack={() => setStep("generate")}
                   onDropDesign={handleDropDesign}
-                  isRemoving={removeBgMutation.isPending}
                   isApproving={generateListings.isPending}
-                  bgRemoved={bgRemoved}
                 />
               )}
 
               {step === "listings" && wizardIdea && (
                 <WizardListingsStep
                   idea={wizardIdea}
-                  onBack={() => setStep("remove_bg")}
+                  onBack={() => setStep("results")}
                   onReject={handleReject}
                   onDropDesign={handleDropDesign}
                   onApproved={() => {

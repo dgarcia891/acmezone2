@@ -17,6 +17,7 @@ interface Props {
   onDropDesign?: (type: "sticker" | "tshirt") => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
+  isBgRemoving?: boolean;
   versions?: DesignVersion[];
   onSelectVersion?: (versionId: string, productType: string) => void;
   onDeleteVersion?: (versionId: string) => void;
@@ -138,14 +139,19 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, isBgRemoving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
   const anyLoading = loadingTypes.size > 0;
   const canDrop = productType === "both";
+  const processing = isBgRemoving || false;
+  const disabled = anyLoading || isApproving || processing;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(productType === "both" || productType === "sticker") && (
-          <DesignCard label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt}
+          <DesignCard
+            key={`sticker-${idea?.sticker_design_url || "none"}`}
+            label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt}
             onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
             onCancel={onCancel ? () => onCancel("sticker") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
@@ -153,7 +159,9 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
             versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
-          <DesignCard label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt}
+          <DesignCard
+            key={`tshirt-${idea?.tshirt_design_url || "none"}`}
+            label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt}
             onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
             onCancel={onCancel ? () => onCancel("tshirt") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
@@ -161,12 +169,24 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
             versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>
+
+      {processing && (
+        <div className="flex items-center justify-center gap-3 py-4">
+          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Removing backgrounds automatically…</p>
+        </div>
+      )}
+
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onReject} disabled={anyLoading || isApproving}>
+        <Button variant="outline" onClick={onReject} disabled={disabled}>
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
         </Button>
-        <Button onClick={onApprove} disabled={anyLoading || isApproving} className="bg-primary hover:bg-primary/90">
-          <Send className="h-4 w-4 mr-2" /> Next: Remove Background
+        <Button onClick={onApprove} disabled={disabled} className="bg-primary hover:bg-primary/90">
+          {processing ? (
+            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing…</>
+          ) : (
+            <><Send className="h-4 w-4 mr-2" /> Next: Process Designs</>
+          )}
         </Button>
       </div>
     </div>
