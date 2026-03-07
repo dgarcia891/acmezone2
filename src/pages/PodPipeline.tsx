@@ -48,10 +48,12 @@ const PodPipeline = () => {
   const [step, setStep] = useState<PipelineStep>("input");
   const [productType, setProductType] = useState("both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
+  const [bgRemoved, setBgRemoved] = useState(false);
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
+  const removeBgMutation = usePodRemoveBg();
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
