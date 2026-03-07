@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsDown, Send, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp, XCircle } from "lucide-react";
+import { ThumbsDown, Check, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp, XCircle } from "lucide-react";
 import DesignGallery from "@/components/pod/DesignGallery";
 import type { DesignVersion } from "@/hooks/usePodPipeline";
 
@@ -17,7 +17,6 @@ interface Props {
   onDropDesign?: (type: "sticker" | "tshirt") => void;
   loadingTypes: Set<string>;
   isApproving: boolean;
-  isBgRemoving?: boolean;
   versions?: DesignVersion[];
   onSelectVersion?: (versionId: string, productType: string) => void;
   onDeleteVersion?: (versionId: string) => void;
@@ -111,19 +110,24 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
             </p>
           </div>
         )}
-        <div className="mt-3 space-y-2">
-          <Button variant="ghost" size="sm" className="text-xs px-0" onClick={() => setShowPrompt(!showPrompt)}>
-            {showPrompt ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
-            {showPrompt ? "Hide prompt" : "Edit prompt"}
+
+        {/* Feedback & regeneration controls */}
+        <div className="mt-4 space-y-3">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Want changes? Describe what to adjust:</label>
+            <Textarea
+              value={editedPrompt}
+              onChange={(e) => setEditedPrompt(e.target.value)}
+              className="text-xs min-h-[80px] resize-y"
+              placeholder="e.g. Make the text bigger, change colors to blue and gold, add more detail to the background…"
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onRegenerate(editedPrompt !== prompt ? editedPrompt : undefined)} disabled={isLoading}>
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Regenerate{editedPrompt !== prompt ? " with changes" : ""}
           </Button>
-          {showPrompt && (
-            <Textarea value={editedPrompt} onChange={(e) => setEditedPrompt(e.target.value)} className="text-xs min-h-[80px] resize-y" placeholder="Describe what you want the design to look like…" />
-          )}
         </div>
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => onRegenerate(editedPrompt !== prompt ? editedPrompt : undefined)} disabled={isLoading}>
-          <RefreshCw className="h-3 w-3 mr-1" />
-          Regenerate{editedPrompt !== prompt ? " with edits" : ""}
-        </Button>
+
         {versions && onSelectVersion && onDeleteVersion && (
           <DesignGallery
             versions={versions}
@@ -139,14 +143,21 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, isBgRemoving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
   const anyLoading = loadingTypes.size > 0;
   const canDrop = productType === "both";
-  const processing = isBgRemoving || false;
-  const disabled = anyLoading || isApproving || processing;
+  const disabled = anyLoading || isApproving;
+  const hasAnyDesign = idea?.sticker_design_url || idea?.tshirt_design_url;
 
   return (
     <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-semibold">Generate & Refine Designs</h2>
+        <p className="text-sm text-muted-foreground">
+          Review your designs below. Use the feedback box to request changes and regenerate until you're happy, then approve.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(productType === "both" || productType === "sticker") && (
           <DesignCard
@@ -170,23 +181,12 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
         )}
       </div>
 
-      {processing && (
-        <div className="flex items-center justify-center gap-3 py-4">
-          <Loader2 className="h-5 w-5 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Removing backgrounds automatically…</p>
-        </div>
-      )}
-
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={onReject} disabled={disabled}>
           <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
         </Button>
-        <Button onClick={onApprove} disabled={disabled} className="bg-primary hover:bg-primary/90">
-          {processing ? (
-            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing…</>
-          ) : (
-            <><Send className="h-4 w-4 mr-2" /> Next: Process Designs</>
-          )}
+        <Button onClick={onApprove} disabled={disabled || !hasAnyDesign} className="bg-primary hover:bg-primary/90">
+          <Check className="h-4 w-4 mr-2" /> Approve Designs
         </Button>
       </div>
     </div>

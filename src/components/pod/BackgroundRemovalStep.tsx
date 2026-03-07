@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, ThumbsDown, Loader2, XCircle } from "lucide-react";
+import { Send, ThumbsDown, Loader2, XCircle, ArrowLeft } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onBack: () => void;
   onDropDesign?: (type: "sticker" | "tshirt") => void;
   isApproving: boolean;
+  isBgRemoving?: boolean;
 }
 
 const checkerboardStyle = {
@@ -66,51 +67,61 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop }
   );
 }
 
-export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, isApproving }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, isApproving, isBgRemoving }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
   const canDrop = productType === "both";
+  const processing = isBgRemoving || false;
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-xl font-semibold">Review Designs</h2>
         <p className="text-sm text-muted-foreground">
-          Background removed successfully! Compare the before &amp; after below, then approve to generate listings.
+          {processing
+            ? "Removing backgrounds… please wait."
+            : "Background removed successfully! Compare the before & after below, then approve to generate listings."}
         </p>
       </div>
 
-      <div className="space-y-6">
-        {hasSticker && (
-          <BeforeAfterComparison
-            type="sticker"
-            rawUrl={idea.sticker_raw_url}
-            transparentUrl={idea.sticker_design_url}
-            canDrop={canDrop}
-            onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
-          />
-        )}
-        {hasTshirt && (
-          <BeforeAfterComparison
-            type="tshirt"
-            rawUrl={idea.tshirt_raw_url}
-            transparentUrl={idea.tshirt_design_url}
-            canDrop={canDrop}
-            onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
-          />
-        )}
-      </div>
+      {processing ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Processing background removal…</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {hasSticker && (
+            <BeforeAfterComparison
+              type="sticker"
+              rawUrl={idea.sticker_raw_url}
+              transparentUrl={idea.sticker_design_url}
+              canDrop={canDrop}
+              onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
+            />
+          )}
+          {hasTshirt && (
+            <BeforeAfterComparison
+              type="tshirt"
+              rawUrl={idea.tshirt_raw_url}
+              transparentUrl={idea.tshirt_design_url}
+              canDrop={canDrop}
+              onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
+            />
+          )}
+        </div>
+      )}
 
       <div className="flex justify-between gap-3">
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack} disabled={isApproving}>
-            Back to Generate
+          <Button variant="outline" onClick={onBack} disabled={isApproving || processing}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Generate
           </Button>
-          <Button variant="outline" onClick={onReject} disabled={isApproving}>
+          <Button variant="outline" onClick={onReject} disabled={isApproving || processing}>
             <ThumbsDown className="h-4 w-4 mr-2" /> Reject Idea
           </Button>
         </div>
-        <Button onClick={onApprove} disabled={isApproving} className="bg-primary hover:bg-primary/90">
+        <Button onClick={onApprove} disabled={isApproving || processing} className="bg-primary hover:bg-primary/90">
           {isApproving ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Listings…</>
           ) : (

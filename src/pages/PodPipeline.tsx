@@ -61,7 +61,7 @@ const PodPipeline = () => {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
 
-  // Track whether auto-bg-removal has been triggered for the current generation cycle
+  // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
 
   // When opening wizard for an existing idea, derive step from status
@@ -134,7 +134,6 @@ const PodPipeline = () => {
     setBgRemoving(false);
     bgAutoTriggeredRef.current = false;
     setVariantDefaults(defaults);
-    // Re-open wizard on next tick so state is clean
     setTimeout(() => setWizardOpen(true), 0);
   };
 
@@ -224,20 +223,20 @@ const PodPipeline = () => {
     }
   };
 
-  // Auto-trigger bg removal when all designs finish generating
+  // Auto-trigger bg removal when entering the results step (if not already done)
   useEffect(() => {
     if (
-      step === "generate" &&
-      loadingTypes.size === 0 &&
+      step === "results" &&
       !bgRemoving &&
       !bgAutoTriggeredRef.current &&
       wizardIdea &&
+      wizardIdea.status !== "bg_removed" &&
       (wizardIdea.sticker_design_url || wizardIdea.tshirt_design_url)
     ) {
       bgAutoTriggeredRef.current = true;
       triggerBgRemoval();
     }
-  }, [step, loadingTypes.size, wizardIdea?.sticker_design_url, wizardIdea?.tshirt_design_url]);
+  }, [step, wizardIdea?.id]);
 
   const triggerBgRemoval = () => {
     if (!wizardIdea) return;
@@ -246,7 +245,6 @@ const PodPipeline = () => {
       onSuccess: (res) => {
         setWizardIdea(res.idea);
         setBgRemoving(false);
-        setStep("results");
       },
       onError: () => {
         setBgRemoving(false);
@@ -255,16 +253,9 @@ const PodPipeline = () => {
   };
 
   const handleApproveDesign = () => {
-    // If bg already removed (e.g. re-entering step), go straight to results
-    if (wizardIdea?.status === "bg_removed") {
-      setStep("results");
-      return;
-    }
-    // Otherwise trigger bg removal if not already running
-    if (!bgRemoving && !bgAutoTriggeredRef.current) {
-      bgAutoTriggeredRef.current = true;
-      triggerBgRemoval();
-    }
+    // User approved the generated designs — move to results step where bg removal will auto-trigger
+    bgAutoTriggeredRef.current = false;
+    setStep("results");
   };
 
   const handleApproveAfterReview = () => {
@@ -374,8 +365,7 @@ const PodPipeline = () => {
                   onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
                   onDropDesign={handleDropDesign}
                   loadingTypes={loadingTypes}
-                  isApproving={generateListings.isPending}
-                  isBgRemoving={bgRemoving}
+                  isApproving={false}
                   versions={versions}
                   onSelectVersion={handleSelectVersion}
                   onDeleteVersion={handleDeleteVersion}
@@ -390,9 +380,10 @@ const PodPipeline = () => {
                   productType={productType}
                   onApprove={handleApproveAfterReview}
                   onReject={handleReject}
-                  onBack={() => setStep("generate")}
+                  onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }}
                   onDropDesign={handleDropDesign}
                   isApproving={generateListings.isPending}
+                  isBgRemoving={bgRemoving}
                 />
               )}
 
