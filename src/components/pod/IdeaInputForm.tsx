@@ -6,14 +6,21 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, X, Sparkles } from "lucide-react";
 
+interface DefaultValues {
+  idea_text?: string;
+  product_type?: string;
+  image_url?: string;
+}
+
 interface Props {
   onSubmit: (data: { idea_text: string; image_base64?: string; image_media_type?: string; product_type: string }) => void;
   isLoading: boolean;
+  defaultValues?: DefaultValues | null;
 }
 
-export default function IdeaInputForm({ onSubmit, isLoading }: Props) {
-  const [ideaText, setIdeaText] = useState("");
-  const [productType, setProductType] = useState("both");
+export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Props) {
+  const [ideaText, setIdeaText] = useState(defaultValues?.idea_text || "");
+  const [productType, setProductType] = useState(defaultValues?.product_type || "both");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMediaType, setImageMediaType] = useState<string | null>(null);
