@@ -1,13 +1,13 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type PipelineStep = "input" | "review" | "generate" | "remove_bg" | "listings" | "summary";
+export type PipelineStep = "input" | "review" | "generate" | "results" | "listings" | "summary";
 
 const steps: { key: PipelineStep; label: string; number: number }[] = [
   { key: "input", label: "Analyze", number: 1 },
   { key: "review", label: "Review", number: 2 },
   { key: "generate", label: "Generate", number: 3 },
-  { key: "remove_bg", label: "Remove BG", number: 4 },
+  { key: "results", label: "Review Designs", number: 4 },
   { key: "listings", label: "Listings", number: 5 },
   { key: "summary", label: "Summary", number: 6 },
 ];
