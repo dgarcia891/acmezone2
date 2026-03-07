@@ -49,6 +49,7 @@ const PodPipeline = () => {
   const [productType, setProductType] = useState("both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
