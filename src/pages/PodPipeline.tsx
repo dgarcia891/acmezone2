@@ -246,7 +246,13 @@ const PodPipeline = () => {
     setBgRemoving(true);
     removeBgMutation.mutate(wizardIdea.id, {
       onSuccess: (res) => {
-        setWizardIdea(res.idea);
+        const cb = `?t=${Date.now()}`;
+        const idea = { ...res.idea };
+        if (idea.sticker_design_url) idea.sticker_design_url += cb;
+        if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
+        if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
+        if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
+        setWizardIdea(idea);
         setBgRemoving(false);
       },
       onError: () => {
