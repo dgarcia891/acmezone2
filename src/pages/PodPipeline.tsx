@@ -138,6 +138,7 @@ const PodPipeline = () => {
     setBgRemoving(false);
     bgAutoTriggeredRef.current = false;
     setVariantDefaults(null);
+    setSearchParams({});
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
