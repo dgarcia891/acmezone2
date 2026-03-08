@@ -64,6 +64,8 @@ interface Props {
   onCreateVariant?: (idea: any) => void;
 }
 
+  const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url;
+
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
