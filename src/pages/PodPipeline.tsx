@@ -347,6 +347,7 @@ const PodPipeline = () => {
                   <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
                     <PlusCircle className="h-3.5 w-3.5" /> New Idea
                   </Button>
+
                   <Button
                     size="sm"
                     variant="outline"
