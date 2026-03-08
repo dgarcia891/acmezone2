@@ -58,7 +58,8 @@ const PodPipeline = () => {
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
-  const suggestMutation = useSuggestIdea();
+  const suggestMutation = useSuggestIdeas();
+  const [trendingOpen, setTrendingOpen] = useState(false);
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
