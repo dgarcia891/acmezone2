@@ -407,7 +407,7 @@ const PodPipeline = () => {
               {step === "listings" && wizardIdea && (
                 <WizardListingsStep
                   idea={wizardIdea}
-                  onBack={() => setStep("results")}
+                  onBack={() => { bgAutoTriggeredRef.current = true; setStep("results"); }}
                   onClose={closeWizard}
                   onReject={handleReject}
                   onDropDesign={handleDropDesign}
