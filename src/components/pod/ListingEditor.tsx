@@ -158,7 +158,12 @@ export default function ListingEditor({ listing, shops = [] }: Props) {
           <Input
             value={blueprintId}
             onChange={(e) => setBlueprintId(e.target.value)}
-            onBlur={() => blueprintId !== (listing.printify_blueprint_id || "") && save({ printify_blueprint_id: blueprintId || null })}
+            onBlur={() => {
+              if (blueprintId !== (listing.printify_blueprint_id || "")) {
+                save({ printify_blueprint_id: blueprintId || null, printify_print_provider_id: null });
+                setPrintProviderId("");
+              }
+            }}
             placeholder="e.g. 1268"
             className="text-xs h-7"
           />
