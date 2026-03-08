@@ -47,8 +47,23 @@ export default function AdminPodPipeline() {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
   const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
 
   const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  // Restore wizard from URL param on mount
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
 
   useEffect(() => {
     if (wizardOpen && wizardIdea) {
