@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, ThumbsDown, Loader2, XCircle, ArrowLeft } from "lucide-react";
+import { Send, ThumbsDown, Loader2, XCircle, ArrowLeft, Pencil } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import ImageEditor from "./ImageEditor";
 
 interface Props {
   idea: any;
@@ -10,8 +13,10 @@ interface Props {
   onReject: () => void;
   onBack: () => void;
   onDropDesign?: (type: "sticker" | "tshirt") => void;
+  onEditSave?: (type: "sticker" | "tshirt", blob: Blob) => void;
   isApproving: boolean;
   isBgRemoving?: boolean;
+  isEditSaving?: boolean;
 }
 
 const checkerboardStyle = {
@@ -43,9 +48,9 @@ function DesignPreview({ label, url, checkerboard }: { label: string; url?: stri
   );
 }
 
-function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop }: {
+function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop, onEdit }: {
   type: string; rawUrl?: string | null; transparentUrl?: string | null;
-  canDrop?: boolean; onDrop?: () => void;
+  canDrop?: boolean; onDrop?: () => void; onEdit?: () => void;
 }) {
   if (!rawUrl && !transparentUrl) return null;
   const label = type === "sticker" ? "Sticker" : "T-Shirt";
@@ -53,11 +58,18 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop }
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{label}</h3>
-        {canDrop && onDrop && (
-          <Button variant="ghost" size="sm" onClick={onDrop} className="text-xs text-destructive hover:text-destructive h-7 px-2">
-            <XCircle className="h-3.5 w-3.5 mr-1" /> Drop {label}
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {onEdit && transparentUrl && (
+            <Button variant="ghost" size="sm" onClick={onEdit} className="text-xs h-7 px-2">
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+            </Button>
+          )}
+          {canDrop && onDrop && (
+            <Button variant="ghost" size="sm" onClick={onDrop} className="text-xs text-destructive hover:text-destructive h-7 px-2">
+              <XCircle className="h-3.5 w-3.5 mr-1" /> Drop {label}
+            </Button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DesignPreview label="Before (Raw)" url={rawUrl} />
@@ -67,11 +79,14 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop }
   );
 }
 
-export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, isApproving, isBgRemoving }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
   const canDrop = productType === "both";
   const processing = isBgRemoving || false;
+
+  const [editingType, setEditingType] = useState<"sticker" | "tshirt" | null>(null);
+  const editUrl = editingType === "sticker" ? idea?.sticker_design_url : editingType === "tshirt" ? idea?.tshirt_design_url : null;
 
   return (
     <div className="space-y-6">
@@ -98,6 +113,7 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
               transparentUrl={idea.sticker_design_url}
               canDrop={canDrop}
               onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
+              onEdit={onEditSave ? () => setEditingType("sticker") : undefined}
             />
           )}
           {hasTshirt && (
@@ -107,6 +123,7 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
               transparentUrl={idea.tshirt_design_url}
               canDrop={canDrop}
               onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
+              onEdit={onEditSave ? () => setEditingType("tshirt") : undefined}
             />
           )}
         </div>
@@ -129,6 +146,26 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
           )}
         </Button>
       </div>
+
+      {/* Image Editor Dialog */}
+      <Dialog open={!!editingType} onOpenChange={(open) => { if (!open) setEditingType(null); }}>
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Edit {editingType === "sticker" ? "Sticker" : "T-Shirt"} Design</DialogTitle>
+          {editUrl && editingType && (
+            <ImageEditor
+              imageUrl={editUrl}
+              onCancel={() => setEditingType(null)}
+              onSave={(blob) => {
+                if (onEditSave && editingType) {
+                  onEditSave(editingType, blob);
+                  setEditingType(null);
+                }
+              }}
+              isSaving={isEditSaving}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
