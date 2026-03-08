@@ -80,6 +80,7 @@ export default function AdminPodPipeline() {
   const closeWizard = () => {
     setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType("both");
     setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
+    setSearchParams({});
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
