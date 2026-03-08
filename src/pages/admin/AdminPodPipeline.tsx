@@ -41,6 +41,7 @@ export default function AdminPodPipeline() {
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
+  const suggestMutation = useSuggestIdea();
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
