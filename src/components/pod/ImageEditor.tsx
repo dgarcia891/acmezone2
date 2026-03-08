@@ -47,33 +47,45 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
 
   // Load image
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      imgRef.current = img;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+    const loadImage = async () => {
+      try {
+        // Fetch as blob to avoid CORS issues with canvas
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
 
-      // Compute display size to fit container
-      const container = containerRef.current;
-      const maxW = container ? container.clientWidth - 32 : 800;
-      const maxH = 600;
-      const scale = Math.min(1, maxW / img.width, maxH / img.height);
-      setDisplaySize({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
-      setCrop({ x: 0, y: 0, w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
+        const img = new Image();
+        img.onload = () => {
+          imgRef.current = img;
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d")!;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
 
-      // Save initial state
-      const initial = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      setHistory([initial]);
-      setHistoryIdx(0);
-      setLoaded(true);
+          // Compute display size to fit container
+          const container = containerRef.current;
+          const maxW = container ? container.clientWidth - 32 : 800;
+          const maxH = 600;
+          const scale = Math.min(1, maxW / img.width, maxH / img.height);
+          setDisplaySize({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
+          setCrop({ x: 0, y: 0, w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
+
+          // Save initial state
+          const initial = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          setHistory([initial]);
+          setHistoryIdx(0);
+          setLoaded(true);
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+      } catch (err) {
+        console.error("Failed to load image for editor:", err);
+      }
     };
-    img.src = imageUrl;
+    loadImage();
   }, [imageUrl]);
 
   const pushHistory = useCallback(() => {
