@@ -227,21 +227,22 @@ export default function AdminPodPipeline() {
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                disabled={suggestMutation.isPending}
-                onClick={async () => {
-                  const suggestion = await suggestMutation.mutateAsync("any");
-                  if (suggestion) {
-                    openWizardForNew();
-                    setVariantDefaults({
-                      idea_text: suggestion.idea_text,
-                      product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
-                    });
-                  }
-                }}
+                onClick={() => setTrendingOpen(true)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                {suggestMutation.isPending ? "Thinking…" : "Give me an idea"}
+                Give me an idea
               </Button>
+              <TrendingIdeasDialog
+                open={trendingOpen}
+                onOpenChange={setTrendingOpen}
+                onSelectIdea={(suggestion) => {
+                  openWizardForNew();
+                  setVariantDefaults({
+                    idea_text: suggestion.idea_text,
+                    product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                  });
+                }}
+              />
               <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                 <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
                   <LayoutGrid className="h-3.5 w-3.5" /> Board
