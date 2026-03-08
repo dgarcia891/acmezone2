@@ -226,7 +226,7 @@ export default function AdminPodPipeline() {
             <BackgroundRemovalStep idea={wizardIdea} productType={productType} onApprove={handleApproveAfterReview} onReject={handleReject} onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }} onDropDesign={handleDropDesign} onEditSave={(type, blob) => { updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, { onSuccess: (updatedIdea: any) => { setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea })); } }); }} isApproving={generateListings.isPending} isBgRemoving={bgRemoving} isEditSaving={updateDesignImage.isPending} />
           )}
           {step === "listings" && wizardIdea && (
-            <WizardListingsStep idea={wizardIdea} onBack={() => setStep("results")} onClose={closeWizard} onReject={handleReject} onDropDesign={handleDropDesign} onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))} onCreateVariant={handleCreateVariant} />
+            <WizardListingsStep idea={wizardIdea} onBack={() => { bgAutoTriggeredRef.current = true; setStep("results"); }} onClose={closeWizard} onReject={handleReject} onDropDesign={handleDropDesign} onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))} onCreateVariant={handleCreateVariant} />
           )}
         </div>
       ) : (
