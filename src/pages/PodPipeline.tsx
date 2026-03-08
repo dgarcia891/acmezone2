@@ -60,6 +60,7 @@ const PodPipeline = () => {
   const deleteVersionMutation = useDeleteDesignVersion();
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
+  const updateDesignImage = useUpdateDesignImage();
 
   // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
