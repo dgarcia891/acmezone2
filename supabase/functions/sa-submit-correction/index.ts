@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { detection_id, url_hash, feedback, user_comment } = body;
+    const { detection_id, url_hash, feedback, user_comment, detection_snapshot } = body;
 
     // Validate required fields
     if (!url_hash || typeof url_hash !== "string") {
@@ -72,6 +72,7 @@ serve(async (req) => {
         url_hash,
         feedback,
         user_comment: user_comment ?? null,
+        detection_snapshot: detection_snapshot ?? null,
         review_status: "pending",
       })
       .select("id")
