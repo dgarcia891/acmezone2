@@ -26,6 +26,11 @@ export default function KanbanBoard({ onCardClick }: Props) {
   const updateStatus = useUpdateIdeaStatus();
   const [rejectedOpen, setRejectedOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+
+  const toggleCollapse = (status: string) => {
+    setCollapsedColumns((prev) => ({ ...prev, [status]: !prev[status] }));
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -80,6 +85,8 @@ export default function KanbanBoard({ onCardClick }: Props) {
               column={col}
               ideas={groupedIdeas[col.status] || []}
               onCardClick={onCardClick}
+              collapsed={!!collapsedColumns[col.status]}
+              onToggleCollapse={() => toggleCollapse(col.status)}
             />
           ))}
         </div>
