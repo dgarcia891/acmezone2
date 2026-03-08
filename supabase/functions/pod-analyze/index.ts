@@ -120,12 +120,43 @@ The commercial_viability_score MUST be an integer from 1-10.`;
 
     const hasImages = (Array.isArray(images) && images.length > 0) || !!image_base64;
 
+    // Upload the first reference image to storage so it can be re-used (e.g. variant flow)
+    let storedImageUrl: string | null = null;
+    if (hasImages) {
+      try {
+        const firstImg = Array.isArray(images) && images.length > 0
+          ? images[0]
+          : { base64: image_base64, media_type: image_media_type };
+
+        const ext = (firstImg.media_type || "image/png").split("/")[1] || "png";
+        const filePath = `references/${crypto.randomUUID()}.${ext}`;
+
+        // Decode base64 to Uint8Array
+        const binaryStr = atob(firstImg.base64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        const { error: uploadErr } = await supabase.storage
+          .from("pod-assets")
+          .upload(filePath, bytes, { contentType: firstImg.media_type || "image/png", upsert: true });
+
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filePath);
+          storedImageUrl = urlData.publicUrl;
+        } else {
+          console.error("Image upload failed:", uploadErr);
+        }
+      } catch (imgErr) {
+        console.error("Image upload error:", imgErr);
+      }
+    }
+
     const { data: idea, error: insertError } = await supabase
       .from("az_pod_ideas")
       .insert({
         user_id: user.id,
         idea_text,
-        image_url: hasImages ? `uploaded_image` : null,
+        image_url: storedImageUrl,
         product_type: "both",
         analysis,
         sticker_design_prompt: analysis.sticker_design_prompt,
