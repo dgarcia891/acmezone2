@@ -1,23 +1,32 @@
 
 
-## Fix: Show Loading Skeletons Immediately in Trending Ideas Dialog
+# Unified Admin Navigation
 
-The dialog opens empty because the loading state (`isPending`) isn't true until the next render cycle after `fetchIdeas()` is called. The skeletons should show immediately when the dialog opens and ideas haven't loaded yet.
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-### Change
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-**File:** `src/components/pod/TrendingIdeasDialog.tsx`
+## Changes
 
-Update the skeleton condition from `suggestMutation.isPending && ideas.length === 0` to also cover the case where the dialog is open but nothing has loaded yet. Simplest fix: show skeletons when `ideas.length === 0 && !hasLoaded` OR when `isPending`.
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-Replace:
-```tsx
-{suggestMutation.isPending && ideas.length === 0 ? (
-```
-With:
-```tsx
-{(suggestMutation.isPending || (!hasLoaded && ideas.length === 0)) ? (
-```
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-This ensures skeletons appear the instant the dialog opens, before `isPending` flips to `true`.
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
+
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 

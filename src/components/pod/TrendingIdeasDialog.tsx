@@ -90,7 +90,7 @@ export default function TrendingIdeasDialog({ open, onOpenChange, onSelectIdea }
         </DialogHeader>
 
         <div className="space-y-3 mt-2">
-          {suggestMutation.isPending && ideas.length === 0 ? (
+          {(suggestMutation.isPending || (!hasLoaded && ideas.length === 0)) ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center gap-2">
