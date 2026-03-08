@@ -348,46 +348,46 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
 
         {/* Canvas area */}
         <div className="flex-1 flex items-center justify-center">
-          {!loaded ? (
-            <div className="flex items-center gap-2 py-20">
+          {!loaded && (
+            <div className="flex items-center gap-2 py-20 absolute inset-0 z-10 justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">Loading image…</span>
             </div>
-          ) : (
-            <div
-              className="relative rounded-lg overflow-hidden"
+          )}
+          <div
+            className="relative rounded-lg overflow-hidden"
+            style={{
+              width: displaySize.w,
+              height: displaySize.h,
+              backgroundImage: checkerboardCSS,
+              backgroundSize: "20px 20px",
+              backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+              backgroundColor: "white",
+              visibility: loaded ? "visible" : "hidden",
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              className={cursorClass}
               style={{
                 width: displaySize.w,
                 height: displaySize.h,
-                backgroundImage: checkerboardCSS,
-                backgroundSize: "20px 20px",
-                backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-                backgroundColor: "white",
+                filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%)`,
               }}
-            >
-              <canvas
-                ref={canvasRef}
-                className={cursorClass}
-                style={{
-                  width: displaySize.w,
-                  height: displaySize.h,
-                  filter: `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%)`,
-                }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            />
+            {tool === "crop" && (
+              <CropOverlay
+                containerWidth={displaySize.w}
+                containerHeight={displaySize.h}
+                crop={crop}
+                onChange={setCrop}
               />
-              {tool === "crop" && (
-                <CropOverlay
-                  containerWidth={displaySize.w}
-                  containerHeight={displaySize.h}
-                  crop={crop}
-                  onChange={setCrop}
-                />
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
