@@ -347,6 +347,25 @@ const PodPipeline = () => {
                   <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
                     <PlusCircle className="h-3.5 w-3.5" /> New Idea
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    disabled={suggestMutation.isPending}
+                    onClick={async () => {
+                      const suggestion = await suggestMutation.mutateAsync();
+                      if (suggestion) {
+                        openWizardForNew();
+                        setVariantDefaults({
+                          idea_text: suggestion.idea_text,
+                          product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                        });
+                      }
+                    }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {suggestMutation.isPending ? "Thinking…" : "Give me an idea"}
+                  </Button>
                   <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                     <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
                       <LayoutGrid className="h-3.5 w-3.5" /> Board
