@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { X, Plus, ChevronDown, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useUpdateListing } from "@/hooks/usePodListings";
+import { useUpdateListing, usePrintifyProviders } from "@/hooks/usePodListings";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Shop {
   shop_id: string;
@@ -38,6 +40,7 @@ export default function ListingEditor({ listing, shops = [] }: Props) {
   const [printProviderId, setPrintProviderId] = useState(listing.printify_print_provider_id || "");
   const [newTag, setNewTag] = useState("");
   const updateListing = useUpdateListing();
+  const { data: providers, isLoading: providersLoading, isError: providersError } = usePrintifyProviders(listing.printify_blueprint_id || blueprintId || null);
 
   useEffect(() => {
     setTitle(listing.title || "");
@@ -155,20 +158,56 @@ export default function ListingEditor({ listing, shops = [] }: Props) {
           <Input
             value={blueprintId}
             onChange={(e) => setBlueprintId(e.target.value)}
-            onBlur={() => blueprintId !== (listing.printify_blueprint_id || "") && save({ printify_blueprint_id: blueprintId || null })}
+            onBlur={() => {
+              if (blueprintId !== (listing.printify_blueprint_id || "")) {
+                save({ printify_blueprint_id: blueprintId || null, printify_print_provider_id: null });
+                setPrintProviderId("");
+              }
+            }}
             placeholder="e.g. 1268"
             className="text-xs h-7"
           />
         </div>
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Print Provider ID</label>
-          <Input
-            value={printProviderId}
-            onChange={(e) => setPrintProviderId(e.target.value)}
-            onBlur={() => printProviderId !== (listing.printify_print_provider_id || "") && save({ printify_print_provider_id: printProviderId || null })}
-            placeholder="e.g. 99"
-            className="text-xs h-7"
-          />
+          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">Print Provider</label>
+          {providersLoading ? (
+            <Skeleton className="h-7 w-full rounded-md" />
+          ) : providersError || !providers || providers.length === 0 ? (
+            <>
+              <Input
+                value={printProviderId}
+                onChange={(e) => setPrintProviderId(e.target.value)}
+                onBlur={() => printProviderId !== (listing.printify_print_provider_id || "") && save({ printify_print_provider_id: printProviderId || null })}
+                placeholder={!blueprintId ? "Enter Blueprint ID first" : "e.g. 99"}
+                className="text-xs h-7"
+              />
+              {blueprintId && providersError && (
+                <p className="text-[9px] text-destructive mt-0.5">Could not load providers</p>
+              )}
+              {blueprintId && providers && providers.length === 0 && (
+                <p className="text-[9px] text-muted-foreground mt-0.5">No providers found for this blueprint</p>
+              )}
+            </>
+          ) : (
+            <Select
+              value={printProviderId ? String(printProviderId) : undefined}
+              onValueChange={(val) => {
+                setPrintProviderId(val);
+                save({ printify_print_provider_id: val });
+              }}
+            >
+              <SelectTrigger className="text-xs h-7">
+                <SelectValue placeholder="Select provider…" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)} className="text-xs">
+                    {p.title}{p.location ? ` (${p.location})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
