@@ -8,8 +8,6 @@ import { LogOut, User, Shield, Zap, CreditCard, LayoutDashboard, ExternalLink } 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditBalance } from '@/components/credits/CreditBalance';
-import { PurchaseCredits } from '@/components/credits/PurchaseCredits';
-import { UsageHistory } from '@/components/credits/UsageHistory';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
@@ -170,54 +168,33 @@ const Dashboard = () => {
 
           <Separator className="my-8" />
 
-          {/* Purchase Credits Section */}
-          <div className="mb-8">
-            <PurchaseCredits />
-          </div>
-
-          <Separator className="my-8" />
-
-          {/* Usage History */}
-          <div className="mb-8">
-            <UsageHistory />
-          </div>
-
-          {/* Chrome Extension Integration Info */}
-          <Card className="elevated bg-gradient-to-r from-primary/5 to-primary-glow/5 border-primary/20">
+          {/* Coming Soon Section */}
+          <Card className="elevated border-dashed">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-primary" />
-                <span>Chrome Extension Integration</span>
+              <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                <Zap className="h-5 w-5" />
+                Coming Soon
               </CardTitle>
               <CardDescription>
-                How to use your credits with the Pre-Apply AI extension
+                These features are currently under development and will be available in a future update.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <h4 className="font-medium mb-2">🔗 Auto-Connected</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Your Chrome extension automatically uses your account credits. No additional setup required.
-                  </p>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border border-dashed p-4 text-center">
+                  <CreditCard className="h-6 w-6 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-muted-foreground">Purchase Credits</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Buy credits for pay-per-use tools</p>
                 </div>
-                <div>
-                  <h4 className="font-medium mb-2">💳 Pay-Per-Use</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Each job analysis consumes 100 credits. Buy more credits when your balance runs low.
-                  </p>
+                <div className="rounded-lg border border-dashed p-4 text-center">
+                  <LayoutDashboard className="h-6 w-6 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-muted-foreground">Usage History</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Track your activity &amp; consumption</p>
                 </div>
-                <div>
-                  <h4 className="font-medium mb-2">📊 Real-Time Tracking</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Monitor your usage and remaining balance from this dashboard in real-time.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">🎯 Smart Analysis</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Get company red-flags, spam detection, and trust insights for every job posting.
-                  </p>
+                <div className="rounded-lg border border-dashed p-4 text-center">
+                  <Shield className="h-6 w-6 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-muted-foreground">Chrome Extension</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Auto-connected credit integration</p>
                 </div>
               </div>
             </CardContent>
