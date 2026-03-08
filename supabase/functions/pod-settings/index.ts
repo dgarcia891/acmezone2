@@ -165,6 +165,23 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      // Handle per-shop margin overrides
+      if (body.action === "set_shop_margin") {
+        const { id, tshirt_margin_pct, sticker_margin_pct } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const update: Record<string, any> = {};
+        if (tshirt_margin_pct !== undefined) update.tshirt_margin_pct = tshirt_margin_pct === "" || tshirt_margin_pct === null ? null : Number(tshirt_margin_pct);
+        if (sticker_margin_pct !== undefined) update.sticker_margin_pct = sticker_margin_pct === "" || sticker_margin_pct === null ? null : Number(sticker_margin_pct);
+        if (Object.keys(update).length === 0) return json({ error: "No margin values provided" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update(update)
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
       // Default: save main settings
       const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
       if (body.trello_api_key) updateData.trello_api_key = body.trello_api_key;
