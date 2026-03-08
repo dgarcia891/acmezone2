@@ -258,7 +258,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">T-Shirt</label>
                   </div>
                   <div className={`w-full rounded border aspect-square overflow-hidden ${!tshirtSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
-                    <img src={idea.tshirt_design_url} alt="T-Shirt design" className="w-full h-full object-contain" />
+                    <img src={cacheBust(idea.tshirt_design_url)} alt="T-Shirt design" className="w-full h-full object-contain" />
                   </div>
                 </div>
               )}
