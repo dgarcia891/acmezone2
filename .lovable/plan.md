@@ -1,32 +1,20 @@
 
 
-# Unified Admin Navigation
+## Fix: Product Type Selection Ignored During Analysis
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### Root Cause
+The `pod-analyze` edge function hardcodes `product_type: "both"` on line 160 of `supabase/functions/pod-analyze/index.ts`. It never reads the `product_type` value sent from the frontend form. So even when you select "T-Shirt only," the idea is saved as "both" and the design step renders both cards.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Changes
 
-## Changes
+**File: `supabase/functions/pod-analyze/index.ts`**
+1. Destructure `product_type` from the request body (line 42)
+2. Use it in the insert statement (line 160), defaulting to `"both"` if not provided
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+```text
+Line 42:  const { idea_text, images, image_base64, image_media_type, product_type } = await req.json();
+Line 160: product_type: product_type || "both",
+```
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
-
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
-
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+That's it — two lines. The frontend already sends `product_type` correctly from `IdeaInputForm` through `handleAnalyze`.
 
