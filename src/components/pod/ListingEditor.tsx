@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { X, Plus, ChevronDown, Eye, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useUpdateListing } from "@/hooks/usePodListings";
+import { useUpdateListing, usePrintifyProviders } from "@/hooks/usePodListings";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Shop {
   shop_id: string;
