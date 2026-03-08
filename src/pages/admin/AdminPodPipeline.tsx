@@ -234,7 +234,7 @@ export default function AdminPodPipeline() {
         </div>
       ) : (
         <>
-          {view === "board" && <KanbanBoard onCardClick={openWizardForIdea} />}
+          {view === "board" && <KanbanBoard onCardClick={openWizardForIdea} restoreIdeaId={searchParams.get("idea") || undefined} />}
           {view === "settings" && <PodSettingsForm />}
         </>
       )}
