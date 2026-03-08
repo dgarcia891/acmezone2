@@ -173,6 +173,8 @@ Deno.serve(async (req) => {
       if (body.printify_shop_id !== undefined) updateData.printify_shop_id = body.printify_shop_id;
       if (body.removebg_api_key) updateData.removebg_api_key = body.removebg_api_key;
       if (body.auto_publish !== undefined) updateData.auto_publish = body.auto_publish;
+      if (body.tshirt_margin_pct !== undefined) updateData.tshirt_margin_pct = body.tshirt_margin_pct;
+      if (body.sticker_margin_pct !== undefined) updateData.sticker_margin_pct = body.sticker_margin_pct;
 
       const { error } = await supabase
         .from("az_pod_settings")
