@@ -42,15 +42,10 @@ const navGroups = [
     label: "Tools",
     items: [
       { title: "POD Pipeline", url: "/admin/pod-pipeline", icon: Palette },
-    ],
-  },
-  {
-    label: "Hydra Guard",
-    items: [
-      { title: "Detections", url: "/admin/security/detections", icon: Eye },
-      { title: "Corrections", url: "/admin/security/corrections", icon: MessageSquare },
-      { title: "Patterns", url: "/admin/security/patterns", icon: Database },
-      { title: "User Reports", url: "/admin/security/reports", icon: FileWarning },
+      { title: "HG Detections", url: "/admin/security/detections", icon: Eye },
+      { title: "HG Corrections", url: "/admin/security/corrections", icon: MessageSquare },
+      { title: "HG Patterns", url: "/admin/security/patterns", icon: Database },
+      { title: "HG Reports", url: "/admin/security/reports", icon: FileWarning },
     ],
   },
   {
