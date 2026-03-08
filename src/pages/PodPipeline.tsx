@@ -365,7 +365,7 @@ const PodPipeline = () => {
                   </Button>
                   <TrendingIdeasDialog
                     open={trendingOpen}
-                    onOpenChange={setTrendingOpen}
+                    onOpenChange={handleTrendingOpenChange}
                     onSelectIdea={(suggestion) => {
                       openWizardForNew();
                       setVariantDefaults({
