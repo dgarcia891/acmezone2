@@ -210,7 +210,7 @@ export function useFetchPrintifyShops() {
   });
 }
 
-
+export function usePodRemoveBg() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (idea_id: string) => {
