@@ -353,6 +353,10 @@ Deno.serve(async (req) => {
       if (!variantList.length) {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
+      // Log first variant structure for debugging
+      if (variantList.length > 0) {
+        console.log("Sample variant structure:", JSON.stringify(variantList[0]));
+      }
 
       // Apply color-aware filtering for t-shirts
       const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
