@@ -37,7 +37,11 @@ export default function AdminPodPipeline() {
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
   const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
-  const [trendingOpen, setTrendingOpen] = useState(false);
+  const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const handleTrendingOpenChange = (open: boolean) => {
+    setTrendingOpen(open);
+    sessionStorage.setItem("pod_trending_open", String(open));
+  };
 
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();

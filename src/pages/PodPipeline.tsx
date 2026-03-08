@@ -59,7 +59,11 @@ const PodPipeline = () => {
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
   const suggestMutation = useSuggestIdeas();
-  const [trendingOpen, setTrendingOpen] = useState(false);
+  const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const handleTrendingOpenChange = (open: boolean) => {
+    setTrendingOpen(open);
+    sessionStorage.setItem("pod_trending_open", String(open));
+  };
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
