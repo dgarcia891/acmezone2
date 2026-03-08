@@ -9,9 +9,9 @@ import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdea } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
-import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
+import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type ViewMode = "board" | "settings";
@@ -41,6 +41,7 @@ export default function AdminPodPipeline() {
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
+  const suggestMutation = useSuggestIdea();
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
@@ -220,6 +221,25 @@ export default function AdminPodPipeline() {
             <>
               <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
                 <PlusCircle className="h-3.5 w-3.5" /> New Idea
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                disabled={suggestMutation.isPending}
+                onClick={async () => {
+                  const suggestion = await suggestMutation.mutateAsync("any");
+                  if (suggestion) {
+                    openWizardForNew();
+                    setVariantDefaults({
+                      idea_text: suggestion.idea_text,
+                      product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                    });
+                  }
+                }}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {suggestMutation.isPending ? "Thinking…" : "Give me an idea"}
               </Button>
               <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                 <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
