@@ -8,8 +8,6 @@ import { LogOut, User, Shield, Zap, CreditCard, LayoutDashboard, ExternalLink } 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditBalance } from '@/components/credits/CreditBalance';
-import { PurchaseCredits } from '@/components/credits/PurchaseCredits';
-import { UsageHistory } from '@/components/credits/UsageHistory';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
