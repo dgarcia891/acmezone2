@@ -65,6 +65,7 @@ interface Props {
 }
 
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
+  const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url;
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
@@ -240,7 +241,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     <label htmlFor="select-sticker" className="text-xs font-medium cursor-pointer">Sticker</label>
                   </div>
                   <div className={`w-full rounded border aspect-square overflow-hidden ${!stickerSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
-                    <img src={idea.sticker_design_url} alt="Sticker design" className="w-full h-full object-contain" />
+                    <img src={cacheBust(idea.sticker_design_url)} alt="Sticker design" className="w-full h-full object-contain" />
                   </div>
                 </div>
               )}
@@ -256,7 +257,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">T-Shirt</label>
                   </div>
                   <div className={`w-full rounded border aspect-square overflow-hidden ${!tshirtSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
-                    <img src={idea.tshirt_design_url} alt="T-Shirt design" className="w-full h-full object-contain" />
+                    <img src={cacheBust(idea.tshirt_design_url)} alt="T-Shirt design" className="w-full h-full object-contain" />
                   </div>
                 </div>
               )}
@@ -280,7 +281,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                 <div>
                   <p className="text-xs font-medium mb-1.5">Sticker</p>
                   <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
-                    <img src={idea.sticker_design_url} alt="Completed sticker design" className="w-full h-full object-contain" loading="lazy" />
+                    <img src={cacheBust(idea.sticker_design_url)} alt="Completed sticker design" className="w-full h-full object-contain" loading="lazy" />
                   </div>
                 </div>
               )}
@@ -288,7 +289,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                 <div>
                   <p className="text-xs font-medium mb-1.5">T-Shirt</p>
                   <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
-                    <img src={idea.tshirt_design_url} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
+                    <img src={cacheBust(idea.tshirt_design_url)} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
                   </div>
                 </div>
               )}

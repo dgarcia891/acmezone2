@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/PipelineStepIndicator";
 import IdeaInputForm from "@/components/pod/IdeaInputForm";
@@ -8,7 +9,7 @@ import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -26,6 +27,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 }
 
 export default function AdminPodPipeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardIdea, setWizardIdea] = useState<any>(null);
@@ -45,8 +47,23 @@ export default function AdminPodPipeline() {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
   const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
 
   const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  // Restore wizard from URL param on mount
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
 
   useEffect(() => {
     if (wizardOpen && wizardIdea) {
@@ -72,12 +89,13 @@ export default function AdminPodPipeline() {
     if (step !== "generate") setAutoGenTriggered(false);
   }, [step, wizardIdea?.id]);
 
-  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); };
-  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); };
+  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); setSearchParams({}); };
+  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); setSearchParams({ idea: idea.id }); };
 
   const closeWizard = () => {
     setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType("both");
     setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
+    setSearchParams({});
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
@@ -155,7 +173,16 @@ export default function AdminPodPipeline() {
     if (!wizardIdea) return;
     setBgRemoving(true);
     removeBgMutation.mutate(wizardIdea.id, {
-      onSuccess: (res) => { setWizardIdea(res.idea); setBgRemoving(false); },
+      onSuccess: (res) => {
+        const cb = `?t=${Date.now()}`;
+        const idea = { ...res.idea };
+        if (idea.sticker_design_url) idea.sticker_design_url += cb;
+        if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
+        if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
+        if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
+        setWizardIdea(idea);
+        setBgRemoving(false);
+      },
       onError: () => { setBgRemoving(false); },
     });
   };

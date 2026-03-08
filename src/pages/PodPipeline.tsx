@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -12,7 +13,7 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -42,6 +43,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 }
 
 const PodPipeline = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardIdea, setWizardIdea] = useState<any>(null);
@@ -61,9 +63,24 @@ const PodPipeline = () => {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
   const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
 
   // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  // Restore wizard from URL param on mount
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
 
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
@@ -103,11 +120,13 @@ const PodPipeline = () => {
   const openWizardForNew = () => {
     setWizardIdea(null);
     setWizardOpen(true);
+    setSearchParams({});
   };
 
   const openWizardForIdea = (idea: any) => {
     setWizardIdea(idea);
     setWizardOpen(true);
+    setSearchParams({ idea: idea.id });
   };
 
   const closeWizard = () => {
@@ -119,6 +138,7 @@ const PodPipeline = () => {
     setBgRemoving(false);
     bgAutoTriggeredRef.current = false;
     setVariantDefaults(null);
+    setSearchParams({});
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
