@@ -102,10 +102,27 @@ async function analyzeDesignColors(imageUrl: string): Promise<ColorAnalysis | nu
   }
 }
 
-function classifyVariantColor(colorName: string): "dark" | "light" | "neutral" {
-  const lower = colorName.toLowerCase().trim();
-  if (DARK_COLORS.has(lower)) return "dark";
-  if (LIGHT_COLORS.has(lower)) return "light";
+function extractColorName(raw: string): string {
+  // Printify variants use "Color / Size" format — extract color part
+  const colorPart = raw.split(" / ")[0].toLowerCase().trim();
+  return colorPart;
+}
+
+function classifyVariantColor(rawName: string): "dark" | "light" | "neutral" {
+  const colorPart = extractColorName(rawName);
+
+  // Exact match first
+  if (DARK_COLORS.has(colorPart)) return "dark";
+  if (LIGHT_COLORS.has(colorPart)) return "light";
+
+  // Partial/contains match for compound names like "dark heather grey"
+  for (const dc of DARK_COLORS) {
+    if (colorPart.includes(dc) || dc.includes(colorPart)) return "dark";
+  }
+  for (const lc of LIGHT_COLORS) {
+    if (colorPart.includes(lc) || lc.includes(colorPart)) return "light";
+  }
+
   return "neutral";
 }
 
@@ -133,9 +150,10 @@ function filterVariantsByColor(
   const clashCategory = analysis.dominance; // "dark" or "light"
 
   for (const v of variants) {
-    // Printify variants have color in options or title
     const colorName = v.options?.color || v.options?.Color || v.title || "";
+    const extracted = extractColorName(colorName);
     const category = classifyVariantColor(colorName);
+    console.log(`Variant ${v.id}: raw="${colorName}" → extracted="${extracted}" → ${category}`);
 
     if (category === clashCategory) {
       variantStates.set(v.id, false);
@@ -334,6 +352,10 @@ Deno.serve(async (req) => {
       const variantList = variants.variants || [];
       if (!variantList.length) {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
+      }
+      // Log first variant structure for debugging
+      if (variantList.length > 0) {
+        console.log("Sample variant structure:", JSON.stringify(variantList[0]));
       }
 
       // Apply color-aware filtering for t-shirts
