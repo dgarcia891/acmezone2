@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Save, X, RotateCcw } from "lucide-react";
 import EditorToolbar, { type EditorTool } from "./editor/EditorToolbar";
 import AdjustmentSliders, { type Adjustments } from "./editor/AdjustmentSliders";
 import CropOverlay, { type CropRect } from "./editor/CropOverlay";
