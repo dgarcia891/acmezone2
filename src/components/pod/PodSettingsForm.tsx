@@ -45,6 +45,8 @@ export default function PodSettingsForm() {
   });
 
   const [primaryAutoPublish, setPrimaryAutoPublish] = useState(false);
+  const [tshirtMargin, setTshirtMargin] = useState(100);
+  const [stickerMargin, setStickerMargin] = useState(100);
   const [newShop, setNewShop] = useState({ shop_id: "", marketplace: "", label: "" });
 
   useEffect(() => {
