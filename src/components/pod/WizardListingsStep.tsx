@@ -279,12 +279,9 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
               {hasSticker && (
                 <div>
                   <p className="text-xs font-medium mb-1.5">Sticker</p>
-                  <img
-                    src={idea.sticker_design_url}
-                    alt="Completed sticker design"
-                    className="w-full rounded border border-border bg-muted aspect-square object-contain"
-                    loading="lazy"
-                  />
+                  <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
+                    <img src={idea.sticker_design_url} alt="Completed sticker design" className="w-full h-full object-contain" loading="lazy" />
+                  </div>
                 </div>
               )}
               {hasTshirt && (
