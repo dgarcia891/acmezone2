@@ -54,10 +54,10 @@ export default function AdminPodPipeline() {
   const bgAutoTriggeredRef = useRef(false);
   const restoredRef = useRef(false);
 
-  // Restore wizard from URL param on mount
+  // Restore wizard from URL param or sessionStorage on mount
   useEffect(() => {
     if (restoredRef.current || wizardOpen) return;
-    const ideaId = searchParams.get("idea");
+    const ideaId = searchParams.get("idea") || sessionStorage.getItem("pod_wizard_idea");
     if (ideaId && allIdeas.length > 0) {
       const found = allIdeas.find((i: any) => i.id === ideaId);
       if (found) {
