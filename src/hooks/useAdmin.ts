@@ -5,19 +5,27 @@ import { useAuth } from '@/contexts/AuthContext';
 export const useAdmin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+    // Don't check until auth is settled
+    if (authLoading) return;
 
+    if (!user) {
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+
+    const checkAdminRole = async () => {
       try {
         const { data, error } = await supabase.rpc('get_my_role');
         
+        if (cancelled) return;
+
         if (error) {
           console.error('Error checking role:', error);
           setIsAdmin(false);
@@ -25,15 +33,18 @@ export const useAdmin = () => {
           setIsAdmin(data === 'admin');
         }
       } catch (err) {
-        console.error('Error checking admin status:', err);
-        setIsAdmin(false);
+        if (!cancelled) {
+          console.error('Error checking admin status:', err);
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     checkAdminRole();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user, authLoading]);
 
   return { isAdmin, loading };
 };
