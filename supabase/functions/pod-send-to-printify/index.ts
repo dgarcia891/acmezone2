@@ -285,14 +285,20 @@ Deno.serve(async (req) => {
     const { printify_api_key, printify_shop_id } = settings;
 
     const shops = [
-      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false },
+      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false, tshirt_margin_pct: null as number | null, sticker_margin_pct: null as number | null },
       ...(additionalShops || []).map((s: any) => ({
         shop_id: s.shop_id,
         marketplace: s.marketplace,
         label: s.label || `${s.marketplace} Shop`,
         auto_publish: s.auto_publish ?? false,
+        tshirt_margin_pct: s.tshirt_margin_pct as number | null,
+        sticker_margin_pct: s.sticker_margin_pct as number | null,
       })),
     ];
+
+    // Global margin defaults from settings
+    const globalTshirtMargin = settings.tshirt_margin_pct ?? 100;
+    const globalStickerMargin = settings.sticker_margin_pct ?? 100;
 
     const overrides: Record<string, boolean> = publish_overrides || {};
 
