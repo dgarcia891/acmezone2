@@ -1,21 +1,19 @@
 
 
-## Fix: `pod-generate-listings` Not Deployed
+## Fix: Show Transparent Designs in Finalize Step
 
-### Root Cause
-The edge function `pod-generate-listings` is missing from `supabase/config.toml`. Without a config entry, it was never deployed. When you clicked "Approve & Generate Listings" in Step 4, the function call returned a 404/error, the `onError` handler showed a toast (which you may have missed), and the wizard stayed on Step 4. Since you walked away, the page may have refreshed or the session timed out, returning you to the Kanban board. The idea's status is still `bg_removed` -- listings were never generated.
+### Problem
+The "Select Products to Publish" section in `WizardListingsStep` displays design images on a solid gray (`bg-muted`) background, making it impossible to see whether backgrounds have been removed. The designs shown here ARE the transparent versions (confirmed in DB — `sticker_design_url` and `tshirt_design_url` point to the post-removal files), but the gray card background masks the transparency.
 
-### Fix (1 file)
+### Database Confirmation
+For idea `d047911f`, the `sticker_raw_url` and `tshirt_raw_url` (with `-raw` suffix) are distinct from the `_design_url` fields, confirming background removal did run. The `_design_url` fields (which are what gets sent to Printify) contain the transparent versions. The visual confusion is purely a display issue.
 
-**`supabase/config.toml`** -- Add the missing function entry:
+### Fix (1 file: `WizardListingsStep.tsx`)
 
-```toml
-[functions.pod-generate-listings]
-verify_jwt = false
-```
+1. **Add checkerboard background** to the design preview images in both the "Select Products to Publish" section (lines 235-258) and "Completed Designs" section (lines 276-298), using the same checkerboard CSS pattern already used in `BackgroundRemovalStep.tsx`.
 
-This will trigger auto-deployment of the function. After that, you can re-open the idea from the Kanban board (it will open at Step 4 since status is `bg_removed`), click "Approve & Generate Listings" again, and it should work.
-
-### Also missing from config (while we're at it)
-I'll audit whether `pod-remove-bg` and `pod-send-to-printify` are also missing. `pod-remove-bg` appears to work (logs show successful runs), so it was likely deployed at some point. `pod-send-to-printify` should also be checked.
+2. **Changes**:
+   - Define `checkerboardStyle` constant (same as in `BackgroundRemovalStep.tsx`)
+   - Apply it to the `<img>` wrapper divs so transparency is clearly visible
+   - This affects only the display — no change to what gets sent to Printify (already uses the correct transparent URLs)
 
