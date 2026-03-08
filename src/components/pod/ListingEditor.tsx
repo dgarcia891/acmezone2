@@ -38,6 +38,7 @@ export default function ListingEditor({ listing, shops = [] }: Props) {
   const [ebayTitle, setEbayTitle] = useState(listing.ebay_title || "");
   const [blueprintId, setBlueprintId] = useState(listing.printify_blueprint_id || "");
   const [printProviderId, setPrintProviderId] = useState(listing.printify_print_provider_id || "");
+  const [newTag, setNewTag] = useState("");
   const updateListing = useUpdateListing();
   const { data: providers, isLoading: providersLoading, isError: providersError } = usePrintifyProviders(listing.printify_blueprint_id || blueprintId || null);
 
