@@ -353,7 +353,7 @@ const PodPipeline = () => {
                     className="gap-1.5"
                     disabled={suggestMutation.isPending}
                     onClick={async () => {
-                      const suggestion = await suggestMutation.mutateAsync();
+                      const suggestion = await suggestMutation.mutateAsync("any");
                       if (suggestion) {
                         openWizardForNew();
                         setVariantDefaults({
