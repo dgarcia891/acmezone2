@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
         printify_shop_id: settings.printify_shop_id || "",
         removebg_api_key: settings.removebg_api_key ? "••••••••" : "",
         auto_publish: settings.auto_publish ?? false,
+        tshirt_margin_pct: settings.tshirt_margin_pct ?? 100,
+        sticker_margin_pct: settings.sticker_margin_pct ?? 100,
         has_trello_api_key: !!settings.trello_api_key,
         has_trello_token: !!settings.trello_token,
         has_printify_api_key: !!settings.printify_api_key,
@@ -67,6 +69,7 @@ Deno.serve(async (req) => {
       } : {
         trello_api_key: "", trello_token: "", printify_api_key: "",
         printify_shop_id: "", removebg_api_key: "", auto_publish: false,
+        tshirt_margin_pct: 100, sticker_margin_pct: 100,
         has_trello_api_key: false, has_trello_token: false,
         has_printify_api_key: false, has_printify_shop_id: false,
         has_removebg_api_key: false,
