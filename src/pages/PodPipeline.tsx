@@ -120,11 +120,13 @@ const PodPipeline = () => {
   const openWizardForNew = () => {
     setWizardIdea(null);
     setWizardOpen(true);
+    setSearchParams({});
   };
 
   const openWizardForIdea = (idea: any) => {
     setWizardIdea(idea);
     setWizardOpen(true);
+    setSearchParams({ idea: idea.id });
   };
 
   const closeWizard = () => {
