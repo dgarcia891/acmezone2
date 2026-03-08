@@ -74,8 +74,8 @@ export default function AdminPodPipeline() {
     if (step !== "generate") setAutoGenTriggered(false);
   }, [step, wizardIdea?.id]);
 
-  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); };
-  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); };
+  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); setSearchParams({}); };
+  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); setSearchParams({ idea: idea.id }); };
 
   const closeWizard = () => {
     setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType("both");
