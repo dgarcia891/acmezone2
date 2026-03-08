@@ -13,7 +13,8 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
+// Fallback prices if cost lookup fails (in cents)
+const FALLBACK_PRICE: Record<string, number> = {
   sticker: 499,
   tshirt: 2499,
 };
@@ -267,7 +268,7 @@ Deno.serve(async (req) => {
     // Fetch Printify credentials
     const { data: settings } = await supabase
       .from("az_pod_settings")
-      .select("printify_api_key, printify_shop_id, auto_publish")
+      .select("printify_api_key, printify_shop_id, auto_publish, tshirt_margin_pct, sticker_margin_pct")
       .eq("user_id", user.id)
       .single();
     if (!settings?.printify_api_key || !settings?.printify_shop_id) {
@@ -284,14 +285,20 @@ Deno.serve(async (req) => {
     const { printify_api_key, printify_shop_id } = settings;
 
     const shops = [
-      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false },
+      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false, tshirt_margin_pct: null as number | null, sticker_margin_pct: null as number | null },
       ...(additionalShops || []).map((s: any) => ({
         shop_id: s.shop_id,
         marketplace: s.marketplace,
         label: s.label || `${s.marketplace} Shop`,
         auto_publish: s.auto_publish ?? false,
+        tshirt_margin_pct: s.tshirt_margin_pct as number | null,
+        sticker_margin_pct: s.sticker_margin_pct as number | null,
       })),
     ];
+
+    // Global margin defaults from settings
+    const globalTshirtMargin = settings.tshirt_margin_pct ?? 100;
+    const globalStickerMargin = settings.sticker_margin_pct ?? 100;
 
     const overrides: Record<string, boolean> = publish_overrides || {};
 
@@ -358,6 +365,15 @@ Deno.serve(async (req) => {
         console.log("Sample variant structure:", JSON.stringify(variantList[0]));
       }
 
+      // Build cost map from variant data (Printify catalog variants include `cost` in cents)
+      const variantCostMap = new Map<number, number>();
+      for (const v of variantList) {
+        if (v.cost != null) {
+          variantCostMap.set(v.id, v.cost);
+        }
+      }
+      console.log(`Cost data available for ${variantCostMap.size}/${variantList.length} variants`);
+
       // Apply color-aware filtering for t-shirts
       const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
       let variantFilterResult: VariantFilterResult | null = null;
@@ -387,13 +403,27 @@ Deno.serve(async (req) => {
               tags: listing.tags || [],
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
-              variants: variantList.map((v: any) => ({
-                id: v.id,
-                price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
-                is_enabled: variantFilterResult
-                  ? (variantFilterResult.variantStates.get(v.id) ?? true)
-                  : true,
-              })),
+              variants: variantList.map((v: any) => {
+                // Determine margin for this shop + product type
+                const isSticker = listing.product_type === "sticker";
+                const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
+                const marginPct = shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
+                const cost = variantCostMap.get(v.id);
+                let price: number;
+                if (cost != null) {
+                  // cost + markup, minimum $1 profit
+                  price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
+                } else {
+                  price = FALLBACK_PRICE[listing.product_type] ?? 1999;
+                }
+                return {
+                  id: v.id,
+                  price,
+                  is_enabled: variantFilterResult
+                    ? (variantFilterResult.variantStates.get(v.id) ?? true)
+                    : true,
+                };
+              }),
               print_areas: [{
                 variant_ids: variantList.map((v: any) => v.id),
                 placeholders: [{

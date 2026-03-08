@@ -324,6 +324,8 @@ export type Database = {
           label: string | null
           marketplace: string
           shop_id: string
+          sticker_margin_pct: number | null
+          tshirt_margin_pct: number | null
           user_id: string
         }
         Insert: {
@@ -334,6 +336,8 @@ export type Database = {
           label?: string | null
           marketplace?: string
           shop_id: string
+          sticker_margin_pct?: number | null
+          tshirt_margin_pct?: number | null
           user_id: string
         }
         Update: {
@@ -344,6 +348,8 @@ export type Database = {
           label?: string | null
           marketplace?: string
           shop_id?: string
+          sticker_margin_pct?: number | null
+          tshirt_margin_pct?: number | null
           user_id?: string
         }
         Relationships: []
@@ -356,8 +362,10 @@ export type Database = {
           printify_api_key: string | null
           printify_shop_id: string | null
           removebg_api_key: string | null
+          sticker_margin_pct: number | null
           trello_api_key: string | null
           trello_token: string | null
+          tshirt_margin_pct: number | null
           updated_at: string | null
           user_id: string
         }
@@ -368,8 +376,10 @@ export type Database = {
           printify_api_key?: string | null
           printify_shop_id?: string | null
           removebg_api_key?: string | null
+          sticker_margin_pct?: number | null
           trello_api_key?: string | null
           trello_token?: string | null
+          tshirt_margin_pct?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -380,8 +390,10 @@ export type Database = {
           printify_api_key?: string | null
           printify_shop_id?: string | null
           removebg_api_key?: string | null
+          sticker_margin_pct?: number | null
           trello_api_key?: string | null
           trello_token?: string | null
+          tshirt_margin_pct?: number | null
           updated_at?: string | null
           user_id?: string
         }

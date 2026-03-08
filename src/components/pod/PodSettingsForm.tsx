@@ -45,6 +45,8 @@ export default function PodSettingsForm() {
   });
 
   const [primaryAutoPublish, setPrimaryAutoPublish] = useState(false);
+  const [tshirtMargin, setTshirtMargin] = useState(100);
+  const [stickerMargin, setStickerMargin] = useState(100);
   const [newShop, setNewShop] = useState({ shop_id: "", marketplace: "", label: "" });
 
   useEffect(() => {
@@ -55,6 +57,8 @@ export default function PodSettingsForm() {
         removebg_api_key: "",
       });
       setPrimaryAutoPublish(settings.auto_publish ?? false);
+      setTshirtMargin(settings.tshirt_margin_pct ?? 100);
+      setStickerMargin(settings.sticker_margin_pct ?? 100);
     }
   }, [settings]);
 
@@ -65,8 +69,9 @@ export default function PodSettingsForm() {
     Object.entries(form).forEach(([k, v]) => {
       if (v) body[k] = v;
     });
-    // Always send auto_publish for primary shop
     body.auto_publish = primaryAutoPublish;
+    body.tshirt_margin_pct = tshirtMargin;
+    body.sticker_margin_pct = stickerMargin;
     if (Object.keys(body).length === 0) return;
 
     if (body.removebg_api_key) {
@@ -145,6 +150,40 @@ export default function PodSettingsForm() {
                 checked={primaryAutoPublish}
                 onCheckedChange={setPrimaryAutoPublish}
               />
+            </div>
+
+            {/* Profit Margins */}
+            <div className="p-3 rounded-md border border-border bg-muted/30 space-y-3">
+              <div>
+                <Label className="text-sm font-medium">Default Profit Margins</Label>
+                <p className="text-xs text-muted-foreground">Applied on top of Printify's production cost. Per-shop overrides below take priority.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">T-Shirt Margin %</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={500}
+                    value={tshirtMargin}
+                    onChange={(e) => setTshirtMargin(Number(e.target.value))}
+                    className="h-8 text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">e.g. $12 cost → ${(12 * (1 + tshirtMargin / 100)).toFixed(2)} retail at {tshirtMargin}%</p>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Sticker Margin %</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={500}
+                    value={stickerMargin}
+                    onChange={(e) => setStickerMargin(Number(e.target.value))}
+                    className="h-8 text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">e.g. $2.50 cost → ${(2.5 * (1 + stickerMargin / 100)).toFixed(2)} retail at {stickerMargin}%</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
