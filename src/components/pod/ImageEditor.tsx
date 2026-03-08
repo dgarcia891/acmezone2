@@ -113,6 +113,29 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
   const undo = () => { if (historyIdx > 0) restoreHistory(historyIdx - 1); };
   const redo = () => { if (historyIdx < history.length - 1) restoreHistory(historyIdx + 1); };
 
+  const revertToOriginal = () => {
+    if (!history[0]) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const original = history[0];
+    canvas.width = original.width;
+    canvas.height = original.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.putImageData(original, 0, 0);
+    setAdjustments({ brightness: 100, contrast: 100, saturation: 100 });
+    setTool("select");
+    // Recompute display size for original dimensions
+    const container = containerRef.current;
+    const maxW = container ? container.clientWidth - 32 : 800;
+    const maxH = 600;
+    const s = Math.min(1, maxW / original.width, maxH / original.height);
+    setDisplaySize({ w: Math.round(original.width * s), h: Math.round(original.height * s) });
+    setCrop({ x: 0, y: 0, w: Math.round(original.width * s), h: Math.round(original.height * s) });
+    // Reset history to just the original
+    setHistory([original]);
+    setHistoryIdx(0);
+  };
+
   // Scale factor: canvas pixels per display pixel
   const scaleFactor = canvasRef.current ? canvasRef.current.width / displaySize.w : 1;
 
