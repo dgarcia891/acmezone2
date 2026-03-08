@@ -35,6 +35,7 @@ export default function PodSettingsForm() {
   const removeShopMutation = useRemoveShop();
   const toggleShopMutation = useToggleShop();
   const setAutoPublishMutation = useSetShopAutoPublish();
+  const setShopMarginMutation = useSetShopMargin();
   const fetchShopsMutation = useFetchPrintifyShops();
   const [discoveredShops, setDiscoveredShops] = useState<Array<{ id: string; title: string; sales_channel: string }>>([]);
 
