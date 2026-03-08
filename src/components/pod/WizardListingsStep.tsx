@@ -290,7 +290,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                 <div>
                   <p className="text-xs font-medium mb-1.5">T-Shirt</p>
                   <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
-                    <img src={idea.tshirt_design_url} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
+                    <img src={cacheBust(idea.tshirt_design_url)} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
                   </div>
                 </div>
               )}
