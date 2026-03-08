@@ -42,6 +42,11 @@ interface PrintifyProductResult {
   variants_count: number;
   variants_enabled: number;
   error?: string;
+  color_analysis?: {
+    dominance: "dark" | "light" | "medium";
+    dominant_colors: string[];
+    excluded_count: number;
+  };
 }
 
 function groupByMarketplace(results: PrintifyProductResult[]) {
