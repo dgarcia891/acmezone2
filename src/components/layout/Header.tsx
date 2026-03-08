@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
-import { LogOut, User, Shield, LayoutGrid, Youtube, Briefcase, Palette } from "lucide-react";
+import { LogOut, User, Shield, LayoutGrid, Youtube, Briefcase } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,20 +61,12 @@ const Header = () => {
               {user ? (
                 <div className="flex items-center gap-3">
                   {isAdmin && (
-                    <>
-                      <NavLink to="/admin" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
-                        <span className="flex items-center gap-1">
-                          <Shield className="h-4 w-4" />
-                          Admin
-                        </span>
-                      </NavLink>
-                      <NavLink to="/pod-pipeline" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
-                        <span className="flex items-center gap-1">
-                          <Palette className="h-4 w-4" />
-                          POD
-                        </span>
-                      </NavLink>
-                    </>
+                    <NavLink to="/admin" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
+                      <span className="flex items-center gap-1">
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </span>
+                    </NavLink>
                   )}
                   <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
                     <span className="flex items-center gap-1">
