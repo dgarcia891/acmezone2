@@ -33,29 +33,43 @@ function momentumLabel(m: string) {
   return m.charAt(0).toUpperCase() + m.slice(1);
 }
 
+const STORAGE_KEY_IDEAS = "pod_trending_ideas";
+const STORAGE_KEY_LOADED = "pod_trending_loaded";
+
 export default function TrendingIdeasDialog({ open, onOpenChange, onSelectIdea }: TrendingIdeasDialogProps) {
   const suggestMutation = useSuggestIdeas();
-  const [ideas, setIdeas] = useState<TrendingSuggestion[]>([]);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [ideas, setIdeas] = useState<TrendingSuggestion[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(STORAGE_KEY_IDEAS);
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [hasLoaded, setHasLoaded] = useState(() => {
+    return sessionStorage.getItem(STORAGE_KEY_LOADED) === "true";
+  });
 
   const fetchIdeas = async () => {
     const result = await suggestMutation.mutateAsync({ count: 5 });
     if (result) {
       setIdeas(result);
       setHasLoaded(true);
+      sessionStorage.setItem(STORAGE_KEY_IDEAS, JSON.stringify(result));
+      sessionStorage.setItem(STORAGE_KEY_LOADED, "true");
     }
   };
 
   // Auto-fetch when opened for the first time or when refreshing
   const handleOpenChange = (isOpen: boolean) => {
     onOpenChange(isOpen);
-    if (isOpen && !hasLoaded && !suggestMutation.isPending) {
+    if (isOpen && !hasLoaded && ideas.length === 0 && !suggestMutation.isPending) {
       fetchIdeas();
     }
   };
 
   const handleRefresh = () => {
     setIdeas([]);
+    sessionStorage.removeItem(STORAGE_KEY_IDEAS);
+    sessionStorage.setItem(STORAGE_KEY_LOADED, "false");
     fetchIdeas();
   };
 
