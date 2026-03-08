@@ -374,6 +374,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                         </span>
                       </div>
                     )}
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">{result.printify_product_id}</Badge>
                 </div>
                 {result.images.length > 0 && (
                   <div>
