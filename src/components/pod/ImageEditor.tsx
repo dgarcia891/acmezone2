@@ -392,14 +392,19 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
       </div>
 
       {/* Action buttons */}
-      <div className="flex justify-end gap-3 pt-2 border-t border-border">
-        <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-          <X className="h-4 w-4 mr-2" /> Cancel
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="ghost" onClick={revertToOriginal} disabled={isSaving || !loaded || (historyIdx === 0 && adjustments.brightness === 100 && adjustments.contrast === 100 && adjustments.saturation === 100)} className="text-destructive hover:text-destructive">
+          <RotateCcw className="h-4 w-4 mr-2" /> Revert to Original
         </Button>
-        <Button onClick={handleSave} disabled={isSaving || !loaded}>
-          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          {isSaving ? "Saving…" : "Save Changes"}
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            <X className="h-4 w-4 mr-2" /> Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving || !loaded}>
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {isSaving ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );
