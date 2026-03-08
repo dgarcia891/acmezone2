@@ -1,28 +1,32 @@
 
 
-## Fix: Stale images after re-entering Step 4 (Background Removal)
+# Unified Admin Navigation
 
-### Root Cause
-Both edge functions (`pod-generate-designs` and `pod-remove-bg`) upload files to fixed paths like `pod-designs/sticker-{id}.png` and `pod-designs/sticker-{id}-raw.png`. The URLs in the database never change between regeneration cycles.
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-In Step 3, `applyGeneratedDesignToWizardIdea` appends `?t={timestamp}` to bust browser cache. But in Step 4, `triggerBgRemoval`'s `onSuccess` does `setWizardIdea(res.idea)` with the raw database URLs -- no cache buster. The browser serves old cached images.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-### Fix (1 file)
+## Changes
 
-**`src/pages/PodPipeline.tsx`** -- In `triggerBgRemoval`'s `onSuccess` callback, add cache-busting query params to all image URLs before setting state:
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-```typescript
-onSuccess: (res) => {
-  const cb = `?t=${Date.now()}`;
-  const idea = { ...res.idea };
-  if (idea.sticker_design_url) idea.sticker_design_url += cb;
-  if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
-  if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
-  if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
-  setWizardIdea(idea);
-  setBgRemoving(false);
-},
-```
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-This mirrors the same cache-busting pattern already used in `applyGeneratedDesignToWizardIdea` for Step 3.
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
+
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
