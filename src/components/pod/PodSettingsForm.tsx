@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store } from "lucide-react";
+import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store, RefreshCw, Download } from "lucide-react";
 import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop, useSetShopAutoPublish, useFetchPrintifyShops } from "@/hooks/usePodPipeline";
 
 const MARKETPLACE_OPTIONS = [
