@@ -197,7 +197,7 @@ const PodPipeline = () => {
     );
   };
 
-  const handleRegenerate = async (type: "sticker" | "tshirt", customPrompt?: string) => {
+  const handleRegenerate = async (type: "sticker" | "tshirt", guidance?: string, customPrompt?: string) => {
     if (!wizardIdea) return;
 
     bgAutoTriggeredRef.current = false;
@@ -209,6 +209,8 @@ const PodPipeline = () => {
         product_type: type,
         sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
         tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
+        sticker_guidance: type === "sticker" ? guidance : undefined,
+        tshirt_guidance: type === "tshirt" ? guidance : undefined,
       });
 
       if (res?.idea) {

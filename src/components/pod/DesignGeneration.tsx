@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsDown, Check, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronUp, XCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThumbsDown, Check, RefreshCw, ImageIcon, Loader2, ChevronDown, ChevronRight, XCircle } from "lucide-react";
 import DesignGallery from "@/components/pod/DesignGallery";
 import type { DesignVersion } from "@/hooks/usePodPipeline";
 
@@ -11,7 +12,7 @@ interface Props {
   productType: string;
   onReject: () => void;
   onApprove: () => void;
-  onRegenerate: (type: "sticker" | "tshirt", customPrompt?: string) => void;
+  onRegenerate: (type: "sticker" | "tshirt", guidance?: string, customPrompt?: string) => void;
   onGenerate?: () => void;
   onCancel?: (type: "sticker" | "tshirt") => void;
   onDropDesign?: (type: "sticker" | "tshirt") => void;
@@ -71,7 +72,7 @@ function LoadingSpinner({ onCancel }: { onCancel?: () => void }) {
 }
 
 function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onDrop, canDrop, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
-  label: string; url?: string | null; prompt?: string; onRegenerate: (customPrompt?: string) => void; isLoading: boolean;
+  label: string; url?: string | null; prompt?: string; onRegenerate: (guidance?: string, customPrompt?: string) => void; isLoading: boolean;
   onCancel?: () => void;
   onDrop?: () => void;
   canDrop?: boolean;
@@ -80,12 +81,23 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
   onDeleteVersion?: (versionId: string) => void;
   isSelectingVersion?: boolean; isDeletingVersion?: boolean;
 }) {
+  const [guidance, setGuidance] = useState("");
   const [editedPrompt, setEditedPrompt] = useState(prompt || "");
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
 
   useEffect(() => {
     if (prompt) setEditedPrompt(prompt);
   }, [prompt]);
+
+  const handleRegenerate = () => {
+    const g = guidance.trim() || undefined;
+    const cp = editedPrompt !== prompt ? editedPrompt : undefined;
+    onRegenerate(g, cp);
+    // Clear guidance after submitting
+    if (g) setGuidance("");
+  };
+
+  const hasChanges = guidance.trim().length > 0 || editedPrompt !== prompt;
 
   return (
     <Card>
@@ -111,20 +123,43 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
           </div>
         )}
 
-        {/* Feedback & regeneration controls */}
+        {/* Guidance + regeneration controls */}
         <div className="mt-4 space-y-3">
+          {/* Simple guidance field */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Want changes? Describe what to adjust:</label>
+            <label className="text-xs font-medium text-muted-foreground">What do you want changed?</label>
             <Textarea
-              value={editedPrompt}
-              onChange={(e) => setEditedPrompt(e.target.value)}
-              className="text-xs min-h-[80px] resize-y"
+              value={guidance}
+              onChange={(e) => setGuidance(e.target.value)}
+              className="text-xs min-h-[70px] resize-y"
               placeholder="e.g. Make the text bigger, change colors to blue and gold, add more detail to the background…"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => onRegenerate(editedPrompt !== prompt ? editedPrompt : undefined)} disabled={isLoading}>
+
+          {/* Collapsible advanced prompt section */}
+          <Collapsible open={promptOpen} onOpenChange={setPromptOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto gap-1">
+                {promptOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                Advanced: View/Edit Prompt
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <Textarea
+                value={editedPrompt}
+                onChange={(e) => setEditedPrompt(e.target.value)}
+                className="text-xs min-h-[100px] resize-y font-mono"
+                placeholder="Raw AI prompt…"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                This is the raw prompt sent to the AI. If you provide guidance above, the AI will refine this prompt automatically.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={isLoading}>
             <RefreshCw className="h-3 w-3 mr-1" />
-            Regenerate{editedPrompt !== prompt ? " with changes" : ""}
+            Regenerate{hasChanges ? " with changes" : ""}
           </Button>
         </div>
 
@@ -154,7 +189,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
       <div className="text-center space-y-2">
         <h2 className="text-xl font-semibold">Generate & Refine Designs</h2>
         <p className="text-sm text-muted-foreground">
-          Review your designs below. Use the feedback box to request changes and regenerate until you're happy, then approve.
+          Describe what you'd like changed in plain English — the AI will refine the prompt and regenerate. Use the advanced section to edit the prompt directly.
         </p>
       </div>
 
@@ -163,7 +198,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
           <DesignCard
             key={`sticker-${idea?.sticker_design_url || "none"}`}
             label="Sticker Design" url={idea?.sticker_design_url} prompt={idea?.sticker_design_prompt}
-            onRegenerate={(cp) => onRegenerate("sticker", cp)} isLoading={loadingTypes.has("sticker")}
+            onRegenerate={(g, cp) => onRegenerate("sticker", g, cp)} isLoading={loadingTypes.has("sticker")}
             onCancel={onCancel ? () => onCancel("sticker") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
             canDrop={canDrop}
@@ -173,7 +208,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
           <DesignCard
             key={`tshirt-${idea?.tshirt_design_url || "none"}`}
             label="T-Shirt Design" url={idea?.tshirt_design_url} prompt={idea?.tshirt_design_prompt}
-            onRegenerate={(cp) => onRegenerate("tshirt", cp)} isLoading={loadingTypes.has("tshirt")}
+            onRegenerate={(g, cp) => onRegenerate("tshirt", g, cp)} isLoading={loadingTypes.has("tshirt")}
             onCancel={onCancel ? () => onCancel("tshirt") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
             canDrop={canDrop}

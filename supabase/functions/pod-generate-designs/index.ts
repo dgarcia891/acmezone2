@@ -39,10 +39,52 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id, product_type, sticker_prompt, tshirt_prompt } = await req.json();
+    const { idea_id, product_type, sticker_prompt, tshirt_prompt, sticker_guidance, tshirt_guidance } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not found");
+
+    // ---------- AI prompt refinement ----------
+    async function refinePrompt(originalPrompt: string, guidance: string): Promise<string> {
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: "You are a prompt engineer for AI image generation. Given the original image generation prompt and user guidance describing requested changes, rewrite the prompt to incorporate the changes. Keep all technical specifications (resolution, format, background requirements) from the original. Return ONLY the new prompt text, nothing else — no explanation, no markdown."
+              },
+              {
+                role: "user",
+                content: `Original prompt:\n${originalPrompt}\n\nRequested changes:\n${guidance}`
+              }
+            ],
+          })
+        });
+
+        if (!response.ok) {
+          console.error("Prompt refinement failed:", response.status);
+          return originalPrompt;
+        }
+
+        const data = await response.json();
+        const refined = data.choices?.[0]?.message?.content?.trim();
+        if (refined && refined.length > 20) {
+          console.log("Prompt refined by AI");
+          return refined;
+        }
+        return originalPrompt;
+      } catch (err) {
+        console.error("Prompt refinement error:", err);
+        return originalPrompt;
+      }
+    }
 
     // ---------- AI image generation ----------
     async function generateDesignImage(prompt: string): Promise<string | null> {
@@ -119,18 +161,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---------- Full pipeline: generate → upload (NO bg removal) ----------
-    async function processDesign(prompt: string, filename: string): Promise<string | null> {
-      const base64Url = await generateDesignImage(prompt);
-      if (!base64Url) return null;
+    // ---------- Full pipeline: refine prompt (if guidance) → generate → upload ----------
+    async function processDesign(basePrompt: string, guidance: string | undefined, filename: string): Promise<{ url: string | null; refinedPrompt: string }> {
+      // Step 1: Refine prompt if guidance provided
+      let finalPrompt = basePrompt;
+      if (guidance && guidance.trim()) {
+        finalPrompt = await refinePrompt(basePrompt, guidance);
+      }
+
+      // Step 2: Generate image
+      const base64Url = await generateDesignImage(finalPrompt);
+      if (!base64Url) return { url: null, refinedPrompt: finalPrompt };
 
       const decoded = decodeBase64Image(base64Url);
       if (!decoded) {
-        // Not a base64 URL (external URL) – return as-is
-        return base64Url;
+        return { url: base64Url, refinedPrompt: finalPrompt };
       }
 
-      return await uploadDesignImage(decoded.bytes, filename);
+      const uploadedUrl = await uploadDesignImage(decoded.bytes, filename);
+      return { url: uploadedUrl, refinedPrompt: finalPrompt };
     }
 
     // ---------- Build update payload ----------
@@ -146,8 +195,9 @@ Deno.serve(async (req) => {
       designTasks.push(
         processDesign(
           `Create a die-cut sticker design. The artwork MUST fill the ENTIRE canvas from edge to edge with absolutely NO margin, NO padding, and NO white border around it. The design should be a single cohesive graphic that bleeds to all four edges of the image. Make it bold, colorful, and print-ready for die-cut sticker production at 300 DPI. Use a solid pure white (#FFFFFF) background ONLY behind the artwork where needed for internal contrast. Do NOT leave any empty white space around the design. The graphic MUST occupy 95-100% of the total image area. Do NOT include any product mockup, shadow, border, frame, or checkered pattern. ${sticker_prompt}`,
+          sticker_guidance,
           `sticker-${idea_id}`
-        ).then(url => ({ key: "sticker_design_url", promptKey: "sticker_design_prompt", prompt: sticker_prompt, url }))
+        ).then(r => ({ key: "sticker_design_url", promptKey: "sticker_design_prompt", prompt: r.refinedPrompt, url: r.url }))
       );
     }
 
@@ -155,8 +205,9 @@ Deno.serve(async (req) => {
       designTasks.push(
         processDesign(
           `Create a t-shirt graphic design at high resolution (4500x5400 pixels or similar print-ready dimensions). The artwork MUST be LARGE and PROMINENT, filling at least 70-80% of the canvas. Make the design bold, oversized, and visually impactful — NOT small or centered in a tiny area. Output ONLY the graphic artwork on a solid pure white (#FFFFFF) background. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white, filling the majority of the canvas. ${tshirt_prompt}`,
+          tshirt_guidance,
           `tshirt-${idea_id}`
-        ).then(url => ({ key: "tshirt_design_url", promptKey: "tshirt_design_prompt", prompt: tshirt_prompt, url }))
+        ).then(r => ({ key: "tshirt_design_url", promptKey: "tshirt_design_prompt", prompt: r.refinedPrompt, url: r.url }))
       );
     }
 
@@ -166,7 +217,6 @@ Deno.serve(async (req) => {
         updateData[result.value.promptKey] = result.value.prompt;
         if (result.value.url) {
           updateData[result.value.key] = result.value.url;
-          // Also save as raw URL for before/after comparison
           const rawKey = result.value.key.replace("_design_url", "_raw_url");
           updateData[rawKey] = result.value.url;
         }
