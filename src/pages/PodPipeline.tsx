@@ -59,7 +59,11 @@ const PodPipeline = () => {
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
   const suggestMutation = useSuggestIdeas();
-  const [trendingOpen, setTrendingOpen] = useState(false);
+  const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const handleTrendingOpenChange = (open: boolean) => {
+    setTrendingOpen(open);
+    sessionStorage.setItem("pod_trending_open", String(open));
+  };
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
@@ -354,14 +358,14 @@ const PodPipeline = () => {
                     size="sm"
                     variant="outline"
                     className="gap-1.5"
-                    onClick={() => setTrendingOpen(true)}
+                    onClick={() => handleTrendingOpenChange(true)}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     Give me an idea
                   </Button>
                   <TrendingIdeasDialog
                     open={trendingOpen}
-                    onOpenChange={setTrendingOpen}
+                    onOpenChange={handleTrendingOpenChange}
                     onSelectIdea={(suggestion) => {
                       openWizardForNew();
                       setVariantDefaults({
