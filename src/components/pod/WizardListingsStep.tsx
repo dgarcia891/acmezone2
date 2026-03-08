@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store,
-  ThumbsDown, ExternalLink, Package, Copy, Palette
+  ThumbsDown, ExternalLink, Package, Copy, Palette, DollarSign
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
