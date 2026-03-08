@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store,
-  ThumbsDown, ExternalLink, Package, Copy, Palette
+  ThumbsDown, ExternalLink, Package, Copy, Palette, DollarSign
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
@@ -336,7 +337,80 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       )}
 
-      {/* Printify Results */}
+      {/* Pricing Preview */}
+      {!isProduction && !isLive && allShops.length > 0 && selectedTypes.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5" /> Estimated Pricing Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              Retail prices are calculated as <span className="font-medium">production cost + margin %</span>, with a minimum $1.00 profit floor. Actual prices depend on Printify variant costs at publish time.
+            </p>
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Shop</TableHead>
+                    <TableHead className="text-xs">Product</TableHead>
+                    <TableHead className="text-xs text-right">Margin</TableHead>
+                    <TableHead className="text-xs text-right">Example ($12 cost)</TableHead>
+                    <TableHead className="text-xs text-right">Example ($8 cost)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allShops.flatMap((shop) => {
+                    const globalTshirtMargin = settingsData?.settings?.tshirt_margin_pct ?? 100;
+                    const globalStickerMargin = settingsData?.settings?.sticker_margin_pct ?? 100;
+
+                    return selectedTypes.map((pt) => {
+                      const isSticker = pt === "sticker";
+                      const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
+                      const shopOverride = isSticker ? additionalShopData?.sticker_margin_pct : additionalShopData?.tshirt_margin_pct;
+                      const effectiveMargin = shopOverride ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
+                      const isInherited = shopOverride == null;
+
+                      const calcPrice = (costCents: number) => {
+                        const raw = Math.round(costCents + (costCents * effectiveMargin / 100));
+                        return Math.max(raw, costCents + 100);
+                      };
+
+                      return (
+                        <TableRow key={`${shop.shop_id}-${pt}`}>
+                          <TableCell className="text-xs py-2">
+                            <div className="flex items-center gap-1.5">
+                              <Badge className={`text-[10px] ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                                {shop.marketplace === "default" ? "Primary" : shop.marketplace}
+                              </Badge>
+                              <span className="truncate max-w-[120px]">{shop.label}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs py-2 capitalize">{pt === "tshirt" ? "T-Shirt" : "Sticker"}</TableCell>
+                          <TableCell className="text-xs py-2 text-right font-mono">
+                            {effectiveMargin}%
+                            {isInherited && (
+                              <span className="text-muted-foreground ml-1 text-[10px]">(default)</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs py-2 text-right font-mono font-medium">
+                            ${(calcPrice(1200) / 100).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-xs py-2 text-right font-mono font-medium">
+                            ${(calcPrice(800) / 100).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {grouped && Object.entries(grouped).map(([shopLabel, products]) => (
         <Card key={shopLabel} className="border-primary/30">
           <CardHeader className="pb-3">
