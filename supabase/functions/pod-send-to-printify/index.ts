@@ -365,6 +365,15 @@ Deno.serve(async (req) => {
         console.log("Sample variant structure:", JSON.stringify(variantList[0]));
       }
 
+      // Build cost map from variant data (Printify catalog variants include `cost` in cents)
+      const variantCostMap = new Map<number, number>();
+      for (const v of variantList) {
+        if (v.cost != null) {
+          variantCostMap.set(v.id, v.cost);
+        }
+      }
+      console.log(`Cost data available for ${variantCostMap.size}/${variantList.length} variants`);
+
       // Apply color-aware filtering for t-shirts
       const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
       let variantFilterResult: VariantFilterResult | null = null;
