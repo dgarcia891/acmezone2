@@ -14,6 +14,13 @@ import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 import { usePodSettings } from "@/hooks/usePodPipeline";
+const checkerboardStyle = {
+  backgroundImage:
+    "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
+  backgroundSize: "20px 20px",
+  backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+  backgroundColor: "white",
+};
 
 const MARKETPLACE_COLORS: Record<string, string> = {
   default: "bg-primary/10 text-primary",
@@ -232,11 +239,9 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     />
                     <label htmlFor="select-sticker" className="text-xs font-medium cursor-pointer">Sticker</label>
                   </div>
-                  <img
-                    src={idea.sticker_design_url}
-                    alt="Sticker design"
-                    className={`w-full rounded border bg-muted aspect-square object-contain ${!stickerSelected ? "opacity-40" : ""}`}
-                  />
+                  <div className={`w-full rounded border aspect-square overflow-hidden ${!stickerSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
+                    <img src={idea.sticker_design_url} alt="Sticker design" className="w-full h-full object-contain" />
+                  </div>
                 </div>
               )}
               {hasTshirt && (
@@ -250,11 +255,9 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     />
                     <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">T-Shirt</label>
                   </div>
-                  <img
-                    src={idea.tshirt_design_url}
-                    alt="T-Shirt design"
-                    className={`w-full rounded border bg-muted aspect-square object-contain ${!tshirtSelected ? "opacity-40" : ""}`}
-                  />
+                  <div className={`w-full rounded border aspect-square overflow-hidden ${!tshirtSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
+                    <img src={idea.tshirt_design_url} alt="T-Shirt design" className="w-full h-full object-contain" />
+                  </div>
                 </div>
               )}
             </div>
@@ -276,23 +279,17 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
               {hasSticker && (
                 <div>
                   <p className="text-xs font-medium mb-1.5">Sticker</p>
-                  <img
-                    src={idea.sticker_design_url}
-                    alt="Completed sticker design"
-                    className="w-full rounded border border-border bg-muted aspect-square object-contain"
-                    loading="lazy"
-                  />
+                  <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
+                    <img src={idea.sticker_design_url} alt="Completed sticker design" className="w-full h-full object-contain" loading="lazy" />
+                  </div>
                 </div>
               )}
               {hasTshirt && (
                 <div>
                   <p className="text-xs font-medium mb-1.5">T-Shirt</p>
-                  <img
-                    src={idea.tshirt_design_url}
-                    alt="Completed t-shirt design"
-                    className="w-full rounded border border-border bg-muted aspect-square object-contain"
-                    loading="lazy"
-                  />
+                  <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
+                    <img src={idea.tshirt_design_url} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
+                  </div>
                 </div>
               )}
             </div>

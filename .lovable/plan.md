@@ -1,19 +1,32 @@
 
 
-## Fix: Show Transparent Designs in Finalize Step
+# Unified Admin Navigation
 
-### Problem
-The "Select Products to Publish" section in `WizardListingsStep` displays design images on a solid gray (`bg-muted`) background, making it impossible to see whether backgrounds have been removed. The designs shown here ARE the transparent versions (confirmed in DB — `sticker_design_url` and `tshirt_design_url` point to the post-removal files), but the gray card background masks the transparency.
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-### Database Confirmation
-For idea `d047911f`, the `sticker_raw_url` and `tshirt_raw_url` (with `-raw` suffix) are distinct from the `_design_url` fields, confirming background removal did run. The `_design_url` fields (which are what gets sent to Printify) contain the transparent versions. The visual confusion is purely a display issue.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-### Fix (1 file: `WizardListingsStep.tsx`)
+## Changes
 
-1. **Add checkerboard background** to the design preview images in both the "Select Products to Publish" section (lines 235-258) and "Completed Designs" section (lines 276-298), using the same checkerboard CSS pattern already used in `BackgroundRemovalStep.tsx`.
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-2. **Changes**:
-   - Define `checkerboardStyle` constant (same as in `BackgroundRemovalStep.tsx`)
-   - Apply it to the `<img>` wrapper divs so transparency is clearly visible
-   - This affects only the display — no change to what gets sent to Printify (already uses the correct transparent URLs)
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
+
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
