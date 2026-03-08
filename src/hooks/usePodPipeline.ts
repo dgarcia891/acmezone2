@@ -164,6 +164,24 @@ export function useSetShopAutoPublish() {
   });
 }
 
+export function useSetShopMargin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, tshirt_margin_pct, sticker_margin_pct }: { id: string; tshirt_margin_pct?: number | null; sticker_margin_pct?: number | null }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "set_shop_margin", id, tshirt_margin_pct, sticker_margin_pct },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useSavePodSettings() {
   const qc = useQueryClient();
   return useMutation({

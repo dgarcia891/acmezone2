@@ -272,36 +272,77 @@ export default function PodSettingsForm() {
           {additionalShops.length > 0 && (
             <div className="space-y-2 mb-4">
               {additionalShops.map((shop: any) => (
-                <div key={shop.id} className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
-                  <Switch
-                    checked={shop.is_active}
-                    onCheckedChange={(checked) => toggleShopMutation.mutate({ id: shop.id, is_active: checked })}
-                    className="shrink-0"
-                    aria-label={`Toggle ${shop.label || shop.marketplace} active`}
-                  />
-                  <Badge className={`text-[10px] shrink-0 ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
-                    {shop.marketplace}
-                  </Badge>
-                  <span className="text-xs font-mono truncate flex-1">{shop.shop_id}</span>
-                  {shop.label && <span className="text-xs text-muted-foreground truncate">{shop.label}</span>}
-                  <div className="flex items-center gap-1 shrink-0 border-l border-border pl-2 ml-1">
-                    <span className="text-[10px] text-muted-foreground">{shop.auto_publish ? "Publish" : "Draft"}</span>
+                <div key={shop.id} className="p-2 rounded-md border border-border bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2">
                     <Switch
-                      checked={shop.auto_publish ?? false}
-                      onCheckedChange={(checked) => setAutoPublishMutation.mutate({ id: shop.id, auto_publish: checked })}
-                      className="shrink-0 scale-75"
-                      aria-label={`Auto-publish for ${shop.label || shop.marketplace}`}
+                      checked={shop.is_active}
+                      onCheckedChange={(checked) => toggleShopMutation.mutate({ id: shop.id, is_active: checked })}
+                      className="shrink-0"
+                      aria-label={`Toggle ${shop.label || shop.marketplace} active`}
                     />
+                    <Badge className={`text-[10px] shrink-0 ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                      {shop.marketplace}
+                    </Badge>
+                    <span className="text-xs font-mono truncate flex-1">{shop.shop_id}</span>
+                    {shop.label && <span className="text-xs text-muted-foreground truncate">{shop.label}</span>}
+                    <div className="flex items-center gap-1 shrink-0 border-l border-border pl-2 ml-1">
+                      <span className="text-[10px] text-muted-foreground">{shop.auto_publish ? "Publish" : "Draft"}</span>
+                      <Switch
+                        checked={shop.auto_publish ?? false}
+                        onCheckedChange={(checked) => setAutoPublishMutation.mutate({ id: shop.id, auto_publish: checked })}
+                        className="shrink-0 scale-75"
+                        aria-label={`Auto-publish for ${shop.label || shop.marketplace}`}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => removeShopMutation.mutate(shop.id)}
+                      disabled={removeShopMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 shrink-0 text-destructive hover:text-destructive"
-                    onClick={() => removeShopMutation.mutate(shop.id)}
-                    disabled={removeShopMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {/* Per-shop margin overrides */}
+                  <div className="flex items-center gap-2 pl-8">
+                    <span className="text-[10px] text-muted-foreground shrink-0">Margins:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">👕</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={500}
+                        placeholder={`${tshirtMargin}%`}
+                        defaultValue={shop.tshirt_margin_pct ?? ""}
+                        className="h-6 w-16 text-[10px] px-1.5"
+                        onBlur={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          if (val !== (shop.tshirt_margin_pct ?? null)) {
+                            setShopMarginMutation.mutate({ id: shop.id, tshirt_margin_pct: val });
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">🏷️</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={500}
+                        placeholder={`${stickerMargin}%`}
+                        defaultValue={shop.sticker_margin_pct ?? ""}
+                        className="h-6 w-16 text-[10px] px-1.5"
+                        onBlur={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          if (val !== (shop.sticker_margin_pct ?? null)) {
+                            setShopMarginMutation.mutate({ id: shop.id, sticker_margin_pct: val });
+                          }
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">blank = inherit default</span>
+                  </div>
                 </div>
               ))}
             </div>
