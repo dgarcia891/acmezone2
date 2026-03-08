@@ -367,11 +367,27 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                       {result.product_type} · {result.variants_enabled}/{result.variants_count} variants enabled
                     </p>
                     {result.color_analysis && result.color_analysis.excluded_count > 0 && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Palette className="h-3 w-3 text-accent-foreground" />
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <Palette className="h-3 w-3 text-accent-foreground shrink-0" />
                         <span className="text-[11px] text-muted-foreground">
-                          🎨 Auto-excluded {result.color_analysis.excluded_count} {result.color_analysis.dominance} variant{result.color_analysis.excluded_count !== 1 ? "s" : ""} to avoid clashing with the {result.color_analysis.dominance} design
+                          🎨 Auto-excluded {result.color_analysis.excluded_count} {result.color_analysis.dominance} variant{result.color_analysis.excluded_count !== 1 ? "s" : ""} to avoid clashing
                         </span>
+                        {result.color_analysis.dominant_colors.length > 0 && (
+                          <div className="flex items-center gap-1 ml-0.5">
+                            {result.color_analysis.dominant_colors.slice(0, 5).map((color, ci) => (
+                              <span
+                                key={ci}
+                                className="inline-block h-3.5 w-3.5 rounded-full border border-border shadow-sm shrink-0"
+                                style={{ backgroundColor: color.startsWith("#") || color.startsWith("rgb") ? color : color }}
+                                title={color}
+                                aria-label={`Dominant color: ${color}`}
+                              />
+                            ))}
+                            <span className="text-[10px] text-muted-foreground/70 ml-0.5">
+                              {result.color_analysis.dominant_colors.slice(0, 5).join(", ")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
