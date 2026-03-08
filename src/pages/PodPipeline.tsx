@@ -63,9 +63,24 @@ const PodPipeline = () => {
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
   const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
 
   // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  // Restore wizard from URL param on mount
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
 
   // When opening wizard for an existing idea, derive step from status
   useEffect(() => {
