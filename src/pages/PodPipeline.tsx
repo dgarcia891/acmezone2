@@ -43,6 +43,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 }
 
 const PodPipeline = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardIdea, setWizardIdea] = useState<any>(null);
