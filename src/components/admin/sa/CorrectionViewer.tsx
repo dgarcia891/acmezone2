@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RefreshCw, MessageSquare, Eye } from 'lucide-react';
+import DetectionSnapshotView from './DetectionSnapshotView';
 
 interface Correction {
   id: string;
@@ -31,6 +32,7 @@ interface Correction {
   ai_review_result: Record<string, unknown> | null;
   reviewed_at: string | null;
   detection_id: string | null;
+  detection_snapshot: Record<string, any> | null;
   created_at: string;
 }
 
@@ -180,7 +182,7 @@ const CorrectionViewer = () => {
 
       {/* Detail Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Correction Details</DialogTitle>
             <DialogDescription>Full correction and AI review data.</DialogDescription>
@@ -204,11 +206,17 @@ const CorrectionViewer = () => {
               {selected.ai_review_result && (
                 <div>
                   <span className="text-muted-foreground">AI Review Result:</span>
-                  <pre className="mt-1 p-3 bg-muted rounded text-xs overflow-auto max-h-[300px]">
+                  <pre className="mt-1 p-3 bg-muted rounded text-xs overflow-auto max-h-[200px]">
                     {JSON.stringify(selected.ai_review_result, null, 2)}
                   </pre>
                 </div>
               )}
+
+              {/* Detection Snapshot */}
+              <div className="border-t border-border pt-3">
+                <DetectionSnapshotView snapshot={selected.detection_snapshot} />
+              </div>
+
               <div className="text-xs text-muted-foreground">
                 Created: {new Date(selected.created_at).toLocaleString()}
                 {selected.reviewed_at && <> • Reviewed: {new Date(selected.reviewed_at).toLocaleString()}</>}
