@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_text, images, image_base64, image_media_type } = await req.json();
+    const { idea_text, images, image_base64, image_media_type, product_type } = await req.json();
     if (!idea_text?.trim()) return json({ error: "idea_text is required" }, 400);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
