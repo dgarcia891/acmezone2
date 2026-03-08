@@ -69,8 +69,9 @@ export default function PodSettingsForm() {
     Object.entries(form).forEach(([k, v]) => {
       if (v) body[k] = v;
     });
-    // Always send auto_publish for primary shop
     body.auto_publish = primaryAutoPublish;
+    body.tshirt_margin_pct = tshirtMargin;
+    body.sticker_margin_pct = stickerMargin;
     if (Object.keys(body).length === 0) return;
 
     if (body.removebg_api_key) {
