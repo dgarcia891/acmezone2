@@ -91,13 +91,14 @@ export default function AdminPodPipeline() {
     if (step !== "generate") setAutoGenTriggered(false);
   }, [step, wizardIdea?.id]);
 
-  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); setSearchParams({}); };
-  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); setSearchParams({ idea: idea.id }); };
+  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); setSearchParams({}); sessionStorage.removeItem("pod_wizard_idea"); };
+  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); setSearchParams({ idea: idea.id }); sessionStorage.setItem("pod_wizard_idea", idea.id); };
 
   const closeWizard = () => {
     setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType("both");
     setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
     setSearchParams({});
+    sessionStorage.removeItem("pod_wizard_idea");
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
