@@ -102,10 +102,27 @@ async function analyzeDesignColors(imageUrl: string): Promise<ColorAnalysis | nu
   }
 }
 
-function classifyVariantColor(colorName: string): "dark" | "light" | "neutral" {
-  const lower = colorName.toLowerCase().trim();
-  if (DARK_COLORS.has(lower)) return "dark";
-  if (LIGHT_COLORS.has(lower)) return "light";
+function extractColorName(raw: string): string {
+  // Printify variants use "Color / Size" format — extract color part
+  const colorPart = raw.split(" / ")[0].toLowerCase().trim();
+  return colorPart;
+}
+
+function classifyVariantColor(rawName: string): "dark" | "light" | "neutral" {
+  const colorPart = extractColorName(rawName);
+
+  // Exact match first
+  if (DARK_COLORS.has(colorPart)) return "dark";
+  if (LIGHT_COLORS.has(colorPart)) return "light";
+
+  // Partial/contains match for compound names like "dark heather grey"
+  for (const dc of DARK_COLORS) {
+    if (colorPart.includes(dc) || dc.includes(colorPart)) return "dark";
+  }
+  for (const lc of LIGHT_COLORS) {
+    if (colorPart.includes(lc) || lc.includes(colorPart)) return "light";
+  }
+
   return "neutral";
 }
 
