@@ -1,32 +1,41 @@
 
 
-# Unified Admin Navigation
+## Collapsible Kanban Columns (Trello-style)
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### What it does
+Each Kanban column gets a collapse toggle. When collapsed, the column shrinks to a narrow ~40px strip showing the emoji, label rotated vertically, and card count badge. Clicking the strip expands it back to full width.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Changes
 
-## Changes
+**`src/components/pod/KanbanColumn.tsx`**
+- Add `collapsed` and `onToggleCollapse` props
+- When collapsed, render a narrow clickable strip (~40px wide) with:
+  - Emoji at top
+  - Label text rotated 90° via `writing-mode: vertical-rl` (CSS)
+  - Badge count at bottom
+  - Same `min-h` as expanded columns for visual consistency
+  - Still acts as a droppable target so drag-and-drop works
+- When expanded, render current layout with a small collapse button (e.g., `ChevronsLeft` icon) in the column header
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+**`src/components/pod/KanbanBoard.tsx`**
+- Add `collapsedColumns` state: `Record<string, boolean>` defaulting all to `false`
+- Pass `collapsed` and `onToggleCollapse` callback to each `KanbanColumn`
+- Toggle updates the state for that column's status key
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+### Collapsed column visual (ASCII)
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
+```text
+┌──┐  ┌────────280px────────┐  ┌──┐
+│📥│  │ 🎨 Designing    [3] │  │📝│
+│  │  │                     │  │  │
+│N │  │  [card]             │  │L │
+│e │  │  [card]             │  │i │
+│w │  │  [card]             │  │s │
+│  │  │                     │  │t │
+│[2]│  │                     │  │[0]│
+└──┘  └─────────────────────┘  └──┘
+ 40px       expanded            40px
+```
 
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+No other files need changes.
 
