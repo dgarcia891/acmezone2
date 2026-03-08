@@ -57,6 +57,8 @@ export default function PodSettingsForm() {
         removebg_api_key: "",
       });
       setPrimaryAutoPublish(settings.auto_publish ?? false);
+      setTshirtMargin(settings.tshirt_margin_pct ?? 100);
+      setStickerMargin(settings.sticker_margin_pct ?? 100);
     }
   }, [settings]);
 
