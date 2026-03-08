@@ -35,9 +35,11 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
   };
 
   const score = idea.analysis?.commercial_viability_score;
-  const thumb = idea.sticker_design_url || idea.tshirt_design_url;
   const priority = idea.priority || "normal";
   const text = idea.idea_text || "Untitled idea";
+
+  // Collect all available images for preview
+  const images = [idea.sticker_design_url, idea.tshirt_design_url, idea.image_url].filter(Boolean) as string[];
 
   return (
     <Card
@@ -45,32 +47,37 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow border-border"
+      className="p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow border-border"
       onClick={(e) => {
-        // Don't open sheet if dragging
         if (!isDragging) onClick();
       }}
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate text-foreground">{text.length > 60 ? text.slice(0, 60) + "…" : text}</p>
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {score != null && (
-              <Badge variant={viabilityColor(score)} className="text-[10px] px-1.5 py-0">
-                {score}/10
-              </Badge>
-            )}
-            {priority !== "normal" && priorityDot[priority] && (
-              <span className={`inline-block w-2 h-2 rounded-full ${priorityDot[priority]}`} title={priority} />
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {idea.created_at ? formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }) : ""}
-            </span>
-          </div>
+      {images.length > 0 && (
+        <div className={`mb-2 gap-1 ${images.length === 1 ? "flex" : "grid grid-cols-2"}`}>
+          {images.slice(0, 4).map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              className={`rounded object-cover w-full ${images.length === 1 ? "h-24" : "h-16"}`}
+              loading="lazy"
+            />
+          ))}
         </div>
-        {thumb && (
-          <img src={thumb} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+      )}
+      <p className="text-sm font-medium truncate text-foreground">{text.length > 60 ? text.slice(0, 60) + "…" : text}</p>
+      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+        {score != null && (
+          <Badge variant={viabilityColor(score)} className="text-[10px] px-1.5 py-0">
+            {score}/10
+          </Badge>
         )}
+        {priority !== "normal" && priorityDot[priority] && (
+          <span className={`inline-block w-2 h-2 rounded-full ${priorityDot[priority]}`} title={priority} />
+        )}
+        <span className="text-[10px] text-muted-foreground">
+          {idea.created_at ? formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }) : ""}
+        </span>
       </div>
     </Card>
   );

@@ -87,7 +87,7 @@ export default function KanbanBoard({ onCardClick }: Props) {
       onDragEnd={handleDragEnd}
     >
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-max">
+        <div className="flex gap-3 pb-4">
           {COLUMNS.map((col) => (
             <KanbanColumn
               key={col.status}
