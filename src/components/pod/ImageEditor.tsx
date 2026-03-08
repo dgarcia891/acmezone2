@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Save, X } from "lucide-react";
+import { Loader2, Save, X, RotateCcw } from "lucide-react";
 import EditorToolbar, { type EditorTool } from "./editor/EditorToolbar";
 import AdjustmentSliders, { type Adjustments } from "./editor/AdjustmentSliders";
 import CropOverlay, { type CropRect } from "./editor/CropOverlay";
@@ -112,6 +112,29 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
 
   const undo = () => { if (historyIdx > 0) restoreHistory(historyIdx - 1); };
   const redo = () => { if (historyIdx < history.length - 1) restoreHistory(historyIdx + 1); };
+
+  const revertToOriginal = () => {
+    if (!history[0]) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const original = history[0];
+    canvas.width = original.width;
+    canvas.height = original.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.putImageData(original, 0, 0);
+    setAdjustments({ brightness: 100, contrast: 100, saturation: 100 });
+    setTool("select");
+    // Recompute display size for original dimensions
+    const container = containerRef.current;
+    const maxW = container ? container.clientWidth - 32 : 800;
+    const maxH = 600;
+    const s = Math.min(1, maxW / original.width, maxH / original.height);
+    setDisplaySize({ w: Math.round(original.width * s), h: Math.round(original.height * s) });
+    setCrop({ x: 0, y: 0, w: Math.round(original.width * s), h: Math.round(original.height * s) });
+    // Reset history to just the original
+    setHistory([original]);
+    setHistoryIdx(0);
+  };
 
   // Scale factor: canvas pixels per display pixel
   const scaleFactor = canvasRef.current ? canvasRef.current.width / displaySize.w : 1;
@@ -369,14 +392,19 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, isSaving }: Pr
       </div>
 
       {/* Action buttons */}
-      <div className="flex justify-end gap-3 pt-2 border-t border-border">
-        <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-          <X className="h-4 w-4 mr-2" /> Cancel
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="ghost" onClick={revertToOriginal} disabled={isSaving || !loaded || (historyIdx === 0 && adjustments.brightness === 100 && adjustments.contrast === 100 && adjustments.saturation === 100)} className="text-destructive hover:text-destructive">
+          <RotateCcw className="h-4 w-4 mr-2" /> Revert to Original
         </Button>
-        <Button onClick={handleSave} disabled={isSaving || !loaded}>
-          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          {isSaving ? "Saving…" : "Save Changes"}
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            <X className="h-4 w-4 mr-2" /> Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving || !loaded}>
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {isSaving ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </div>
   );
