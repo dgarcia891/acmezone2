@@ -358,7 +358,7 @@ const PodPipeline = () => {
                     size="sm"
                     variant="outline"
                     className="gap-1.5"
-                    onClick={() => setTrendingOpen(true)}
+                    onClick={() => handleTrendingOpenChange(true)}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     Give me an idea
