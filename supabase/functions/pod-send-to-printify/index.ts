@@ -13,7 +13,8 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE: Record<string, number> = {
+// Fallback prices if cost lookup fails (in cents)
+const FALLBACK_PRICE: Record<string, number> = {
   sticker: 499,
   tshirt: 2499,
 };
