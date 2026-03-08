@@ -299,6 +299,35 @@ export function useDeleteDesignVersion() {
   });
 }
 
+export function useUpdateDesignImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId, productType, blob }: { ideaId: string; productType: "sticker" | "tshirt"; blob: Blob }) => {
+      const filename = `${ideaId}/${productType}-edited-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("pod-assets")
+        .upload(filename, blob, { contentType: "image/png", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filename);
+      const publicUrl = urlData.publicUrl;
+      const urlField = productType === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+      const { data, error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ [urlField]: publicUrl, updated_at: new Date().toISOString() } as any)
+        .eq("id", ideaId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Edited image saved");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useDropDesign() {
   const qc = useQueryClient();
   return useMutation({
