@@ -85,6 +85,8 @@ export default function KanbanBoard({ onCardClick }: Props) {
               column={col}
               ideas={groupedIdeas[col.status] || []}
               onCardClick={onCardClick}
+              collapsed={!!collapsedColumns[col.status]}
+              onToggleCollapse={() => toggleCollapse(col.status)}
             />
           ))}
         </div>

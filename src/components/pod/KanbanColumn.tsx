@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import KanbanCard from "./KanbanCard";
 
 export interface ColumnDef {
@@ -14,10 +15,33 @@ interface KanbanColumnProps {
   column: ColumnDef;
   ideas: any[];
   onCardClick: (idea: any) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function KanbanColumn({ column, ideas, onCardClick }: KanbanColumnProps) {
+export default function KanbanColumn({ column, ideas, onCardClick, collapsed, onToggleCollapse }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.status });
+
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        onClick={onToggleCollapse}
+        className={`flex flex-col items-center w-[40px] min-w-[40px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] cursor-pointer hover:bg-muted/60 transition-colors ${isOver ? "ring-2 ring-primary/40" : ""}`}
+      >
+        <div className="flex flex-col items-center gap-1 py-3">
+          <span className="text-base">{column.emoji}</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5">{ideas.length}</Badge>
+        </div>
+        <span
+          className="text-xs font-semibold text-muted-foreground mt-2"
+          style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+        >
+          {column.label}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -29,6 +53,15 @@ export default function KanbanColumn({ column, ideas, onCardClick }: KanbanColum
         <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
           {ideas.length}
         </Badge>
+        {onToggleCollapse && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
+            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={`Collapse ${column.label} column`}
+          >
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
       <ScrollArea className="flex-1 max-h-[calc(100vh-240px)]">
         <div ref={setNodeRef} className="p-2 space-y-2 min-h-[60px]">
