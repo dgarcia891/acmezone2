@@ -1,32 +1,27 @@
 
 
-# Unified Admin Navigation
+## Fix: Persist Trending Ideas Dialog State Across Navigation
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### Problem
+The Trending Ideas dialog loses its fetched results when navigating to another tab and back, because `ideas` and `hasLoaded` are local component state that resets on unmount.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Solution
+Persist the fetched ideas array and loaded flag to `sessionStorage`. On mount, restore from storage so previously fetched results are still visible when the user returns.
 
-## Changes
+### Changes
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+**File:** `src/components/pod/TrendingIdeasDialog.tsx`
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+1. On component mount, initialize `ideas` and `hasLoaded` from `sessionStorage` keys (`pod_trending_ideas`, `pod_trending_loaded`).
+2. After a successful fetch, write the results to `sessionStorage`.
+3. On refresh, clear storage before re-fetching.
+4. Adjust `handleOpenChange` so it only auto-fetches if there are no cached results.
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
+**File:** `src/pages/admin/AdminPodPipeline.tsx`
 
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+Also persist the `trendingOpen` dialog state to `sessionStorage` so the dialog re-opens when the user navigates back.
+
+- On mount, check `sessionStorage` for `pod_trending_open` and restore.
+- When `trendingOpen` changes, write to `sessionStorage`.
+- When the dialog closes normally (via idea selection), clear the flag.
 
