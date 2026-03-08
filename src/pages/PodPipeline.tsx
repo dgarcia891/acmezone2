@@ -385,8 +385,16 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }}
                   onDropDesign={handleDropDesign}
+                  onEditSave={(type, blob) => {
+                    updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, {
+                      onSuccess: (updatedIdea: any) => {
+                        setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea }));
+                      },
+                    });
+                  }}
                   isApproving={generateListings.isPending}
                   isBgRemoving={bgRemoving}
+                  isEditSaving={updateDesignImage.isPending}
                 />
               )}
 
