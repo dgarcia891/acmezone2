@@ -2,11 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import ScrollToTop from "./components/ScrollToTop";
+
+// Public pages
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Products from "./pages/Products";
@@ -14,7 +17,6 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
 import Support from "./pages/Support";
@@ -27,13 +29,21 @@ import InsightReelSuccess from "./pages/InsightReelSuccess";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
-import PodPipeline from "./pages/PodPipeline";
-import { Navigate } from "react-router-dom";
-import ScrollToTop from "./components/ScrollToTop";
+
+// Admin layout + sub-pages
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminDetections from "./pages/admin/AdminDetections";
+import AdminCorrections from "./pages/admin/AdminCorrections";
+import AdminPatterns from "./pages/admin/AdminPatterns";
+import AdminUserReports from "./pages/admin/AdminUserReports";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPodPipeline from "./pages/admin/AdminPodPipeline";
 
 const queryClient = new QueryClient();
 
-// Component to handle page tracking inside BrowserRouter
 const PageTracker = () => {
   usePageTracking();
   return null;
@@ -54,19 +64,10 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin" element={
-                  <ProtectedRoute>
-                    <Admin />
-                  </ProtectedRoute>
+                  <ProtectedRoute><Dashboard /></ProtectedRoute>
                 } />
                 <Route path="/payment-success" element={
-                  <ProtectedRoute>
-                    <PaymentSuccess />
-                  </ProtectedRoute>
+                  <ProtectedRoute><PaymentSuccess /></ProtectedRoute>
                 } />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
@@ -76,21 +77,30 @@ const App = () => (
                 <Route path="/insightreel" element={<InsightReelLanding />} />
                 <Route path="/insightreel/pricing" element={<InsightReelPricing />} />
                 <Route path="/insightreel/success" element={
-                  <ProtectedRoute>
-                    <InsightReelSuccess />
-                  </ProtectedRoute>
+                  <ProtectedRoute><InsightReelSuccess /></ProtectedRoute>
                 } />
                 <Route path="/insightreel/dashboard" element={
-                  <ProtectedRoute>
-                    <InsightReelDashboard />
-                  </ProtectedRoute>
+                  <ProtectedRoute><InsightReelDashboard /></ProtectedRoute>
                 } />
+
+                {/* Admin area — nested routes with sidebar layout */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminOverview />} />
+                  <Route path="users" element={<AdminOverview />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="analytics" element={<AdminAnalytics />} />
+                  <Route path="security/detections" element={<AdminDetections />} />
+                  <Route path="security/corrections" element={<AdminCorrections />} />
+                  <Route path="security/patterns" element={<AdminPatterns />} />
+                  <Route path="security/reports" element={<AdminUserReports />} />
+                  <Route path="pod-pipeline" element={<AdminPodPipeline />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
+
+                {/* Backward-compat redirects */}
+                <Route path="/pod-pipeline" element={<Navigate to="/admin/pod-pipeline" replace />} />
                 <Route path="/hydra-guard/admin" element={<Navigate to="/admin" replace />} />
-                <Route path="/pod-pipeline" element={
-                  <ProtectedRoute>
-                    <PodPipeline />
-                  </ProtectedRoute>
-                } />
+
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
