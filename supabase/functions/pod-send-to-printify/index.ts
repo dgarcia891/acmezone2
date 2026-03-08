@@ -150,9 +150,10 @@ function filterVariantsByColor(
   const clashCategory = analysis.dominance; // "dark" or "light"
 
   for (const v of variants) {
-    // Printify variants have color in options or title
     const colorName = v.options?.color || v.options?.Color || v.title || "";
+    const extracted = extractColorName(colorName);
     const category = classifyVariantColor(colorName);
+    console.log(`Variant ${v.id}: raw="${colorName}" → extracted="${extracted}" → ${category}`);
 
     if (category === clashCategory) {
       variantStates.set(v.id, false);
