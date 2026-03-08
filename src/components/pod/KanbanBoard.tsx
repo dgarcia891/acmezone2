@@ -38,6 +38,7 @@ export default function KanbanBoard({ onCardClick }: Props) {
     const statusMap: Record<string, string> = {
       "analyzed": "designing",
       "designs_generated": "designing",
+      "bg_removed": "ready",
       "approved": "ready",
       "qc": "ready",
     };
