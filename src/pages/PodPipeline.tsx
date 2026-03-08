@@ -12,7 +12,7 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -60,6 +60,7 @@ const PodPipeline = () => {
   const deleteVersionMutation = useDeleteDesignVersion();
   const generateListings = useGenerateListings();
   const dropDesignMutation = useDropDesign();
+  const updateDesignImage = useUpdateDesignImage();
 
   // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
@@ -384,8 +385,16 @@ const PodPipeline = () => {
                   onReject={handleReject}
                   onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }}
                   onDropDesign={handleDropDesign}
+                  onEditSave={(type, blob) => {
+                    updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, {
+                      onSuccess: (updatedIdea: any) => {
+                        setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea }));
+                      },
+                    });
+                  }}
                   isApproving={generateListings.isPending}
                   isBgRemoving={bgRemoving}
+                  isEditSaving={updateDesignImage.isPending}
                 />
               )}
 
