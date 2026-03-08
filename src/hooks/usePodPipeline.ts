@@ -47,7 +47,7 @@ export function usePodAnalyze() {
 export function usePodGenerateDesigns() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { idea_id: string; product_type: string; sticker_prompt?: string; tshirt_prompt?: string }) => {
+    mutationFn: async (body: { idea_id: string; product_type: string; sticker_prompt?: string; tshirt_prompt?: string; sticker_guidance?: string; tshirt_guidance?: string }) => {
       const { data, error } = await supabase.functions.invoke("pod-generate-designs", { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
