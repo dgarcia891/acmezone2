@@ -25,6 +25,141 @@ const MARKETPLACE_TITLE_LIMITS: Record<string, number> = {
   default: 140,
 };
 
+// --------------- Color-aware variant filtering ---------------
+
+const DARK_COLORS = new Set([
+  "black", "dark heather", "navy", "dark grey", "dark gray",
+  "forest green", "maroon", "dark chocolate", "charcoal",
+  "dark heather grey", "dark heather gray",
+]);
+
+const LIGHT_COLORS = new Set([
+  "white", "natural", "sport grey", "sport gray", "light blue",
+  "light pink", "sand", "ash", "ice grey", "ice gray",
+  "cream", "soft cream", "heather prism ice blue",
+]);
+
+type ColorDominance = "dark" | "light" | "medium";
+
+interface ColorAnalysis {
+  dominance: ColorDominance;
+  dominant_colors: string[];
+}
+
+async function analyzeDesignColors(imageUrl: string): Promise<ColorAnalysis | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    console.warn("LOVABLE_API_KEY not set, skipping color analysis");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analyze this design image for t-shirt printing. What are the dominant colors? Is the design predominantly dark, light, or medium brightness? Respond ONLY with valid JSON: {\"dominance\": \"dark\" | \"light\" | \"medium\", \"dominant_colors\": [\"color1\", \"color2\"]}" },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI color analysis failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    // Extract JSON from the response (handle markdown code blocks)
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      console.warn("Could not parse color analysis response:", text);
+      return null;
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!["dark", "light", "medium"].includes(parsed.dominance)) {
+      console.warn("Invalid dominance value:", parsed.dominance);
+      return null;
+    }
+    return {
+      dominance: parsed.dominance as ColorDominance,
+      dominant_colors: Array.isArray(parsed.dominant_colors) ? parsed.dominant_colors : [],
+    };
+  } catch (err) {
+    console.error("Color analysis error:", err);
+    return null;
+  }
+}
+
+function classifyVariantColor(colorName: string): "dark" | "light" | "neutral" {
+  const lower = colorName.toLowerCase().trim();
+  if (DARK_COLORS.has(lower)) return "dark";
+  if (LIGHT_COLORS.has(lower)) return "light";
+  return "neutral";
+}
+
+interface VariantFilterResult {
+  variantStates: Map<number, boolean>; // variant id -> is_enabled
+  excludedCount: number;
+  analysis: ColorAnalysis;
+}
+
+function filterVariantsByColor(
+  variants: { id: number; options?: Record<string, string>; title?: string }[],
+  analysis: ColorAnalysis
+): VariantFilterResult {
+  const variantStates = new Map<number, boolean>();
+  let excludedCount = 0;
+
+  if (analysis.dominance === "medium") {
+    // Medium/colorful designs work on most colors — enable all
+    for (const v of variants) {
+      variantStates.set(v.id, true);
+    }
+    return { variantStates, excludedCount: 0, analysis };
+  }
+
+  const clashCategory = analysis.dominance; // "dark" or "light"
+
+  for (const v of variants) {
+    // Printify variants have color in options or title
+    const colorName = v.options?.color || v.options?.Color || v.title || "";
+    const category = classifyVariantColor(colorName);
+
+    if (category === clashCategory) {
+      variantStates.set(v.id, false);
+      excludedCount++;
+    } else {
+      variantStates.set(v.id, true);
+    }
+  }
+
+  // Safety: ensure at least 3 variants remain enabled
+  const enabledCount = variants.length - excludedCount;
+  if (enabledCount < 3) {
+    // Re-enable all and skip filtering
+    for (const v of variants) {
+      variantStates.set(v.id, true);
+    }
+    return { variantStates, excludedCount: 0, analysis };
+  }
+
+  return { variantStates, excludedCount, analysis };
+}
+
+// --------------- Helpers ---------------
+
 function sanitizeTitle(title: string | null | undefined, maxLen = 140) {
   const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
   return normalized.slice(0, maxLen);
@@ -58,6 +193,8 @@ async function printifyFetch(path: string, apiKey: string, options: RequestInit 
   return data;
 }
 
+// --------------- Main handler ---------------
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -84,7 +221,6 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    // Accept per-shop publish overrides instead of a single boolean
     const { idea_id, product_types, publish_overrides } = await req.json();
     if (!idea_id) return json({ error: "idea_id is required" }, 400);
 
@@ -110,7 +246,7 @@ Deno.serve(async (req) => {
     }
     if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
 
-    // Fetch Printify credentials + primary auto_publish
+    // Fetch Printify credentials
     const { data: settings } = await supabase
       .from("az_pod_settings")
       .select("printify_api_key, printify_shop_id, auto_publish")
@@ -120,7 +256,7 @@ Deno.serve(async (req) => {
       return json({ error: "Printify API key and Shop ID are required. Configure them in Settings." }, 400);
     }
 
-    // Fetch additional shops (including auto_publish)
+    // Fetch additional shops
     const { data: additionalShops } = await supabase
       .from("az_pod_printify_shops")
       .select("*")
@@ -129,7 +265,6 @@ Deno.serve(async (req) => {
 
     const { printify_api_key, printify_shop_id } = settings;
 
-    // Build shop list: primary + additional, each with their own auto_publish default
     const shops = [
       { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false },
       ...(additionalShops || []).map((s: any) => ({
@@ -140,8 +275,21 @@ Deno.serve(async (req) => {
       })),
     ];
 
-    // publish_overrides is a Record<shop_id, boolean> that allows per-shop override at send time
     const overrides: Record<string, boolean> = publish_overrides || {};
+
+    // Run color analysis for t-shirt designs (skip stickers)
+    const colorAnalysisCache: Record<string, ColorAnalysis | null> = {};
+    for (const listing of filteredListings) {
+      if (listing.product_type === "sticker") continue;
+      const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
+      if (designUrl && !colorAnalysisCache[designUrl]) {
+        console.log(`Analyzing design colors for ${listing.product_type}...`);
+        colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
+        if (colorAnalysisCache[designUrl]) {
+          console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+        }
+      }
+    }
 
     const results: any[] = [];
 
@@ -183,14 +331,24 @@ Deno.serve(async (req) => {
         `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
         printify_api_key
       );
-      const variantIds = (variants.variants || []).map((v: any) => v.id);
-      if (!variantIds.length) {
+      const variantList = variants.variants || [];
+      if (!variantList.length) {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
 
-      // Create product on each shop with per-shop publish decision
+      // Apply color-aware filtering for t-shirts
+      const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
+      let variantFilterResult: VariantFilterResult | null = null;
+
+      if (colorAnalysis && listing.product_type === "tshirt") {
+        variantFilterResult = filterVariantsByColor(variantList, colorAnalysis);
+        if (variantFilterResult.excludedCount > 0) {
+          console.log(`Color filter: excluded ${variantFilterResult.excludedCount} ${colorAnalysis.dominance} variants`);
+        }
+      }
+
+      // Create product on each shop
       for (const shop of shops) {
-        // Determine publish: override > shop default
         const shouldPublish = shop.shop_id in overrides
           ? overrides[shop.shop_id]
           : shop.auto_publish;
@@ -207,13 +365,15 @@ Deno.serve(async (req) => {
               tags: listing.tags || [],
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
-              variants: variantIds.map((vid: number) => ({
-                id: vid,
+              variants: variantList.map((v: any) => ({
+                id: v.id,
                 price: DEFAULT_VARIANT_PRICE_BY_PRODUCT_TYPE[listing.product_type] ?? 1999,
-                is_enabled: true,
+                is_enabled: variantFilterResult
+                  ? (variantFilterResult.variantStates.get(v.id) ?? true)
+                  : true,
               })),
               print_areas: [{
-                variant_ids: variantIds,
+                variant_ids: variantList.map((v: any) => v.id),
                 placeholders: [{
                   position: "front",
                   images: [{
@@ -229,7 +389,6 @@ Deno.serve(async (req) => {
           });
           console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
 
-          // Publish if this shop's setting says so
           let published = false;
           if (shouldPublish) {
             try {
@@ -266,6 +425,14 @@ Deno.serve(async (req) => {
             variants_count: (product.variants || []).length,
             variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
             published,
+            // Color analysis metadata
+            ...(variantFilterResult && variantFilterResult.excludedCount > 0 ? {
+              color_analysis: {
+                dominance: variantFilterResult.analysis.dominance,
+                dominant_colors: variantFilterResult.analysis.dominant_colors,
+                excluded_count: variantFilterResult.excludedCount,
+              },
+            } : {}),
           });
         } catch (shopError) {
           console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);
