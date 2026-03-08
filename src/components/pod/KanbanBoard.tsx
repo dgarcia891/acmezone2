@@ -26,10 +26,19 @@ export default function KanbanBoard({ onCardClick }: Props) {
   const updateStatus = useUpdateIdeaStatus();
   const [rejectedOpen, setRejectedOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("pod-kanban-collapsed");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
 
   const toggleCollapse = (status: string) => {
-    setCollapsedColumns((prev) => ({ ...prev, [status]: !prev[status] }));
+    setCollapsedColumns((prev) => {
+      const next = { ...prev, [status]: !prev[status] };
+      localStorage.setItem("pod-kanban-collapsed", JSON.stringify(next));
+      return next;
+    });
   };
 
   const sensors = useSensors(
