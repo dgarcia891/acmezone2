@@ -157,7 +157,7 @@ The commercial_viability_score MUST be an integer from 1-10.`;
         user_id: user.id,
         idea_text,
         image_url: storedImageUrl,
-        product_type: "both",
+        product_type: product_type || "both",
         analysis,
         sticker_design_prompt: analysis.sticker_design_prompt,
         tshirt_design_prompt: analysis.tshirt_design_prompt,
