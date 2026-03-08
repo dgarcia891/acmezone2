@@ -375,21 +375,25 @@ export function useDropDesign() {
   });
 }
 
-export function useSuggestIdea() {
+export interface TrendingSuggestion {
+  idea_text: string;
+  product_type: string;
+  reasoning: string;
+  target_audience: string;
+  estimated_viability: number;
+  trend_momentum: "rising" | "peaking" | "steady";
+  category: string;
+}
+
+export function useSuggestIdeas() {
   return useMutation({
-    mutationFn: async (category?: string) => {
+    mutationFn: async ({ category, count }: { category?: string; count?: number } = {}) => {
       const { data, error } = await supabase.functions.invoke("pod-suggest-idea", {
-        body: { category: category || "any" },
+        body: { category: category || "any", count: count || 5 },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data.suggestion as {
-        idea_text: string;
-        product_type: string;
-        reasoning: string;
-        target_audience: string;
-        estimated_viability: number;
-      };
+      return data.suggestions as TrendingSuggestion[];
     },
     onError: (err: Error) => toast.error(err.message),
   });

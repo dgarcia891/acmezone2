@@ -13,7 +13,8 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdea } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdeas } from "@/hooks/usePodPipeline";
+import TrendingIdeasDialog from "@/components/pod/TrendingIdeasDialog";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -57,7 +58,8 @@ const PodPipeline = () => {
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
   const removeBgMutation = usePodRemoveBg();
-  const suggestMutation = useSuggestIdea();
+  const suggestMutation = useSuggestIdeas();
+  const [trendingOpen, setTrendingOpen] = useState(false);
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
@@ -348,25 +350,26 @@ const PodPipeline = () => {
                     <PlusCircle className="h-3.5 w-3.5" /> New Idea
                   </Button>
 
-                  <Button
+              <Button
                     size="sm"
                     variant="outline"
                     className="gap-1.5"
-                    disabled={suggestMutation.isPending}
-                    onClick={async () => {
-                      const suggestion = await suggestMutation.mutateAsync("any");
-                      if (suggestion) {
-                        openWizardForNew();
-                        setVariantDefaults({
-                          idea_text: suggestion.idea_text,
-                          product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
-                        });
-                      }
-                    }}
+                    onClick={() => setTrendingOpen(true)}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    {suggestMutation.isPending ? "Thinking…" : "Give me an idea"}
+                    Give me an idea
                   </Button>
+                  <TrendingIdeasDialog
+                    open={trendingOpen}
+                    onOpenChange={setTrendingOpen}
+                    onSelectIdea={(suggestion) => {
+                      openWizardForNew();
+                      setVariantDefaults({
+                        idea_text: suggestion.idea_text,
+                        product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                      });
+                    }}
+                  />
                   <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                     <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
                       <LayoutGrid className="h-3.5 w-3.5" /> Board
