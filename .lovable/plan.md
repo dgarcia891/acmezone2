@@ -1,32 +1,41 @@
 
 
-# Unified Admin Navigation
+## Auto-Fetch Printify Print Providers for Blueprint ID
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### Overview
+Replace the manual Print Provider ID text input in `ListingEditor.tsx` with a dynamic dropdown that auto-fetches available print providers from the Printify API when a Blueprint ID is entered.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Implementation
 
-## Changes
+**1. New Edge Function: `pod-printify-providers/index.ts`**
+- Accepts `{ blueprint_id: string }` in the request body
+- Reads the Printify API key from `az_pod_settings` (same pattern as `pod-send-to-printify`)
+- Calls `GET /v1/catalog/blueprints/{blueprint_id}/print_providers.json`
+- Returns the array of providers (each has `id`, `title`, `location` fields)
+- Requires auth, CORS headers, standard error handling
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+**2. New Hook: add `usePrintifyProviders` to `src/hooks/usePodListings.ts`**
+- Takes a `blueprintId: string | null` parameter
+- Calls the edge function via `supabase.functions.invoke("pod-printify-providers", { body: { blueprint_id } })`
+- Uses `useQuery` with `enabled: !!blueprintId && blueprintId.length > 0`
+- Caches results per blueprint ID (`queryKey: ["printify-providers", blueprintId]`)
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+**3. Update `src/components/pod/ListingEditor.tsx`**
+- Import `usePrintifyProviders` and `Select` component
+- When `blueprintId` changes (on blur/save), the hook fetches providers
+- Replace the Print Provider ID `<Input>` with a `<Select>` dropdown:
+  - Shows provider `title` and `location` as label, `id` as value
+  - Loading state: show skeleton/spinner inside select
+  - Error state: fall back to manual text input with warning
+  - Empty state: show "No providers found" message
+- On selection, save `printify_print_provider_id` to the listing
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
+### Files Changed
 
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+| File | Change |
+|------|--------|
+| `supabase/functions/pod-printify-providers/index.ts` | New edge function to proxy Printify catalog API |
+| `supabase/config.toml` | Add `[functions.pod-printify-providers]` with `verify_jwt = false` |
+| `src/hooks/usePodListings.ts` | Add `usePrintifyProviders(blueprintId)` query hook |
+| `src/components/pod/ListingEditor.tsx` | Replace provider ID input with auto-populated Select dropdown |
 
