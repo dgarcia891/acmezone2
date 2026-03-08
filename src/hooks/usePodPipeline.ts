@@ -374,3 +374,23 @@ export function useDropDesign() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export function useSuggestIdea() {
+  return useMutation({
+    mutationFn: async (category?: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-suggest-idea", {
+        body: { category: category || "any" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.suggestion as {
+        idea_text: string;
+        product_type: string;
+        reasoning: string;
+        target_audience: string;
+        estimated_viability: number;
+      };
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
