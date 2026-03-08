@@ -1,0 +1,2 @@
+ALTER TABLE sa_corrections ADD COLUMN IF NOT EXISTS detection_snapshot JSONB DEFAULT NULL;
+COMMENT ON COLUMN sa_corrections.detection_snapshot IS 'Full detection context at time of user feedback — flagged check, scan snapshot, AI verification, email context';

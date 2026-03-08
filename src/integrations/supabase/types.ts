@@ -609,6 +609,7 @@ export type Database = {
           ai_review_result: Json | null
           created_at: string
           detection_id: string | null
+          detection_snapshot: Json | null
           feedback: string
           id: string
           review_status: string
@@ -622,6 +623,7 @@ export type Database = {
           ai_review_result?: Json | null
           created_at?: string
           detection_id?: string | null
+          detection_snapshot?: Json | null
           feedback: string
           id?: string
           review_status?: string
@@ -635,6 +637,7 @@ export type Database = {
           ai_review_result?: Json | null
           created_at?: string
           detection_id?: string | null
+          detection_snapshot?: Json | null
           feedback?: string
           id?: string
           review_status?: string
