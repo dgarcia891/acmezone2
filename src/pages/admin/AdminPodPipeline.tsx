@@ -27,6 +27,7 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 }
 
 export default function AdminPodPipeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardIdea, setWizardIdea] = useState<any>(null);
