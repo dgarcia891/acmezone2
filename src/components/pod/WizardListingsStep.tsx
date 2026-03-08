@@ -366,8 +366,14 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     <p className="text-xs text-muted-foreground">
                       {result.product_type} · {result.variants_enabled}/{result.variants_count} variants enabled
                     </p>
-                  </div>
-                  <Badge variant="secondary" className="text-[10px]">{result.printify_product_id}</Badge>
+                    {result.color_analysis && result.color_analysis.excluded_count > 0 && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Palette className="h-3 w-3 text-accent-foreground" />
+                        <span className="text-[11px] text-muted-foreground">
+                          🎨 Auto-excluded {result.color_analysis.excluded_count} {result.color_analysis.dominance} variant{result.color_analysis.excluded_count !== 1 ? "s" : ""} to avoid clashing with the {result.color_analysis.dominance} design
+                        </span>
+                      </div>
+                    )}
                 </div>
                 {result.images.length > 0 && (
                   <div>
