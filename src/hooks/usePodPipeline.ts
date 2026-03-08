@@ -198,6 +198,18 @@ export function useValidateRemoveBgKey() {
 }
 
 
+export function useFetchPrintifyShops() {
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("pod-printify-shops");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.shops as Array<{ id: string; title: string; sales_channel: string }>;
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function usePodRemoveBg() {
   const qc = useQueryClient();
   return useMutation({

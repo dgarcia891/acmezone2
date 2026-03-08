@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store } from "lucide-react";
-import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop, useSetShopAutoPublish } from "@/hooks/usePodPipeline";
+import { Sparkles, Printer, Eraser, CheckCircle2, XCircle, Save, Loader2, ShieldCheck, Plus, Trash2, Store, RefreshCw, Download } from "lucide-react";
+import { usePodSettings, useSavePodSettings, useValidateRemoveBgKey, useAddShop, useRemoveShop, useToggleShop, useSetShopAutoPublish, useFetchPrintifyShops } from "@/hooks/usePodPipeline";
 
 const MARKETPLACE_OPTIONS = [
   { value: "ebay", label: "eBay", description: "80 char title limit" },
@@ -35,6 +35,8 @@ export default function PodSettingsForm() {
   const removeShopMutation = useRemoveShop();
   const toggleShopMutation = useToggleShop();
   const setAutoPublishMutation = useSetShopAutoPublish();
+  const fetchShopsMutation = useFetchPrintifyShops();
+  const [discoveredShops, setDiscoveredShops] = useState<Array<{ id: string; title: string; sales_channel: string }>>([]);
 
   const [form, setForm] = useState({
     printify_api_key: "",
@@ -156,6 +158,75 @@ export default function PodSettingsForm() {
           <p className="text-xs text-muted-foreground mb-3">
             Add Printify shops linked to specific marketplaces. Products will be posted to all active shops with marketplace-appropriate titles.
           </p>
+
+          {/* Fetch Shops from Printify */}
+          <div className="mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+              onClick={async () => {
+                const shops = await fetchShopsMutation.mutateAsync();
+                setDiscoveredShops(shops);
+              }}
+              disabled={fetchShopsMutation.isPending || !settings?.has_printify_api_key}
+            >
+              {fetchShopsMutation.isPending ? <Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> : <Download className="h-3 w-3 mr-1.5" />}
+              Fetch Shops from Printify
+            </Button>
+            {!settings?.has_printify_api_key && (
+              <p className="text-[10px] text-muted-foreground mt-1">Save your Printify API key first to fetch shops.</p>
+            )}
+          </div>
+
+          {/* Discovered shops */}
+          {discoveredShops.length > 0 && (
+            <div className="mb-4 p-3 rounded-md border border-primary/30 bg-primary/5 space-y-2">
+              <p className="text-xs font-medium">Discovered {discoveredShops.length} shop(s) from Printify:</p>
+              {discoveredShops.map((shop) => {
+                const alreadyAdded = additionalShops.some((s: any) => s.shop_id === shop.id) || form.printify_shop_id === shop.id;
+                const guessedMarketplace = shop.sales_channel?.toLowerCase().includes("etsy") ? "etsy"
+                  : shop.sales_channel?.toLowerCase().includes("ebay") ? "ebay"
+                  : shop.sales_channel?.toLowerCase().includes("shopify") ? "shopify"
+                  : "other";
+                return (
+                  <div key={shop.id} className="flex items-center gap-2 p-2 rounded-md border border-border bg-background">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium">{shop.title}</span>
+                      <span className="text-[10px] text-muted-foreground ml-2">ID: {shop.id}</span>
+                      <span className="text-[10px] text-muted-foreground ml-2">({shop.sales_channel})</span>
+                    </div>
+                    {alreadyAdded ? (
+                      <Badge variant="secondary" className="text-[10px] shrink-0">Already added</Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] shrink-0"
+                        onClick={() => {
+                          addShopMutation.mutate(
+                            { shop_id: shop.id, marketplace: guessedMarketplace, label: shop.title },
+                            { onSuccess: () => setDiscoveredShops((prev) => prev.filter((s) => s.id !== shop.id)) }
+                          );
+                        }}
+                        disabled={addShopMutation.isPending}
+                      >
+                        <Plus className="h-2.5 w-2.5 mr-0.5" /> Add
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[10px] h-6 px-2"
+                onClick={() => setDiscoveredShops([])}
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
 
           {/* Existing shops list */}
           {additionalShops.length > 0 && (
