@@ -1,32 +1,21 @@
 
 
-# Unified Admin Navigation
+## Fix: `pod-generate-listings` Not Deployed
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### Root Cause
+The edge function `pod-generate-listings` is missing from `supabase/config.toml`. Without a config entry, it was never deployed. When you clicked "Approve & Generate Listings" in Step 4, the function call returned a 404/error, the `onError` handler showed a toast (which you may have missed), and the wizard stayed on Step 4. Since you walked away, the page may have refreshed or the session timed out, returning you to the Kanban board. The idea's status is still `bg_removed` -- listings were never generated.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Fix (1 file)
 
-## Changes
+**`supabase/config.toml`** -- Add the missing function entry:
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+```toml
+[functions.pod-generate-listings]
+verify_jwt = false
+```
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
+This will trigger auto-deployment of the function. After that, you can re-open the idea from the Kanban board (it will open at Step 4 since status is `bg_removed`), click "Approve & Generate Listings" again, and it should work.
 
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
-
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+### Also missing from config (while we're at it)
+I'll audit whether `pod-remove-bg` and `pod-send-to-printify` are also missing. `pod-remove-bg` appears to work (logs show successful runs), so it was likely deployed at some point. `pod-send-to-printify` should also be checked.
 
