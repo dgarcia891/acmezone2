@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
     // Fetch Printify credentials
     const { data: settings } = await supabase
       .from("az_pod_settings")
-      .select("printify_api_key, printify_shop_id, auto_publish")
+      .select("printify_api_key, printify_shop_id, auto_publish, tshirt_margin_pct, sticker_margin_pct")
       .eq("user_id", user.id)
       .single();
     if (!settings?.printify_api_key || !settings?.printify_shop_id) {
