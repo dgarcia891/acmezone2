@@ -127,6 +127,83 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   // Build shops array for listing editor marketplace preview
   const shops = allShops.map((s) => ({ shop_id: s.shop_id, marketplace: s.marketplace, label: s.label }));
 
+  // Hydrate local override state once
+  useEffect(() => {
+    if (hydratedOverrides) return;
+    if (!overrideData) return;
+
+    const next: Record<string, { tshirt_margin_pct: number | null; sticker_margin_pct: number | null }> = {};
+    for (const shop of allShops) {
+      const row = overrideData.perShop?.[shop.shop_id];
+      next[shop.shop_id] = {
+        tshirt_margin_pct: row?.tshirt_margin_pct ?? null,
+        sticker_margin_pct: row?.sticker_margin_pct ?? null,
+      };
+    }
+
+    setMarginOverrides(next);
+    setHydratedOverrides(true);
+  }, [hydratedOverrides, overrideData, allShops]);
+
+  const tshirtListing = useMemo(() => listings.find((l: any) => l.product_type === "tshirt") || null, [listings]);
+  const tshirtBlueprintId = tshirtListing?.printify_blueprint_id ?? null;
+  const tshirtPrintProviderId = tshirtListing?.printify_print_provider_id ?? null;
+
+  const variantsQuery = useFetchVariantColors({
+    blueprintId: tshirtBlueprintId,
+    printProviderId: tshirtPrintProviderId,
+    imageUrl: idea?.tshirt_design_url || null,
+  });
+
+  const variantIdsSet = useMemo(() => new Set(tshirtVariantIds.map((n) => Number(n)).filter((n) => Number.isFinite(n))), [tshirtVariantIds]);
+
+  const colorsByName = useMemo(() => {
+    const map = new Map<string, number[]>();
+    const variants = variantsQuery.data?.variants || [];
+
+    for (const v of variants) {
+      const raw = v.options?.color || v.options?.Color || v.title || "";
+      const colorName = String(raw).split(" / ")[0].trim() || "Unknown";
+      const list = map.get(colorName) || [];
+      list.push(v.id);
+      map.set(colorName, list);
+    }
+
+    return map;
+  }, [variantsQuery.data?.variants]);
+
+  const recommendedVariantSet = useMemo(() => {
+    const ids = variantsQuery.data?.recommended_variant_ids || [];
+    return new Set(ids.map((n) => Number(n)).filter((n) => Number.isFinite(n)));
+  }, [variantsQuery.data?.recommended_variant_ids]);
+
+  useEffect(() => {
+    if (hydratedColors) return;
+    if (!overrideData) return;
+    if (!variantsQuery.data) return;
+
+    const fromDb = overrideData.global?.tshirt_color_overrides;
+    const dbIds = Array.isArray(fromDb) ? fromDb.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n)) : [];
+
+    if (dbIds.length > 0) {
+      setTshirtVariantIds(dbIds);
+      setHydratedColors(true);
+      return;
+    }
+
+    const recommended = variantsQuery.data.recommended_variant_ids || [];
+    const recommendedIds = recommended.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n));
+    if (recommendedIds.length > 0) {
+      setTshirtVariantIds(recommendedIds);
+      setHydratedColors(true);
+      return;
+    }
+
+    const all = (variantsQuery.data.variants || []).map((v) => v.id);
+    setTshirtVariantIds(all);
+    setHydratedColors(true);
+  }, [hydratedColors, overrideData, variantsQuery.data]);
+
   // Initialize overrides from shop defaults
   useEffect(() => {
     if (allShops.length > 0 && Object.keys(publishOverrides).length === 0) {
