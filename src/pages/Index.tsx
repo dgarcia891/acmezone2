@@ -16,6 +16,17 @@ import {
 } from "@/components/ui/carousel";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ogImage from "@/assets/og-default.jpg";
+import JsonLd, { organizationSchema, webSiteSchema, SITE_URL } from "@/components/seo/JsonLd";
+import FAQSection from "@/components/seo/FAQSection";
+import { faqSchema } from "@/components/seo/JsonLd";
+
+const homeFaqs = [
+  { question: "What is Acme Zone?", answer: "Acme Zone is a software studio that builds AI-powered tools for automation, image processing, and workflow optimization. All our browser-based tools are free, private, and require no sign-up." },
+  { question: "Are the tools really free?", answer: "Yes! Browser-based tools like Background Remover and HEIC-to-JPG Converter are completely free with unlimited use. Some products like InsightReel offer a free trial with optional paid tiers." },
+  { question: "Is my data safe?", answer: "Absolutely. Our browser-based tools process everything locally on your device — no images or files are ever uploaded to our servers. Products that use cloud processing follow strict data privacy policies." },
+  { question: "What AI technologies do you use?", answer: "We use state-of-the-art machine learning models for background removal, image segmentation, natural language processing, and sentiment analysis. Our tools leverage transformer-based architectures for high accuracy." },
+  { question: "Do I need to create an account?", answer: "No account is needed for our free tools. For premium products like InsightReel and Pre-Apply AI, a free account lets you manage your usage and subscriptions." },
+];
 
 const ProductCard = ({ product }: { product: Product }) => {
   const hasMultipleImages = product.images && product.images.length > 1;
