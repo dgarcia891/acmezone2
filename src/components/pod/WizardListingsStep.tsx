@@ -42,6 +42,40 @@ const MARKETPLACE_COLORS: Record<string, string> = {
   other: "bg-muted text-muted-foreground",
 };
 
+// Data-driven swatches: keep them subtle + HSL-based; unknown names fall back to theme tokens.
+const COLOR_SWATCH_HSL: Record<string, string> = {
+  black: "hsl(0 0% 10%)",
+  white: "hsl(0 0% 98%)",
+  navy: "hsl(220 55% 25%)",
+  blue: "hsl(215 75% 45%)",
+  lightblue: "hsl(205 80% 75%)",
+  red: "hsl(0 80% 52%)",
+  maroon: "hsl(350 60% 30%)",
+  green: "hsl(140 45% 35%)",
+  forest: "hsl(140 45% 25%)",
+  yellow: "hsl(45 95% 55%)",
+  orange: "hsl(25 90% 55%)",
+  pink: "hsl(330 85% 70%)",
+  purple: "hsl(275 65% 55%)",
+  grey: "hsl(0 0% 55%)",
+  gray: "hsl(0 0% 55%)",
+  charcoal: "hsl(0 0% 25%)",
+  sand: "hsl(35 35% 75%)",
+  natural: "hsl(35 25% 85%)",
+};
+
+function swatchForColorName(colorName: string): string {
+  const key = colorName.toLowerCase().replace(/\s+/g, "");
+  // Try exact key first
+  if (COLOR_SWATCH_HSL[key]) return COLOR_SWATCH_HSL[key];
+
+  // Try partial matches (e.g. "dark heather grey")
+  for (const k of Object.keys(COLOR_SWATCH_HSL)) {
+    if (key.includes(k)) return COLOR_SWATCH_HSL[k];
+  }
+
+  return "hsl(var(--muted))";
+}
 interface PrintifyProductResult {
   product_type: string;
   printify_product_id: string;
