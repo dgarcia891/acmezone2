@@ -265,6 +265,27 @@ Deno.serve(async (req) => {
     }
     if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
 
+    // Fetch per-idea overrides (margins + optional manual t-shirt variant selection)
+    const { data: overrideRows, error: overrideErr } = await supabase
+      .from("az_pod_idea_overrides")
+      .select("*")
+      .eq("idea_id", idea_id);
+    if (overrideErr) throw overrideErr;
+
+    const perShopOverrides = new Map<string, any>();
+    let globalOverride: any = null;
+    for (const r of overrideRows || []) {
+      if (r?.shop_id) perShopOverrides.set(String(r.shop_id), r);
+      else globalOverride = r;
+    }
+
+    const rawManual = globalOverride?.tshirt_color_overrides;
+    const manualVariantIds = Array.isArray(rawManual)
+      ? rawManual.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+      : [];
+    const manualVariantIdSet = new Set<number>(manualVariantIds);
+    const hasManualTshirtVariants = manualVariantIdSet.size > 0;
+
     // Fetch Printify credentials
     const { data: settings } = await supabase
       .from("az_pod_settings")
