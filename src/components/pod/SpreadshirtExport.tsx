@@ -35,6 +35,15 @@ export default function SpreadshirtExport({ idea, listings }: Props) {
   const [downloadingTshirt, setDownloadingTshirt] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
 
+  const STORAGE_KEY = "pod-spreadshirt-expanded";
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
   const stickerListing = listings.find((l) => l.product_type === "sticker");
   const tshirtListing = listings.find((l) => l.product_type === "tshirt");
 
