@@ -19,6 +19,7 @@ import DetectionsTab from '@/components/hydra-guard/DetectionsTab';
 import CorrectionsTab from '@/components/hydra-guard/CorrectionsTab';
 import PatternsTab from '@/components/hydra-guard/PatternsTab';
 import UserReportsTab from '@/components/hydra-guard/UserReportsTab';
+import HydraGuardSummary from '@/components/hydra-guard/HydraGuardSummary';
 import { 
   Users, 
   Shield, 
@@ -323,6 +324,7 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="hydra-guard">
+              <HydraGuardSummary />
               <Tabs defaultValue="corrections" className="space-y-4">
                 <TabsList>
                   <TabsTrigger value="detections" className="gap-2"><Eye className="h-4 w-4" />Detections</TabsTrigger>

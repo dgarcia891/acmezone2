@@ -163,7 +163,7 @@ const UserReportsTab = () => {
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(0); }}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {['all', 'pending', 'reviewed', 'dismissed', 'promoted'].map(s => (
+            {['all', 'pending', 'reviewed', 'dismissed', 'flagged'].map(s => (
               <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             ))}
           </SelectContent>
@@ -308,8 +308,8 @@ const UserReportsTab = () => {
                     <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'dismissed')}>
                       <XCircle className="h-4 w-4 mr-2" /> Dismiss
                     </Button>
-                    <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'promoted')}>
-                      <AlertCircle className="h-4 w-4 mr-2" /> Flag for Review
+                    <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'flagged')}>
+                      <AlertCircle className="h-4 w-4 mr-2" /> Flag for Investigation
                     </Button>
                   </div>
                 </div>

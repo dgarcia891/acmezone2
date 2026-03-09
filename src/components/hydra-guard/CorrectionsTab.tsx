@@ -27,14 +27,14 @@ interface Correction {
   created_at: string;
 }
 
-interface Stats { pending: number; approvedWeek: number; rejectedWeek: number; }
+interface Stats { pending: number; needsReview: number; approvedWeek: number; rejectedWeek: number; }
 
 const CorrectionsTab = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats>({ pending: 0, approvedWeek: 0, rejectedWeek: 0 });
+  const [stats, setStats] = useState<Stats>({ pending: 0, needsReview: 0, approvedWeek: 0, rejectedWeek: 0 });
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -43,13 +43,15 @@ const CorrectionsTab = () => {
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const [{ count: pend }, { data: weekData }] = await Promise.all([
+    const [{ count: pend }, { count: needsRev }, { data: weekData }] = await Promise.all([
       supabase.from('sa_corrections').select('*', { count: 'exact', head: true }).eq('review_status', 'pending'),
+      supabase.from('sa_corrections').select('*', { count: 'exact', head: true }).eq('review_status', 'needs_review'),
       supabase.from('sa_corrections').select('review_status, reviewed_at').gte('reviewed_at', weekAgo),
     ]);
     const rows = (weekData as unknown as Correction[]) || [];
     setStats({
       pending: pend ?? 0,
+      needsReview: needsRev ?? 0,
       approvedWeek: rows.filter(r => r.review_status === 'approved').length,
       rejectedWeek: rows.filter(r => r.review_status === 'rejected').length,
     });
@@ -142,9 +144,10 @@ const CorrectionsTab = () => {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         {[
           { label: 'Pending Review', value: stats.pending, icon: Clock, color: 'text-yellow-600' },
+          { label: 'Needs Review', value: stats.needsReview, icon: AlertCircle, color: 'text-orange-600' },
           { label: 'Approved (7d)', value: stats.approvedWeek, icon: CheckCircle, color: 'text-green-600' },
           { label: 'Rejected (7d)', value: stats.rejectedWeek, icon: XCircle, color: 'text-red-600' },
         ].map(s => (
@@ -228,7 +231,7 @@ const CorrectionsTab = () => {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-3 border-t">
-              <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages}</span>
+              <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({totalCount} total)</span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
                 <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>

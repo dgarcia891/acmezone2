@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { severityBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
@@ -47,6 +49,42 @@ const DetectionsTab = () => {
   const [dateRange, setDateRange] = useState('7d');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Detection | null>(null);
+  const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
+  const [promoteForm, setPromoteForm] = useState({ phrase: '', category: 'urgency', severity_weight: 5 });
+
+  const extractSignals = (signals: any) => {
+    const list: string[] = [];
+    if (signals?.hard && Array.isArray(signals.hard)) {
+      list.push(...signals.hard);
+    }
+    if (signals?.soft && Array.isArray(signals.soft)) {
+      list.push(...signals.soft);
+    }
+    return list.map(s => typeof s === 'string' ? s : (s as any)?.phrase || JSON.stringify(s)).filter(Boolean);
+  };
+
+  const openPromote = (phrase: string, weight = 5) => {
+    setPromoteForm({ phrase, category: 'other', severity_weight: weight });
+    setPromoteDialogOpen(true);
+  };
+
+  const handlePromote = async () => {
+    if (!promoteForm.phrase) return;
+    const { error } = await supabase.from('sa_patterns').insert({
+      phrase: promoteForm.phrase,
+      category: promoteForm.category,
+      severity_weight: promoteForm.severity_weight,
+      source: 'ai_promoted',
+      active: true
+    } as never);
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Pattern created successfully.' });
+      setPromoteDialogOpen(false);
+    }
+  };
 
   const getCutoffDate = useCallback((range: string) => {
     const entry = DATE_RANGES.find(d => d.value === range);
@@ -243,9 +281,56 @@ const DetectionsTab = () => {
               <div>
                 <span className="font-medium">Signals:</span>
                 <pre className="mt-1 p-3 rounded bg-muted text-xs overflow-x-auto">{JSON.stringify(selected.signals, null, 2)}</pre>
+                
+                {extractSignals(selected.signals).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {extractSignals(selected.signals).map((s, i) => (
+                      <Badge 
+                        key={i} 
+                        variant="secondary" 
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                        onClick={() => openPromote(s)}
+                      >
+                        + Promote: {s}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Promote to Pattern Dialog */}
+      <Dialog open={promoteDialogOpen} onOpenChange={setPromoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Promote Signal to Pattern</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label>Phrase</Label>
+              <Input value={promoteForm.phrase} onChange={e => setPromoteForm(f => ({...f, phrase: e.target.value}))} />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={promoteForm.category} onValueChange={v => setPromoteForm(f => ({...f, category: v}))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['urgency', 'coercion', 'impersonation', 'financial', 'credential', 'typosquat', 'other'].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Severity Weight ({promoteForm.severity_weight})</Label>
+              <Slider min={1} max={10} step={1} value={[promoteForm.severity_weight]} onValueChange={v => setPromoteForm(f => ({...f, severity_weight: v[0]}))} className="mt-2" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setPromoteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handlePromote}>Create Pattern</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
