@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import JsonLd, { softwareAppSchema, faqSchema, breadcrumbSchema, SITE_URL } from '@/components/seo/JsonLd';
+import FAQSection from '@/components/seo/FAQSection';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -800,6 +802,25 @@ const ChromeExtensionImageEditor: React.FC = () => {
               </Card>
             </div>
           </div>
+          {(() => {
+            const editorFaqs = [
+              { question: 'What sizes does this tool generate?', answer: 'It generates all four required Chrome extension icon sizes: 16×16, 32×32, 48×48, and 128×128 pixels, perfectly formatted for your manifest.json.' },
+              { question: 'Do I need to install anything?', answer: 'No — this tool runs entirely in your browser. Just upload an image, adjust settings, and download your icons. No signup or software required.' },
+              { question: 'What image formats can I upload?', answer: 'You can upload PNG, JPG, JPEG, SVG, or WebP images. For best results, use a high-resolution square image (at least 128×128 pixels).' },
+              { question: 'Can I crop my image before generating icons?', answer: 'Yes! The tool includes a built-in crop feature that lets you select the perfect region of your image before generating all icon sizes.' },
+              { question: 'Are my images uploaded to a server?', answer: 'No — all processing happens locally in your browser using the HTML Canvas API. Your images never leave your device.' },
+            ];
+            return (
+              <>
+                <JsonLd data={[
+                  softwareAppSchema({ name: 'Chrome Extension Icon Generator', description: 'Generate all required Chrome extension icon sizes from a single image. Free, private, browser-based tool.', url: `${SITE_URL}/chrome-extension-image-editor`, category: 'DeveloperApplication' }),
+                  faqSchema(editorFaqs),
+                  breadcrumbSchema([{ name: 'Home', url: SITE_URL }, { name: 'Chrome Extension Icon Generator', url: `${SITE_URL}/chrome-extension-image-editor` }]),
+                ]} />
+                <FAQSection faqs={editorFaqs} />
+              </>
+            );
+          })()}
         </main>
 
         <Footer />
