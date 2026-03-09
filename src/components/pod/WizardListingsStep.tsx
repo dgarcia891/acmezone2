@@ -377,6 +377,17 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const grouped = printifyResults ? groupByMarketplace(printifyResults.filter((r) => r.printify_product_id)) : null;
   const errors = printifyResults?.filter((r) => r.error) || [];
 
+  // Representative background color for T-shirt previews (first selected color, or white)
+  const representativeTshirtColor = useMemo(() => {
+    if (!colorsByName || colorsByName.size === 0) return "#FFFFFF";
+    for (const [colorName, ids] of colorsByName.entries()) {
+      if (ids.some((id) => variantIdsSet.has(id))) {
+        return swatchForColorName(colorName);
+      }
+    }
+    return "#FFFFFF";
+  }, [colorsByName, variantIdsSet]);
+
   const tshirtVariantSelectionInvalid = tshirtSelected && hasTshirt && !!variantsQuery.data && tshirtVariantIds.length === 0;
 
   const handleSendToPrintify = async () => {
