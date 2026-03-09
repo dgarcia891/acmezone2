@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
 import { Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, Loader2 } from 'lucide-react';
+import DetectionSnapshotView from '@/components/admin/sa/DetectionSnapshotView';
 
 interface Correction {
   id: string;
