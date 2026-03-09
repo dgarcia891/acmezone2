@@ -49,6 +49,42 @@ const DetectionsTab = () => {
   const [dateRange, setDateRange] = useState('7d');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Detection | null>(null);
+  const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
+  const [promoteForm, setPromoteForm] = useState({ phrase: '', category: 'urgency', severity_weight: 5 });
+
+  const extractSignals = (signals: any) => {
+    const list: string[] = [];
+    if (signals?.hard && Array.isArray(signals.hard)) {
+      list.push(...signals.hard);
+    }
+    if (signals?.soft && Array.isArray(signals.soft)) {
+      list.push(...signals.soft);
+    }
+    return list.map(s => typeof s === 'string' ? s : (s as any)?.phrase || JSON.stringify(s)).filter(Boolean);
+  };
+
+  const openPromote = (phrase: string, weight = 5) => {
+    setPromoteForm({ phrase, category: 'other', severity_weight: weight });
+    setPromoteDialogOpen(true);
+  };
+
+  const handlePromote = async () => {
+    if (!promoteForm.phrase) return;
+    const { error } = await supabase.from('sa_patterns').insert({
+      phrase: promoteForm.phrase,
+      category: promoteForm.category,
+      severity_weight: promoteForm.severity_weight,
+      source: 'ai_promoted',
+      active: true
+    } as never);
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Pattern created successfully.' });
+      setPromoteDialogOpen(false);
+    }
+  };
 
   const getCutoffDate = useCallback((range: string) => {
     const entry = DATE_RANGES.find(d => d.value === range);
