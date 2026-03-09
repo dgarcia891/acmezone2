@@ -22,6 +22,7 @@ interface Correction {
   reviewed_by: string | null;
   ai_review_result: Record<string, unknown> | null;
   ai_analysis: Record<string, unknown> | null;
+  detection_snapshot: Record<string, any> | null;
   created_at: string;
 }
 
