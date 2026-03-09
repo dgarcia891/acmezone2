@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Copy, Download, Package, Loader2, CheckCircle2, ExternalLink } from "lucide-react";
+import { Copy, Download, Package, Loader2, CheckCircle2, ExternalLink, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Listing {
@@ -33,6 +34,15 @@ export default function SpreadshirtExport({ idea, listings }: Props) {
   const [downloadingSticker, setDownloadingSticker] = useState(false);
   const [downloadingTshirt, setDownloadingTshirt] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
+
+  const STORAGE_KEY = "pod-spreadshirt-expanded";
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
   const stickerListing = listings.find((l) => l.product_type === "sticker");
   const tshirtListing = listings.find((l) => l.product_type === "tshirt");
@@ -230,83 +240,100 @@ export default function SpreadshirtExport({ idea, listings }: Props) {
     </div>
   );
 
+  const handleToggle = (value: boolean) => {
+    setOpen(value);
+    try {
+      localStorage.setItem(STORAGE_KEY, String(value));
+    } catch {}
+  };
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm">Export to Spreadshirt</CardTitle>
-          </div>
-          <a
-            href="https://partner.spreadshirt.com/designs/upload"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-          >
-            Open Partner Area <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-xs text-muted-foreground">
-          Download properly-sized images and copy metadata for Spreadshirt's Partner Area upload.
-        </p>
+    <Collapsible open={open} onOpenChange={handleToggle}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer select-none hover:bg-muted/50 transition-colors rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm">Export to Spreadshirt</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://partner.spreadshirt.com/designs/upload"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Open Partner Area <ExternalLink className="h-3 w-3" />
+                </a>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+              </div>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Download properly-sized images and copy metadata for Spreadshirt's Partner Area upload.
+            </p>
 
-        {hasSticker && stickerListing && idea.sticker_design_url && (
-          <DesignRow
-            label="Sticker Design"
-            imageUrl={idea.sticker_design_url}
-            listing={stickerListing}
-            downloading={downloadingSticker}
-            onDownload={() =>
-              downloadResizedImage(
-                idea.sticker_design_url!,
-                `sticker-${idea.id.slice(0, 8)}.png`,
-                setDownloadingSticker
-              )
-            }
-          />
-        )}
-
-        {hasTshirt && tshirtListing && idea.tshirt_design_url && (
-          <DesignRow
-            label="T-Shirt Design"
-            imageUrl={idea.tshirt_design_url}
-            listing={tshirtListing}
-            downloading={downloadingTshirt}
-            onDownload={() =>
-              downloadResizedImage(
-                idea.tshirt_design_url!,
-                `tshirt-${idea.id.slice(0, 8)}.png`,
-                setDownloadingTshirt
-              )
-            }
-          />
-        )}
-
-        <div className="pt-2 border-t border-border">
-          <Button
-            onClick={downloadAllWithCsv}
-            disabled={downloadingAll}
-            className="w-full"
-            variant="default"
-          >
-            {downloadingAll ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Export...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" /> Download All + CSV
-              </>
+            {hasSticker && stickerListing && idea.sticker_design_url && (
+              <DesignRow
+                label="Sticker Design"
+                imageUrl={idea.sticker_design_url}
+                listing={stickerListing}
+                downloading={downloadingSticker}
+                onDownload={() =>
+                  downloadResizedImage(
+                    idea.sticker_design_url!,
+                    `sticker-${idea.id.slice(0, 8)}.png`,
+                    setDownloadingSticker
+                  )
+                }
+              />
             )}
-          </Button>
-          <p className="text-[10px] text-muted-foreground text-center mt-2">
-            ZIP contains resized images and metadata.csv for bulk upload
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+
+            {hasTshirt && tshirtListing && idea.tshirt_design_url && (
+              <DesignRow
+                label="T-Shirt Design"
+                imageUrl={idea.tshirt_design_url}
+                listing={tshirtListing}
+                downloading={downloadingTshirt}
+                onDownload={() =>
+                  downloadResizedImage(
+                    idea.tshirt_design_url!,
+                    `tshirt-${idea.id.slice(0, 8)}.png`,
+                    setDownloadingTshirt
+                  )
+                }
+              />
+            )}
+
+            <div className="pt-2 border-t border-border">
+              <Button
+                onClick={downloadAllWithCsv}
+                disabled={downloadingAll}
+                className="w-full"
+                variant="default"
+              >
+                {downloadingAll ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Export...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" /> Download All + CSV
+                  </>
+                )}
+              </Button>
+              <p className="text-[10px] text-muted-foreground text-center mt-2">
+                ZIP contains resized images and metadata.csv for bulk upload
+              </p>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
