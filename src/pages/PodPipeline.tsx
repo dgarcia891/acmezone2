@@ -358,7 +358,7 @@ const PodPipeline = () => {
               {!wizardOpen && (
                 <>
                   <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
-                    <PlusCircle className="h-3.5 w-3.5" /> New Idea
+                    <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" /> New Idea
                   </Button>
 
               <Button
@@ -367,7 +367,7 @@ const PodPipeline = () => {
                     className="gap-1.5"
                     onClick={() => handleTrendingOpenChange(true)}
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                     Give me an idea
                   </Button>
                   <TrendingIdeasDialog
