@@ -743,9 +743,13 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     return selectedTypes.map((pt) => {
                       const isSticker = pt === "sticker";
                       const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
-                      const shopOverride = isSticker ? additionalShopData?.sticker_margin_pct : additionalShopData?.tshirt_margin_pct;
-                      const effectiveMargin = shopOverride ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
-                      const isInherited = shopOverride == null;
+
+                      const shopDefault = isSticker ? additionalShopData?.sticker_margin_pct : additionalShopData?.tshirt_margin_pct;
+                      const ideaOverride = isSticker ? marginOverrides[shop.shop_id]?.sticker_margin_pct : marginOverrides[shop.shop_id]?.tshirt_margin_pct;
+                      const globalDefault = isSticker ? globalStickerMargin : globalTshirtMargin;
+
+                      const effectiveMargin = (ideaOverride ?? shopDefault ?? globalDefault) as number;
+                      const source = ideaOverride != null ? "custom" : shopDefault != null ? "shop" : "default";
 
                       const calcPrice = (costCents: number) => {
                         const raw = Math.round(costCents + (costCents * effectiveMargin / 100));
