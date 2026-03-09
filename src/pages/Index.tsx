@@ -169,6 +169,7 @@ const Index = () => {
             )}
           </div>
         </section>
+        <FAQSection faqs={homeFaqs} />
       </main>
       <Footer />
     </>
