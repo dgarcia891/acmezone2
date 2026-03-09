@@ -92,23 +92,23 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="text-sm" htmlFor="name">Name</label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <label className="block text-sm font-medium mb-1" htmlFor="name">Name</label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
             </div>
             <div>
-              <label className="text-sm" htmlFor="email">Email</label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+              <label className="block text-sm font-medium mb-1" htmlFor="email">Email</label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
             </div>
             <div>
-              <label className="text-sm" htmlFor="message">Message</label>
+              <label className="block text-sm font-medium mb-1" htmlFor="message">Message</label>
               <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={6} />
             </div>
 
             {/* Math CAPTCHA */}
-            <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
-              <label className="text-sm font-medium" htmlFor="captcha">
+            <fieldset className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
+              <legend className="text-sm font-medium">
                 Quick check: What is {captcha.a} + {captcha.b}?
-              </label>
+              </legend>
               <Input
                 id="captcha"
                 type="number"
@@ -117,14 +117,16 @@ const Contact = () => {
                 onChange={(e) => setCaptchaAnswer(e.target.value)}
                 placeholder="Your answer"
                 className="max-w-[160px]"
+                aria-label="Captcha answer"
               />
-            </div>
+            </fieldset>
 
             {/* Submit only visible when CAPTCHA solved */}
             <div
               className={`transition-all duration-300 ${captchaSolved ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
+              aria-hidden={!captchaSolved}
             >
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} tabIndex={captchaSolved ? 0 : -1}>
                 {loading ? "Sending..." : "Send Message"}
               </Button>
             </div>

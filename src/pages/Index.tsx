@@ -50,8 +50,8 @@ const ProductCard = ({ product }: { product: Product }) => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
-              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
+              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" aria-label="Previous image" />
+              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" aria-label="Next image" />
             </Carousel>
           ) : (
             <img 
