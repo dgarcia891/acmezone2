@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { severityBadgeClass, statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
 import {
   FileWarning, Clock, CheckCircle, XCircle, AlertCircle,
-  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2
+  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2, Sparkles
 } from 'lucide-react';
 
 interface UserReport {
@@ -34,6 +34,7 @@ interface UserReport {
   reviewed_at: string | null;
   admin_notes: string | null;
   promoted_pattern_id: string | null;
+  ai_analysis: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -289,6 +290,35 @@ const UserReportsTab = () => {
                 </div>
               )}
               {selected.reviewed_at && <div><span className="font-medium">Reviewed:</span> {formatDate(selected.reviewed_at)}</div>}
+              {selected.ai_analysis && Object.keys(selected.ai_analysis).length > 0 && (
+                <div className="border rounded-lg p-3 bg-muted/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">AI Analysis</span>
+                    {(selected.ai_analysis as any).confidence != null && (
+                      <Badge variant="outline">{(selected.ai_analysis as any).confidence}% confidence</Badge>
+                    )}
+                  </div>
+                  {(selected.ai_analysis as any).verdict && (
+                    <div className="mb-1"><span className="font-medium">Verdict:</span> <Badge variant="outline" className={
+                      (selected.ai_analysis as any).verdict === 'SCAM' ? 'border-red-500 text-red-600' :
+                      (selected.ai_analysis as any).verdict === 'SAFE' ? 'border-green-500 text-green-600' :
+                      'border-yellow-500 text-yellow-600'
+                    }>{(selected.ai_analysis as any).verdict}</Badge></div>
+                  )}
+                  {(selected.ai_analysis as any).reason && <p className="text-muted-foreground text-xs">{(selected.ai_analysis as any).reason}</p>}
+                  {Array.isArray((selected.ai_analysis as any).suggested_patterns) && (selected.ai_analysis as any).suggested_patterns.length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-xs font-medium">Suggested patterns:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(selected.ai_analysis as any).suggested_patterns.map((p: string, i: number) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{p}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {selected.admin_notes && !isPending(selected.review_status) && (
                 <div><span className="font-medium">Admin Notes:</span><p className="mt-1 text-muted-foreground">{selected.admin_notes}</p></div>
               )}

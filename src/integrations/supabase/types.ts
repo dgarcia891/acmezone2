@@ -778,6 +778,7 @@ export type Database = {
       sa_user_reports: {
         Row: {
           admin_notes: string | null
+          ai_analysis: Json | null
           body_preview: string | null
           created_at: string | null
           description: string | null
@@ -799,6 +800,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          ai_analysis?: Json | null
           body_preview?: string | null
           created_at?: string | null
           description?: string | null
@@ -820,6 +822,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          ai_analysis?: Json | null
           body_preview?: string | null
           created_at?: string | null
           description?: string | null
