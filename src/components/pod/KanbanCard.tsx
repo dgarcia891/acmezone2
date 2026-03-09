@@ -67,7 +67,7 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
             <img
               key={i}
               src={url}
-              alt=""
+              alt={`Design preview ${i + 1} for ${text.length > 30 ? text.slice(0, 30) + "…" : text}`}
               className={`rounded object-cover w-full ${images.length === 1 ? "h-24" : "h-16"}`}
               loading="lazy"
             />

@@ -106,8 +106,8 @@ const Auth = () => {
             <div className="mx-auto w-12 h-12 bg-gradient-to-br from-primary to-primary-glow rounded-xl flex items-center justify-center mb-4">
               <CreditCard className="w-6 h-6 text-primary-foreground" />
             </div>
-            <CardTitle className="text-gradient-primary">
-              {resetMode ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}
+            <CardTitle asChild className="text-gradient-primary">
+              <h1>{resetMode ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}</h1>
             </CardTitle>
             <CardDescription>
               {resetMode 

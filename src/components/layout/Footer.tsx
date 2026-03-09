@@ -17,7 +17,7 @@ const Footer = () => {
             </ul>
           </div>
           <div>
-            <div className="text-sm font-medium">Legal</div>
+            <h2 className="text-sm font-medium">Legal</h2>
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground story-link">Privacy Policy</Link></li>
               <li><Link to="/terms" className="text-muted-foreground hover:text-foreground story-link">Terms of Service</Link></li>
