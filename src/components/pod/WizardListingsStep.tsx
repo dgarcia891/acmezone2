@@ -126,6 +126,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
   const { data: overrideData, isLoading: overridesLoading } = useIdeaOverrides(idea?.id ?? null);
   const saveOverride = useSaveIdeaOverride();
+  const setShopMargin = useSetShopMargin();
+  const saveGlobalSettings = useSavePodSettings();
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
