@@ -464,6 +464,11 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       )}
 
+      {/* Spreadshirt Export */}
+      {listings.length > 0 && (
+        <SpreadshirtExport idea={idea} listings={listings} />
+      )}
+
       {/* Listings */}
       {!isProduction && !isLive && (
         <Card>
