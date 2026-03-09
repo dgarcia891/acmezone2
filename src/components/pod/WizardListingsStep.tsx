@@ -24,7 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
-import { usePodSettings } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSetShopMargin, useSavePodSettings } from "@/hooks/usePodPipeline";
 import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
@@ -126,6 +126,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
   const { data: overrideData, isLoading: overridesLoading } = useIdeaOverrides(idea?.id ?? null);
   const saveOverride = useSaveIdeaOverride();
+  const setShopMargin = useSetShopMargin();
+  const saveGlobalSettings = useSavePodSettings();
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
@@ -289,6 +291,45 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
       shopId,
       patch: { tshirt_margin_pct: null, sticker_margin_pct: null },
     });
+  };
+
+  const setAsDefaultForShop = async (shop: any, effectiveTshirt: number, effectiveSticker: number) => {
+    try {
+      if (shop.marketplace === "default") {
+        // Update global settings for primary shop
+        await saveGlobalSettings.mutateAsync({
+          tshirt_margin_pct: String(effectiveTshirt),
+          sticker_margin_pct: String(effectiveSticker),
+        });
+      } else {
+        // Update shop-specific defaults
+        const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
+        if (additionalShopData?.id) {
+          await setShopMargin.mutateAsync({
+            id: additionalShopData.id,
+            tshirt_margin_pct: effectiveTshirt,
+            sticker_margin_pct: effectiveSticker,
+          });
+        }
+      }
+
+      // Clear idea-level override since it's now the default
+      if (idea?.id) {
+        await saveOverride.mutateAsync({
+          ideaId: idea.id,
+          shopId: shop.shop_id,
+          patch: { tshirt_margin_pct: null, sticker_margin_pct: null },
+        });
+      }
+
+      // Update local state to reflect cleared override
+      setMarginOverrides((prev) => ({
+        ...prev,
+        [shop.shop_id]: { tshirt_margin_pct: null, sticker_margin_pct: null },
+      }));
+    } catch (error) {
+      console.error("Failed to set as default:", error);
+    }
   };
 
   const toggleColorGroup = (colorName: string, checked: boolean) => {
@@ -473,15 +514,27 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                         </p>
                       </div>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => resetMarginsForShop(shop.shop_id)}
-                        disabled={saveOverride.isPending}
-                      >
-                        Reset
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setAsDefaultForShop(shop, effectiveTshirt, effectiveSticker)}
+                          disabled={saveOverride.isPending || setShopMargin.isPending || saveGlobalSettings.isPending}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Set as Default
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => resetMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        >
+                          Reset
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
