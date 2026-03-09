@@ -438,27 +438,35 @@ Deno.serve(async (req) => {
               tags: listing.tags || [],
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
-              variants: variantList.map((v: any) => {
-                // Determine margin for this shop + product type
-                const isSticker = listing.product_type === "sticker";
-                const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
-                const marginPct = shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
-                const cost = variantCostMap.get(v.id);
-                let price: number;
-                if (cost != null) {
-                  // cost + markup, minimum $1 profit
-                  price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
-                } else {
-                  price = FALLBACK_PRICE[listing.product_type] ?? 1999;
-                }
-                return {
-                  id: v.id,
-                  price,
-                  is_enabled: variantFilterResult
-                    ? (variantFilterResult.variantStates.get(v.id) ?? true)
-                    : true,
-                };
-              }),
+               variants: variantList.map((v: any) => {
+                 // Determine margin for this shop + product type
+                 const isSticker = listing.product_type === "sticker";
+                 const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
+                 const ideaOverrideRow = perShopOverrides.get(String(shop.shop_id));
+                 const ideaMargin = isSticker ? ideaOverrideRow?.sticker_margin_pct : ideaOverrideRow?.tshirt_margin_pct;
+                 const marginPct = (ideaMargin ?? shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin)) as number;
+
+                 const cost = variantCostMap.get(v.id);
+                 let price: number;
+                 if (cost != null) {
+                   // cost + markup, minimum $1 profit
+                   price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
+                 } else {
+                   price = FALLBACK_PRICE[listing.product_type] ?? 1999;
+                 }
+
+                 const isEnabled = listing.product_type === "tshirt" && hasManualTshirtVariants
+                   ? manualVariantIdSet.has(v.id)
+                   : variantFilterResult
+                     ? (variantFilterResult.variantStates.get(v.id) ?? true)
+                     : true;
+
+                 return {
+                   id: v.id,
+                   price,
+                   is_enabled: isEnabled,
+                 };
+               }),
               print_areas: [{
                 variant_ids: variantList.map((v: any) => v.id),
                 placeholders: [{
