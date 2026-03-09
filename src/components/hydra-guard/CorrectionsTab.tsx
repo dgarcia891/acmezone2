@@ -144,9 +144,10 @@ const CorrectionsTab = () => {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         {[
           { label: 'Pending Review', value: stats.pending, icon: Clock, color: 'text-yellow-600' },
+          { label: 'Needs Review', value: stats.needsReview, icon: AlertCircle, color: 'text-orange-600' },
           { label: 'Approved (7d)', value: stats.approvedWeek, icon: CheckCircle, color: 'text-green-600' },
           { label: 'Rejected (7d)', value: stats.rejectedWeek, icon: XCircle, color: 'text-red-600' },
         ].map(s => (
