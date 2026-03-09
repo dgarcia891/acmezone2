@@ -395,6 +395,213 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       )}
 
+      {/* Per-idea margin overrides */}
+      {!isProduction && !isLive && allShops.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5" /> Margin Overrides (This Idea)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Leave fields blank to inherit shop/global defaults. Changes are saved per shop.
+            </p>
+
+            <div className="space-y-2">
+              {allShops.map((shop) => {
+                const globalTshirtMargin = settingsData?.settings?.tshirt_margin_pct ?? 100;
+                const globalStickerMargin = settingsData?.settings?.sticker_margin_pct ?? 100;
+                const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
+
+                const local = marginOverrides[shop.shop_id] || { tshirt_margin_pct: null, sticker_margin_pct: null };
+
+                const shopTshirtDefault = additionalShopData?.tshirt_margin_pct ?? null;
+                const shopStickerDefault = additionalShopData?.sticker_margin_pct ?? null;
+
+                const effectiveTshirt = (local.tshirt_margin_pct ?? shopTshirtDefault ?? globalTshirtMargin) as number;
+                const effectiveSticker = (local.sticker_margin_pct ?? shopStickerDefault ?? globalStickerMargin) as number;
+
+                return (
+                  <div key={shop.shop_id} className="rounded-md border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                            {shop.marketplace === "default" ? "Primary" : shop.marketplace}
+                          </Badge>
+                          <span className="text-xs font-medium truncate">{shop.label}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Effective: Sticker <span className="font-mono">{effectiveSticker}%</span> · T-Shirt <span className="font-mono">{effectiveTshirt}%</span>
+                        </p>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => resetMarginsForShop(shop.shop_id)}
+                        disabled={saveOverride.isPending}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Sticker margin %</Label>
+                        <Input
+                          inputMode="numeric"
+                          type="number"
+                          min={0}
+                          max={500}
+                          placeholder={`${shopStickerDefault ?? globalStickerMargin}`}
+                          value={local.sticker_margin_pct ?? ""}
+                          onChange={(e) => setMarginField(shop.shop_id, "sticker_margin_pct", e.target.value)}
+                          onBlur={() => saveMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {local.sticker_margin_pct == null ? "Using default" : "Custom"}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">T-Shirt margin %</Label>
+                        <Input
+                          inputMode="numeric"
+                          type="number"
+                          min={0}
+                          max={500}
+                          placeholder={`${shopTshirtDefault ?? globalTshirtMargin}`}
+                          value={local.tshirt_margin_pct ?? ""}
+                          onChange={(e) => setMarginField(shop.shop_id, "tshirt_margin_pct", e.target.value)}
+                          onBlur={() => saveMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {local.tshirt_margin_pct == null ? "Using default" : "Custom"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-idea t-shirt color selection */}
+      {tshirtSelected && hasTshirt && !isProduction && !isLive && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5" /> T-Shirt Color Variants
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={selectAllTshirtColors}
+                  disabled={!variantsQuery.data || saveOverride.isPending}
+                >
+                  Select all
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={resetTshirtColorsToAi}
+                  disabled={recommendedVariantSet.size === 0 || saveOverride.isPending}
+                >
+                  Reset to AI
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!tshirtListing || !tshirtBlueprintId || !tshirtPrintProviderId ? (
+              <p className="text-xs text-muted-foreground">
+                To customize colors, set a Blueprint ID and Print Provider ID on the T-Shirt listing.
+              </p>
+            ) : variantsQuery.isLoading ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading variants…
+              </div>
+            ) : (variantsQuery.data?.variants || []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">No variants found for this blueprint/provider.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Selected <span className="font-mono">{tshirtVariantIds.length}</span> of <span className="font-mono">{variantsQuery.data?.variants.length}</span> variants
+                  </p>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={saveTshirtColors}
+                    disabled={tshirtVariantIds.length === 0 || saveOverride.isPending}
+                  >
+                    {saveOverride.isPending ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</>
+                    ) : (
+                      "Save colors"
+                    )}
+                  </Button>
+                </div>
+
+                {variantsQuery.data?.analysis && (
+                  <p className="text-[11px] text-muted-foreground">
+                    AI: <span className="font-medium">{variantsQuery.data.analysis.dominance}</span> design — recommended {recommendedVariantSet.size} variants.
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {Array.from(colorsByName.entries())
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([colorName, ids]) => {
+                      const enabledCount = ids.filter((id) => variantIdsSet.has(id)).length;
+                      const checked = enabledCount === ids.length;
+                      const indeterminate = enabledCount > 0 && enabledCount < ids.length;
+                      const aiRecommended = ids.length > 0 && ids.every((id) => recommendedVariantSet.has(id));
+
+                      return (
+                        <div key={colorName} className="flex items-center gap-2 rounded-md border border-border p-2">
+                          <Checkbox
+                            checked={indeterminate ? "indeterminate" : checked}
+                            onCheckedChange={(v) => toggleColorGroup(colorName, !!v)}
+                            aria-label={`Toggle ${colorName}`}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-block h-3.5 w-3.5 rounded-full border border-border"
+                                style={{ backgroundColor: `hsl(var(--muted))` }}
+                                aria-hidden="true"
+                              />
+                              <span className="text-xs truncate" title={colorName}>{colorName}</span>
+                              {aiRecommended && (
+                                <Badge variant="secondary" className="text-[10px]">AI</Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {enabledCount}/{ids.length} enabled
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Design Selection & Publish Controls */}
       {(hasSticker || hasTshirt) && !isProduction && !isLive && (
         <Card>
