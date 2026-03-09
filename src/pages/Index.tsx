@@ -95,19 +95,22 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>Acme Zone | Custom Software Products and Tools</title>
-        <meta name="description" content="Discover innovative software products and tools including InsightReel, Pre-Apply AI, and more. Built for speed, clarity, and efficiency." />
+        <title>Acme Zone | AI-Powered Software Tools & Automation</title>
+        <meta name="description" content="Free AI-powered tools for background removal, image conversion, video analysis, and workflow automation. Browser-based, private, and no sign-up required." />
         <link rel="canonical" href="https://acme.zone/" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Acme Zone | Custom Software Products and Tools" />
-        <meta property="og:description" content="Discover innovative software products and tools. Built for speed, clarity, and efficiency." />
+        <meta property="og:title" content="Acme Zone | AI-Powered Software Tools & Automation" />
+        <meta property="og:description" content="Free AI-powered tools for background removal, image conversion, video analysis, and workflow automation." />
         <meta property="og:url" content="https://acme.zone/" />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Acme Zone | Custom Software Products and Tools" />
-        <meta name="twitter:description" content="Discover innovative software products and tools." />
+        <meta name="twitter:title" content="Acme Zone | AI-Powered Software Tools" />
+        <meta name="twitter:description" content="Free AI-powered tools for background removal, image conversion, and automation." />
         <meta name="twitter:image" content={ogImage} />
+        <meta name="keywords" content="AI tools, background remover, image converter, automation, Chrome extension, free AI tools, workflow optimization" />
       </Helmet>
+      <JsonLd data={[organizationSchema(), webSiteSchema(), faqSchema(homeFaqs)]} />
       <Header />
       <main id="main-content" className="flex-1">
         <section className="relative py-20 md:py-28 pb-8 md:pb-12">
