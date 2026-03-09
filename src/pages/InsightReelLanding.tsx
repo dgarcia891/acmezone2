@@ -30,6 +30,14 @@ const heroFeatures = [
   { icon: BarChart3, title: "Usage Dashboard", desc: "Track your analyses and manage your subscription effortlessly." },
 ];
 
+const insightReelFaqs = [
+  { question: "What is InsightReel?", answer: "InsightReel is a Chrome extension that uses AI to analyze video transcripts. It extracts key insights, sentiment analysis, and takeaways from any video — right in your browser." },
+  { question: "How many free analyses do I get?", answer: "You get 3 free analyses with no credit card required. After that, you can upgrade to Pro ($8/month for 100 analyses) or use your own API key with the BYOK plan ($3/month, unlimited)." },
+  { question: "What types of videos can I analyze?", answer: "InsightReel works with any video that has a transcript — YouTube, Vimeo, educational platforms, webinars, and more. If there's a transcript, InsightReel can analyze it." },
+  { question: "Is my data private?", answer: "Yes. We only process the transcript text you send for analysis. We don't store video content or share your data with third parties." },
+  { question: "How do I install InsightReel?", answer: "Visit the Chrome Web Store, search for InsightReel, and click 'Add to Chrome'. Sign in with your account and you're ready to analyze videos instantly." },
+];
+
 const tiers = [
   {
     name: "Free Trial",
