@@ -114,15 +114,17 @@ export default function KanbanBoard({ onCardClick }: Props) {
       {rejectedIdeas.length > 0 && (
         <div className="mt-4 border border-border rounded-lg">
           <button
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => setRejectedOpen(!rejectedOpen)}
+            aria-expanded={rejectedOpen}
+            aria-controls="rejected-ideas-list"
           >
-            {rejectedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            ❌ Rejected
+            {rejectedOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
+            <span aria-hidden="true">❌</span> Rejected
             <Badge variant="secondary" className="text-[10px] px-1.5">{rejectedIdeas.length}</Badge>
           </button>
           {rejectedOpen && (
-            <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div id="rejected-ideas-list" className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {rejectedIdeas.map((idea: any) => (
                 <KanbanCard key={idea.id} idea={idea} onClick={() => onCardClick(idea)} />
               ))}

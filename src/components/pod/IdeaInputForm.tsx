@@ -105,8 +105,9 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <label className="text-sm font-medium mb-2 block">Idea Text</label>
+          <label className="text-sm font-medium mb-2 block" htmlFor="idea-text">Idea Text</label>
           <Textarea
+            id="idea-text"
             placeholder="Describe the meme, viral text, or content idea..."
             rows={4}
             value={ideaText}
@@ -136,8 +137,9 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
                   size="icon"
                   className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
                   onClick={() => removeImage(idx)}
+                  aria-label={`Remove image ${idx + 1}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
             ))}
@@ -149,12 +151,21 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
 
             {/* Always-visible upload zone */}
             <div
-              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              role="button"
+              tabIndex={0}
+              aria-label="Add image upload"
+              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={() => fileRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileRef.current?.click();
+                }
+              }}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
             >
-              <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+              <Upload className="h-5 w-5 text-muted-foreground mb-1" aria-hidden="true" />
               <p className="text-xs text-muted-foreground text-center px-1">
                 Add image
               </p>
@@ -204,7 +215,7 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
             })
           }
         >
-          <Sparkles className="h-4 w-4 mr-2" />
+          <Sparkles className="h-4 w-4 mr-2" aria-hidden="true" />
           Analyze Idea
         </Button>
       </CardContent>

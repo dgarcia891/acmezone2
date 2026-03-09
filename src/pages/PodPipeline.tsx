@@ -349,7 +349,7 @@ const PodPipeline = () => {
     <>
       <Helmet><title>POD Pipeline | acme.zone</title></Helmet>
       <Header />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <div className="mx-auto py-8 px-4">
           {/* Header row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -358,7 +358,7 @@ const PodPipeline = () => {
               {!wizardOpen && (
                 <>
                   <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
-                    <PlusCircle className="h-3.5 w-3.5" /> New Idea
+                    <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" /> New Idea
                   </Button>
 
               <Button
@@ -367,7 +367,7 @@ const PodPipeline = () => {
                     className="gap-1.5"
                     onClick={() => handleTrendingOpenChange(true)}
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                     Give me an idea
                   </Button>
                   <TrendingIdeasDialog
@@ -383,17 +383,17 @@ const PodPipeline = () => {
                   />
                   <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                     <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
-                      <LayoutGrid className="h-3.5 w-3.5" /> Board
+                      <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> Board
                     </ToggleGroupItem>
                     <ToggleGroupItem value="settings" aria-label="Settings" className="gap-1.5 text-xs">
-                      <Settings className="h-3.5 w-3.5" /> Settings
+                      <Settings className="h-3.5 w-3.5" aria-hidden="true" /> Settings
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </>
               )}
               {wizardOpen && (
                 <Button variant="ghost" size="sm" onClick={closeWizard} className="gap-1.5">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back to Board
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to Board
                 </Button>
               )}
             </div>

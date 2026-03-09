@@ -26,16 +26,26 @@ export default function KanbanColumn({ column, ideas, onCardClick, collapsed, on
     return (
       <div
         ref={setNodeRef}
+        role="button"
+        tabIndex={0}
+        aria-label={`Expand ${column.label} column (${ideas.length} items)`}
         onClick={onToggleCollapse}
-        className={`flex flex-col items-center w-[40px] min-w-[40px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] cursor-pointer hover:bg-muted/60 transition-colors ${isOver ? "ring-2 ring-primary/40" : ""}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggleCollapse?.();
+          }
+        }}
+        className={`flex flex-col items-center w-[40px] min-w-[40px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] cursor-pointer hover:bg-muted/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isOver ? "ring-2 ring-primary/40" : ""}`}
       >
         <div className="flex flex-col items-center gap-1 py-3">
-          <span className="text-base">{column.emoji}</span>
+          <span className="text-base" aria-hidden="true">{column.emoji}</span>
           <Badge variant="secondary" className="text-[10px] px-1.5">{ideas.length}</Badge>
         </div>
         <span
           className="text-xs font-semibold text-muted-foreground mt-2"
           style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+          aria-hidden="true"
         >
           {column.label}
         </span>
@@ -48,7 +58,7 @@ export default function KanbanColumn({ column, ideas, onCardClick, collapsed, on
       className={`flex flex-col flex-1 min-w-[220px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] ${isOver ? "ring-2 ring-primary/40" : ""}`}
     >
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
-        <span className="text-base">{column.emoji}</span>
+        <span className="text-base" aria-hidden="true">{column.emoji}</span>
         <span className="text-sm font-semibold text-foreground">{column.label}</span>
         <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
           {ideas.length}

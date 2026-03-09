@@ -82,7 +82,7 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
           </Badge>
         )}
         {priority !== "normal" && priorityDot[priority] && (
-          <span className={`inline-block w-2 h-2 rounded-full ${priorityDot[priority]}`} title={priority} />
+          <span className={`inline-block w-2 h-2 rounded-full ${priorityDot[priority]}`} role="img" aria-label={`${priority} priority`} />
         )}
         <span className="text-[10px] text-muted-foreground">
           {idea.created_at ? formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }) : ""}
