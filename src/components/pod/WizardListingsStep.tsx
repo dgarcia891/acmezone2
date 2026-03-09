@@ -377,6 +377,17 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const grouped = printifyResults ? groupByMarketplace(printifyResults.filter((r) => r.printify_product_id)) : null;
   const errors = printifyResults?.filter((r) => r.error) || [];
 
+  // Representative background color for T-shirt previews (first selected color, or white)
+  const representativeTshirtColor = useMemo(() => {
+    if (!colorsByName || colorsByName.size === 0) return "#FFFFFF";
+    for (const [colorName, ids] of colorsByName.entries()) {
+      if (ids.some((id) => variantIdsSet.has(id))) {
+        return swatchForColorName(colorName);
+      }
+    }
+    return "#FFFFFF";
+  }, [colorsByName, variantIdsSet]);
+
   const tshirtVariantSelectionInvalid = tshirtSelected && hasTshirt && !!variantsQuery.data && tshirtVariantIds.length === 0;
 
   const handleSendToPrintify = async () => {
@@ -778,7 +789,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     />
                     <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">T-Shirt</label>
                   </div>
-                  <div className={`w-full rounded border aspect-square overflow-hidden ${!tshirtSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
+                  <div className={`w-full rounded border aspect-square overflow-hidden flex items-center justify-center p-[12%] ${!tshirtSelected ? "opacity-40" : ""}`} style={{ backgroundColor: representativeTshirtColor }}>
                     <img src={cacheBust(idea.tshirt_design_url)} alt="T-Shirt design" className="w-full h-full object-contain" />
                   </div>
                 </div>
@@ -810,7 +821,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
               {hasTshirt && (
                 <div>
                   <p className="text-xs font-medium mb-1.5">T-Shirt</p>
-                  <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
+                  <div className="w-full rounded border border-border aspect-square overflow-hidden flex items-center justify-center p-[12%]" style={{ backgroundColor: representativeTshirtColor }}>
                     <img src={cacheBust(idea.tshirt_design_url)} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
                   </div>
                 </div>
