@@ -82,7 +82,7 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop, 
 
 const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(Date.now())}` : url;
 
-export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving, hasListings }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
   const canDrop = productType === "both";
