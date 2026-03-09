@@ -34,6 +34,7 @@ interface UserReport {
   reviewed_at: string | null;
   admin_notes: string | null;
   promoted_pattern_id: string | null;
+  ai_analysis: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
