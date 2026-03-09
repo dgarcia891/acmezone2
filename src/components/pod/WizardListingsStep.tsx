@@ -685,70 +685,60 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                       );
                     })}
                 </div>
+
+                {/* Color Previews - inline */}
+                {tshirtVariantIds.length > 0 && (() => {
+                  const selectedColorNames = Array.from(colorsByName.entries())
+                    .filter(([_, ids]) => ids.some((id) => variantIdsSet.has(id)))
+                    .map(([colorName]) => colorName)
+                    .sort((a, b) => a.localeCompare(b));
+
+                  const maxPreviews = 12;
+                  const displayedColors = selectedColorNames.slice(0, maxPreviews);
+                  const hasMore = selectedColorNames.length > maxPreviews;
+
+                  return (
+                    <div className="mt-4 pt-4 border-t border-border space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Palette className="h-4 w-4 text-muted-foreground" />
+                        <h4 className="text-sm font-medium">Color Previews</h4>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {selectedColorNames.length} {selectedColorNames.length === 1 ? 'color' : 'colors'} selected
+                          {hasMore && ` (showing ${maxPreviews})`}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {displayedColors.map((colorName) => {
+                          const designUrl = cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
+                          const bgColor = swatchForColorName(colorName);
+
+                          return (
+                            <div key={colorName} className="flex flex-col gap-1.5">
+                              <div
+                                className="w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
+                                style={{ backgroundColor: bgColor }}
+                              >
+                                {designUrl && (
+                                  <img
+                                    src={designUrl}
+                                    alt={`Design on ${colorName}`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                )}
+                              </div>
+                              <p className="text-xs text-center text-muted-foreground truncate" title={colorName}>
+                                {colorName}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Color Previews - Show design on selected color backgrounds */}
-      {hasTshirt && tshirtSelected && !isProduction && !isLive && variantsQuery.data && tshirtVariantIds.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm">Color Previews</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {(() => {
-              const selectedColorNames = Array.from(colorsByName.entries())
-                .filter(([_, ids]) => ids.some((id) => variantIdsSet.has(id)))
-                .map(([colorName]) => colorName)
-                .sort((a, b) => a.localeCompare(b));
-
-              const maxPreviews = 12;
-              const displayedColors = selectedColorNames.slice(0, maxPreviews);
-              const hasMore = selectedColorNames.length > maxPreviews;
-
-              return (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-muted-foreground">
-                      {selectedColorNames.length} {selectedColorNames.length === 1 ? 'color' : 'colors'} selected
-                      {hasMore && ` (showing ${maxPreviews})`}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {displayedColors.map((colorName) => {
-                      const designUrl = cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
-                      const bgColor = swatchForColorName(colorName);
-
-                      return (
-                        <div key={colorName} className="flex flex-col gap-1.5">
-                          <div
-                            className="w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
-                            style={{ backgroundColor: bgColor }}
-                          >
-                            {designUrl && (
-                              <img
-                                src={designUrl}
-                                alt={`Design on ${colorName}`}
-                                className="w-full h-full object-contain"
-                              />
-                            )}
-                          </div>
-                          <p className="text-xs text-center text-muted-foreground truncate" title={colorName}>
-                            {colorName}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
           </CardContent>
         </Card>
       )}
