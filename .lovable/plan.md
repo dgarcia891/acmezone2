@@ -1,32 +1,32 @@
 
 
-# Unified Admin Navigation
+## Fix: Skip Listing Regeneration When No Changes Made
 
-## Problem
-Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
+### Problem
+Going from step 5 (Finalize) → step 4 (Results) → back to step 5 triggers `handleApproveAfterReview`, which **always** calls `generateListings.mutate()` — regenerating all listing content via AI even when nothing changed in step 4.
 
-## Solution
-Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
+### Solution
+In `handleApproveAfterReview` in `src/pages/PodPipeline.tsx`, check if listings already exist for this idea. If the idea's status is already `"listings"`, `"ready"`, `"production"`, or `"live"`, simply navigate to step 5 without calling the AI.
 
-## Changes
+### File Changed
+**`src/pages/PodPipeline.tsx`** — Update `handleApproveAfterReview` (~line 297):
 
-### 1. Merge Hydra Guard into Admin.tsx
-**File:** `src/pages/Admin.tsx`
-- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
-- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
-- Nest them inside a sub-tabs layout within the Hydra Guard tab content
-- Add the Shield icon with a distinctive color to make it stand out
+```typescript
+const handleApproveAfterReview = () => {
+  if (!wizardIdea) return;
+  // If listings already generated, just navigate forward
+  const hasListings = ["listings", "ready", "production", "live"].includes(wizardIdea.status);
+  if (hasListings) {
+    setStep("listings");
+    return;
+  }
+  generateListings.mutate(wizardIdea.id, {
+    onSuccess: () => {
+      setStep("listings");
+    },
+  });
+};
+```
 
-### 2. Redirect old route
-**File:** `src/App.tsx`
-- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
-
-### 3. Remove standalone page
-**File:** `src/pages/HydraGuardAdmin.tsx`
-- Can be deleted since its content now lives inside Admin.tsx
-
-### Result
-- One admin URL: `/admin`
-- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
-- Header "Admin" link takes you to everything
+One file, ~4 lines added. No backend or database changes.
 
