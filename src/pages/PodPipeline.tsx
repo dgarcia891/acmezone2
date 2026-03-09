@@ -383,10 +383,10 @@ const PodPipeline = () => {
                   />
                   <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
                     <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
-                      <LayoutGrid className="h-3.5 w-3.5" /> Board
+                      <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> Board
                     </ToggleGroupItem>
                     <ToggleGroupItem value="settings" aria-label="Settings" className="gap-1.5 text-xs">
-                      <Settings className="h-3.5 w-3.5" /> Settings
+                      <Settings className="h-3.5 w-3.5" aria-hidden="true" /> Settings
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </>
