@@ -92,15 +92,15 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="text-sm" htmlFor="name">Name</label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <label className="block text-sm font-medium mb-1" htmlFor="name">Name</label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
             </div>
             <div>
-              <label className="text-sm" htmlFor="email">Email</label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+              <label className="block text-sm font-medium mb-1" htmlFor="email">Email</label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
             </div>
             <div>
-              <label className="text-sm" htmlFor="message">Message</label>
+              <label className="block text-sm font-medium mb-1" htmlFor="message">Message</label>
               <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={6} />
             </div>
 
