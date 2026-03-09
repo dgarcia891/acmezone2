@@ -313,6 +313,7 @@ export default function InsightReelLanding() {
             </Card>
           </div>
         </section>
+        <FAQSection faqs={insightReelFaqs} />
       </main>
 
       <Footer />
