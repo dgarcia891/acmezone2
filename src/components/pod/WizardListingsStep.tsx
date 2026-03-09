@@ -24,7 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
-import { usePodSettings } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSetShopMargin, useSavePodSettings } from "@/hooks/usePodPipeline";
 import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
