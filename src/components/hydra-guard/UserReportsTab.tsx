@@ -309,7 +309,7 @@ const UserReportsTab = () => {
                       <XCircle className="h-4 w-4 mr-2" /> Dismiss
                     </Button>
                     <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'promoted')}>
-                      <AlertCircle className="h-4 w-4 mr-2" /> Promote
+                      <AlertCircle className="h-4 w-4 mr-2" /> Flag for Review
                     </Button>
                   </div>
                 </div>

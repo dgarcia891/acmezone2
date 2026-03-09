@@ -34,15 +34,13 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await userClient.auth.getUser();
+    if (userError || !userData?.user) {
       return json({ error: "Unauthorized: Invalid token" }, 401);
     }
-    const adminUserId = claimsData.claims.sub as string;
+    const adminUserId = userData.user.id;
 
     // --- 2. Verify admin role ---
-    // Use service role client to bypass RLS for role check
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: roleCheck, error: roleError } = await supabase
@@ -81,14 +79,12 @@ Deno.serve(async (req) => {
     let adjustmentAmount = 0;
     const feedback = (correction.feedback || "").toLowerCase();
     if (feedback === "false_positive" || feedback === "not_a_scam") {
-      // User says it's safe but we flagged it → reduce confidence
       adjustmentAmount = -1;
     } else if (
       feedback === "missed_threat" ||
       feedback === "confirmed_threat" ||
       feedback === "is_a_scam"
     ) {
-      // User says it's a threat → increase confidence
       adjustmentAmount = +1;
     }
 
@@ -108,7 +104,6 @@ Deno.serve(async (req) => {
         .single();
 
       if (detection?.signals) {
-        // Collect pattern phrase strings from signals.hard and signals.soft
         const signals = detection.signals as Record<string, unknown>;
         const matchedPhrases: string[] = [];
 
@@ -127,7 +122,6 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Look up each matched phrase in sa_patterns
         if (matchedPhrases.length > 0) {
           const { data: patterns } = await supabase
             .from("sa_patterns")
@@ -140,7 +134,6 @@ Deno.serve(async (req) => {
               const newWeight = Math.max(1, Math.min(10, oldWeight + adjustmentAmount));
 
               if (newWeight !== oldWeight) {
-                // Update pattern weight
                 const { error: updateErr } = await supabase
                   .from("sa_patterns")
                   .update({ severity_weight: newWeight })
@@ -151,7 +144,6 @@ Deno.serve(async (req) => {
                   continue;
                 }
 
-                // Log the adjustment
                 const { error: logErr } = await supabase
                   .from("pattern_adjustments")
                   .insert({

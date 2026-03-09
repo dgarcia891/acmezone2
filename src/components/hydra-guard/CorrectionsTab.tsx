@@ -262,6 +262,14 @@ const CorrectionsTab = () => {
                   <pre className="mt-1 p-3 rounded bg-muted text-xs overflow-x-auto">{JSON.stringify(selected.ai_analysis, null, 2)}</pre>
                 </div>
               )}
+              {selected.detection_snapshot && (
+                <div>
+                  <span className="font-medium">Detection Snapshot:</span>
+                  <div className="mt-1">
+                    <DetectionSnapshotView snapshot={selected.detection_snapshot} />
+                  </div>
+                </div>
+              )}
               {isPending(selected.review_status) && (
                 <div className="flex gap-2 pt-2">
                   <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => handleApprove(selected.id)}>
