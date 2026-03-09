@@ -78,7 +78,7 @@ const Contact = () => {
         <link rel="canonical" href="https://acme.zone/contact" />
       </Helmet>
       <Header />
-      <main className="container mx-auto py-12">
+      <main id="main-content" className="container mx-auto py-12">
         <section>
           <h1 className="text-3xl font-semibold tracking-tight">Contact Us</h1>
           <p className="mt-2 text-muted-foreground">We'd love to hear from you.</p>

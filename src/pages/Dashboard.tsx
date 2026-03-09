@@ -75,7 +75,7 @@ const Dashboard = () => {
       <div className="min-h-screen flex flex-col">
         <Header />
         
-        <main className="flex-1 container mx-auto px-4 py-8">
+        <main id="main-content" className="flex-1 container mx-auto px-4 py-8">
           {/* Welcome Section */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">

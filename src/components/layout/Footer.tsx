@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="border-t bg-background">
+    <footer className="border-t bg-background" role="contentinfo">
       <div className="container mx-auto py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
@@ -10,14 +10,14 @@ const Footer = () => {
             <p className="mt-2 text-sm text-muted-foreground">Custom software products and tools.</p>
           </div>
           <div>
-            <div className="text-sm font-medium">Quick Links</div>
+            <h2 className="text-sm font-medium">Quick Links</h2>
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link to="/products" className="text-muted-foreground hover:text-foreground story-link">Products</Link></li>
               <li><Link to="/contact" className="text-muted-foreground hover:text-foreground story-link">Contact</Link></li>
             </ul>
           </div>
           <div>
-            <div className="text-sm font-medium">Legal</div>
+            <h2 className="text-sm font-medium">Legal</h2>
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground story-link">Privacy Policy</Link></li>
               <li><Link to="/terms" className="text-muted-foreground hover:text-foreground story-link">Terms of Service</Link></li>

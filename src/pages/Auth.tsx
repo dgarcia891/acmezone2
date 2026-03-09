@@ -100,15 +100,15 @@ const Auth = () => {
         <meta name="description" content="Access your Pre-Apply AI credit dashboard and manage your job application analysis credits." />
       </Helmet>
       
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" id="main-content">
         <Card className="w-full max-w-md elevated">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-gradient-to-br from-primary to-primary-glow rounded-xl flex items-center justify-center mb-4">
               <CreditCard className="w-6 h-6 text-primary-foreground" />
             </div>
-            <CardTitle className="text-gradient-primary">
+            <h1 className="text-2xl font-semibold leading-none tracking-tight text-gradient-primary">
               {resetMode ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}
-            </CardTitle>
+            </h1>
             <CardDescription>
               {resetMode 
                 ? 'Enter your email to reset your password'
@@ -151,11 +151,12 @@ const Auth = () => {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                       ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                       )}
                     </Button>
                   </div>

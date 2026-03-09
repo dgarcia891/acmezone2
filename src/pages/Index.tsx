@@ -98,7 +98,7 @@ const Index = () => {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
       <Header />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <section className="relative py-20 md:py-28 pb-8 md:pb-12">
           <div className="container mx-auto px-4">
             <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">

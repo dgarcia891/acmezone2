@@ -30,7 +30,7 @@ const Products = () => {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
       <Header />
-      <main className="container mx-auto py-12">
+      <main id="main-content" className="container mx-auto py-12">
         <section>
           <h1 className="font-display text-4xl tracking-tight text-gradient-primary">Products</h1>
           <p className="mt-2 text-muted-foreground leading-relaxed">Discover tools and extensions built for speed and clarity.</p>

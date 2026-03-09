@@ -23,12 +23,12 @@ const Header = () => {
   };
 
   return (
-    <header className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
       <div className="container mx-auto flex h-16 items-center justify-between">
-        <Link to="/" className="font-display text-xl tracking-tight text-gradient-primary">
+        <Link to="/" className="font-display text-xl tracking-tight text-gradient-primary" aria-label="Acme Zone — Home">
           Acme Zone
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+        <nav aria-label="Main navigation" className="flex items-center gap-6 text-sm">
           <NavLink to="/" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Home</NavLink>
 
           {/* My Apps Dropdown */}

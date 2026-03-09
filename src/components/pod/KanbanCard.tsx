@@ -47,9 +47,18 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow border-border"
+      role="button"
+      tabIndex={0}
+      aria-label={`Idea: ${text.length > 60 ? text.slice(0, 60) + "…" : text}. Priority: ${priority}${score != null ? `. Viability: ${score}/10` : ""}`}
+      className="p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       onClick={(e) => {
         if (!isDragging) onClick();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (!isDragging) onClick();
+        }
       }}
     >
       {images.length > 0 && (
@@ -58,7 +67,7 @@ export default function KanbanCard({ idea, onClick }: KanbanCardProps) {
             <img
               key={i}
               src={url}
-              alt=""
+              alt={`Design preview ${i + 1} for ${text.length > 30 ? text.slice(0, 30) + "…" : text}`}
               className={`rounded object-cover w-full ${images.length === 1 ? "h-24" : "h-16"}`}
               loading="lazy"
             />
