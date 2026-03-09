@@ -118,16 +118,18 @@ export default function InsightReelLanding() {
   return (
     <>
       <Helmet>
-        <title>InsightReel – AI Video Transcript Analysis | Acme.zone</title>
-        <meta name="description" content="Analyze any video transcript with AI. Get instant insights, sentiment analysis, and key takeaways. Free trial with 3 analyses — no credit card needed." />
+        <title>InsightReel | AI Video Transcript Analysis Chrome Extension</title>
+        <meta name="description" content="Analyze any video transcript with AI. Get instant insights, sentiment analysis, and key takeaways in seconds. Free trial — 3 analyses, no credit card needed." />
         <link rel="canonical" href="https://acme.zone/insightreel" />
         <meta property="og:type" content="product" />
-        <meta property="og:title" content="InsightReel – AI Video Transcript Analysis" />
-        <meta property="og:description" content="Analyze any video transcript with AI. Free trial included." />
+        <meta property="og:title" content="InsightReel | AI Video Transcript Analysis" />
+        <meta property="og:description" content="Analyze any video transcript with AI. Free trial with 3 analyses." />
         <meta property="og:url" content="https://acme.zone/insightreel" />
+        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="InsightReel – AI Video Transcript Analysis" />
-        <meta name="twitter:description" content="Analyze any video transcript with AI. Free trial included." />
+        <meta name="twitter:title" content="InsightReel | AI Video Transcript Analysis" />
+        <meta name="twitter:description" content="Analyze any video transcript with AI. Free trial with 3 analyses." />
+        <meta name="keywords" content="AI video analysis, transcript analysis, sentiment analysis, video insights, Chrome extension, InsightReel" />
       </Helmet>
 
       <Header />

@@ -73,9 +73,14 @@ const Contact = () => {
   return (
     <>
       <Helmet>
-        <title>Contact | Acme Zone</title>
-        <meta name="description" content="Contact Acme Zone for product inquiries and support." />
+        <title>Contact Us | Acme Zone – AI Tools Support</title>
+        <meta name="description" content="Get in touch with Acme Zone for product inquiries, support, or partnership opportunities. We build AI-powered tools for automation and image processing." />
         <link rel="canonical" href="https://acme.zone/contact" />
+        <meta property="og:title" content="Contact Us | Acme Zone" />
+        <meta property="og:description" content="Get in touch with Acme Zone for product inquiries and support." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://acme.zone/contact" />
+        <meta name="twitter:card" content="summary" />
       </Helmet>
       <Header />
       <main id="main-content" className="container mx-auto py-12">

@@ -485,19 +485,21 @@ const ChromeExtensionImageEditor: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>Chrome Extension Image Editor - AI Background Removal | Format Icons Automatically</title>
+        <title>Chrome Extension Icon Generator | AI Background Removal & Auto-Resize</title>
         <meta 
           name="description" 
-          content="Upload any image and automatically format it for Chrome extension submissions. AI removes backgrounds and creates all required icon sizes (16x16, 32x32, 48x48, 128x128) in seconds." 
+          content="Generate Chrome extension icons automatically. AI removes backgrounds and creates all required sizes (16x16, 32x32, 48x48, 128x128). Free, browser-based, no uploads." 
         />
-        <link rel="canonical" href="/chrome-extension-image-editor" />
-        <meta property="og:title" content="Chrome Extension Image Editor - AI Background Removal" />
-        <meta property="og:description" content="Upload any image and automatically format it for Chrome extension submissions with AI background removal." />
+        <link rel="canonical" href="https://acme.zone/products/chrome-extension-image-editor" />
+        <meta property="og:title" content="Chrome Extension Icon Generator | AI Background Removal" />
+        <meta property="og:description" content="Generate Chrome extension icons with AI background removal. Free and browser-based." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="/chrome-extension-image-editor" />
+        <meta property="og:url" content="https://acme.zone/products/chrome-extension-image-editor" />
+        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Chrome Extension Image Editor - AI Background Removal" />
-        <meta name="twitter:description" content="Upload any image and automatically format it for Chrome extension submissions with AI background removal." />
+        <meta name="twitter:title" content="Chrome Extension Icon Generator | AI Background Removal" />
+        <meta name="twitter:description" content="Generate Chrome extension icons with AI. Free and browser-based." />
+        <meta name="keywords" content="Chrome extension icons, icon generator, AI background removal, image resize, free tool" />
       </Helmet>
 
       <div className="min-h-screen flex flex-col">

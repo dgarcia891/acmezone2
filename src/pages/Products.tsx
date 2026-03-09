@@ -16,18 +16,20 @@ const Products = () => {
   return (
     <>
       <Helmet>
-        <title>Products | Custom Software Products</title>
-        <meta name="description" content="Explore software products including InsightReel and more. Clean, modern, and fast." />
+        <title>AI Tools & Software Products | Acme Zone</title>
+        <meta name="description" content="Browse AI-powered tools: background remover, video analysis, job scanning, and image converters. Free browser-based utilities and Chrome extensions." />
         <link rel="canonical" href="https://acme.zone/products" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Products | Custom Software Products" />
-        <meta property="og:description" content="Explore software products including InsightReel and more." />
+        <meta property="og:title" content="AI Tools & Software Products | Acme Zone" />
+        <meta property="og:description" content="Browse AI-powered tools for automation, image processing, and video analysis." />
         <meta property="og:url" content="https://acme.zone/products" />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Products | Custom Software Products" />
-        <meta name="twitter:description" content="Explore software products including InsightReel and more." />
+        <meta name="twitter:title" content="AI Tools & Software Products | Acme Zone" />
+        <meta name="twitter:description" content="Browse AI-powered tools for automation, image processing, and video analysis." />
         <meta name="twitter:image" content={ogImage} />
+        <meta name="keywords" content="AI tools, software products, Chrome extensions, automation tools, free AI utilities" />
       </Helmet>
       <Header />
       <main id="main-content" className="container mx-auto py-12">
