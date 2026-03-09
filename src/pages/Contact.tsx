@@ -105,10 +105,10 @@ const Contact = () => {
             </div>
 
             {/* Math CAPTCHA */}
-            <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
-              <label className="text-sm font-medium" htmlFor="captcha">
+            <fieldset className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
+              <legend className="text-sm font-medium">
                 Quick check: What is {captcha.a} + {captcha.b}?
-              </label>
+              </legend>
               <Input
                 id="captcha"
                 type="number"
