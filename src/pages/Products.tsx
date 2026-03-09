@@ -97,7 +97,7 @@ const Products = () => {
                   <div className="space-y-2 pt-2">
                     {p.features.slice(0, 4).map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
                         <span>{feature}</span>
                       </div>
                     ))}

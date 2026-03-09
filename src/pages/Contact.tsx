@@ -117,8 +117,9 @@ const Contact = () => {
                 onChange={(e) => setCaptchaAnswer(e.target.value)}
                 placeholder="Your answer"
                 className="max-w-[160px]"
+                aria-label="Captcha answer"
               />
-            </div>
+            </fieldset>
 
             {/* Submit only visible when CAPTCHA solved */}
             <div
