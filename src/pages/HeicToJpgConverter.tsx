@@ -388,48 +388,25 @@ const HeicToJpgConverter: React.FC = () => {
             </div>
           </div>
 
-          {/* FAQ Section */}
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-            <div className="space-y-6 max-w-3xl mx-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">What is a HEIC file?</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    HEIC (High Efficiency Image Container) is Apple's default image format for iPhones and iPads. 
-                    It offers better compression than JPG while maintaining quality, but isn't universally supported.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Why convert from HEIC to JPG?</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    While HEIC offers better compression, many applications, websites, and devices don't support it yet. 
-                    Converting to JPG ensures maximum compatibility across older systems, social media, email services, 
-                    photo editing software, and printing services.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Is my data safe?</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Yes! All conversion happens directly in your browser using JavaScript. Your files are never 
-                    uploaded to any server. Once you close the page, all data is gone.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          {(() => {
+            const heicFaqs = [
+              { question: 'What is a HEIC file?', answer: 'HEIC (High Efficiency Image Container) is Apple\'s default image format for iPhones and iPads. It offers better compression than JPG while maintaining quality, but isn\'t universally supported.' },
+              { question: 'Why convert from HEIC to JPG?', answer: 'While HEIC offers better compression, many applications, websites, and devices don\'t support it yet. Converting to JPG ensures maximum compatibility across older systems, social media, email services, photo editing software, and printing services.' },
+              { question: 'Is my data safe?', answer: 'Yes! All conversion happens directly in your browser using JavaScript. Your files are never uploaded to any server. Once you close the page, all data is gone.' },
+              { question: 'How many files can I convert at once?', answer: 'You can batch convert as many HEIC files as you like. The converter processes them in parallel for maximum speed, all within your browser.' },
+              { question: 'What quality are the converted JPGs?', answer: 'We use 92% JPEG quality by default, which provides an excellent balance between file size and image quality — virtually indistinguishable from the original.' },
+            ];
+            return (
+              <>
+                <JsonLd data={[
+                  softwareAppSchema({ name: 'Free HEIC to JPG Converter', description: 'Convert Apple HEIC photos to JPG format instantly in your browser. No upload, no signup, 100% private.', url: `${SITE_URL}/heic-to-jpg`, category: 'PhotographyApplication' }),
+                  faqSchema(heicFaqs),
+                  breadcrumbSchema([{ name: 'Home', url: SITE_URL }, { name: 'HEIC to JPG Converter', url: `${SITE_URL}/heic-to-jpg` }]),
+                ]} />
+                <FAQSection faqs={heicFaqs} />
+              </>
+            );
+          })()}
         </div>
       </main>
 
