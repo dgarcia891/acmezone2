@@ -34,7 +34,7 @@ const CorrectionsTab = () => {
   const { user } = useAuth();
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats>({ pending: 0, approvedWeek: 0, rejectedWeek: 0 });
+  const [stats, setStats] = useState<Stats>({ pending: 0, needsReview: 0, approvedWeek: 0, rejectedWeek: 0 });
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('pending');
