@@ -151,12 +151,21 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
 
             {/* Always-visible upload zone */}
             <div
-              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              role="button"
+              tabIndex={0}
+              aria-label="Add image upload"
+              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={() => fileRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileRef.current?.click();
+                }
+              }}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
             >
-              <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+              <Upload className="h-5 w-5 text-muted-foreground mb-1" aria-hidden="true" />
               <p className="text-xs text-muted-foreground text-center px-1">
                 Add image
               </p>
