@@ -27,7 +27,7 @@ interface Correction {
   created_at: string;
 }
 
-interface Stats { pending: number; approvedWeek: number; rejectedWeek: number; }
+interface Stats { pending: number; needsReview: number; approvedWeek: number; rejectedWeek: number; }
 
 const CorrectionsTab = () => {
   const { toast } = useToast();
