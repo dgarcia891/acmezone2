@@ -137,8 +137,9 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
                   size="icon"
                   className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
                   onClick={() => removeImage(idx)}
+                  aria-label={`Remove image ${idx + 1}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
             ))}
