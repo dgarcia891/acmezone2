@@ -296,6 +296,12 @@ const PodPipeline = () => {
 
   const handleApproveAfterReview = () => {
     if (!wizardIdea) return;
+    // If listings already generated, skip AI regeneration and navigate directly
+    const hasListings = ["listings", "ready", "production", "live"].includes(wizardIdea.status ?? "");
+    if (hasListings) {
+      setStep("listings");
+      return;
+    }
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
         setStep("listings");
