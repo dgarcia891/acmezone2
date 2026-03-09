@@ -299,8 +299,10 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const isProduction = ideaStatus === "production";
   const isLive = ideaStatus === "live";
 
-  const grouped = printifyResults ? groupByMarketplace(printifyResults.filter(r => r.printify_product_id)) : null;
-  const errors = printifyResults?.filter(r => r.error) || [];
+  const grouped = printifyResults ? groupByMarketplace(printifyResults.filter((r) => r.printify_product_id)) : null;
+  const errors = printifyResults?.filter((r) => r.error) || [];
+
+  const tshirtVariantSelectionInvalid = tshirtSelected && hasTshirt && !!variantsQuery.data && tshirtVariantIds.length === 0;
 
   const handleSendToPrintify = async () => {
     // Approve listings first, then send
