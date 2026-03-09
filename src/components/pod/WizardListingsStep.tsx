@@ -219,6 +219,77 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
     setPublishOverrides((prev) => ({ ...prev, [shopId]: value }));
   };
 
+  const setMarginField = (shopId: string, field: "tshirt_margin_pct" | "sticker_margin_pct", value: string) => {
+    const num = value.trim() === "" ? null : Number(value);
+    setMarginOverrides((prev) => ({
+      ...prev,
+      [shopId]: {
+        tshirt_margin_pct: prev[shopId]?.tshirt_margin_pct ?? null,
+        sticker_margin_pct: prev[shopId]?.sticker_margin_pct ?? null,
+        [field]: num == null || Number.isNaN(num) ? null : Math.max(0, Math.min(500, Math.round(num))),
+      },
+    }));
+  };
+
+  const saveMarginsForShop = (shopId: string) => {
+    if (!idea?.id) return;
+    const row = marginOverrides[shopId] || { tshirt_margin_pct: null, sticker_margin_pct: null };
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId,
+      patch: {
+        tshirt_margin_pct: row.tshirt_margin_pct,
+        sticker_margin_pct: row.sticker_margin_pct,
+      },
+    });
+  };
+
+  const resetMarginsForShop = (shopId: string) => {
+    setMarginOverrides((prev) => ({
+      ...prev,
+      [shopId]: { tshirt_margin_pct: null, sticker_margin_pct: null },
+    }));
+    if (!idea?.id) return;
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId,
+      patch: { tshirt_margin_pct: null, sticker_margin_pct: null },
+    });
+  };
+
+  const toggleColorGroup = (colorName: string, checked: boolean) => {
+    const ids = colorsByName.get(colorName) || [];
+    setTshirtVariantIds((prev) => {
+      const next = new Set(prev.map((n) => Number(n)).filter((n) => Number.isFinite(n)));
+      if (checked) {
+        ids.forEach((id) => next.add(id));
+      } else {
+        ids.forEach((id) => next.delete(id));
+      }
+      return Array.from(next);
+    });
+  };
+
+  const saveTshirtColors = () => {
+    if (!idea?.id) return;
+    if (tshirtVariantIds.length === 0) return;
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId: null,
+      patch: { tshirt_color_overrides: tshirtVariantIds },
+    });
+  };
+
+  const selectAllTshirtColors = () => {
+    const all = (variantsQuery.data?.variants || []).map((v) => v.id);
+    setTshirtVariantIds(all);
+  };
+
+  const resetTshirtColorsToAi = () => {
+    const ai = Array.from(recommendedVariantSet);
+    if (ai.length > 0) setTshirtVariantIds(ai);
+  };
+
   const selectedTypes: string[] = [];
   if (stickerSelected && hasSticker) selectedTypes.push("sticker");
   if (tshirtSelected && hasTshirt) selectedTypes.push("tshirt");
