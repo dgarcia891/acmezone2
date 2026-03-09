@@ -520,14 +520,14 @@ Deno.serve(async (req) => {
             variants_count: (product.variants || []).length,
             variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
             published,
-            // Color analysis metadata
-            ...(variantFilterResult && variantFilterResult.excludedCount > 0 ? {
-              color_analysis: {
-                dominance: variantFilterResult.analysis.dominance,
-                dominant_colors: variantFilterResult.analysis.dominant_colors,
-                excluded_count: variantFilterResult.excludedCount,
-              },
-            } : {}),
+             // Color analysis metadata (only when AI filtering is used)
+             ...(!hasManualTshirtVariants && variantFilterResult && variantFilterResult.excludedCount > 0 ? {
+               color_analysis: {
+                 dominance: variantFilterResult.analysis.dominance,
+                 dominant_colors: variantFilterResult.analysis.dominant_colors,
+                 excluded_count: variantFilterResult.excludedCount,
+               },
+             } : {}),
           });
         } catch (shopError) {
           console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);
