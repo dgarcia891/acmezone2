@@ -393,7 +393,7 @@ const PodPipeline = () => {
               )}
               {wizardOpen && (
                 <Button variant="ghost" size="sm" onClick={closeWizard} className="gap-1.5">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back to Board
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to Board
                 </Button>
               )}
             </div>
