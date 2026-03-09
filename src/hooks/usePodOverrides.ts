@@ -73,7 +73,7 @@ export function useSaveIdeaOverride() {
       const { ideaId, shopId, patch } = args;
 
       // Find existing row (first match) to avoid duplicate-row ambiguity when no unique constraint exists
-      let finder = supabase
+      let finder: any = supabase
         .from("az_pod_idea_overrides" as any)
         .select("id")
         .eq("idea_id", ideaId)
@@ -81,19 +81,21 @@ export function useSaveIdeaOverride() {
 
       finder = shopId == null ? finder.is("shop_id", null) : finder.eq("shop_id", shopId);
 
-      const { data: existing, error: findErr } = await finder.maybeSingle();
+      const { data: existing, error: findErr } = await (finder as any).maybeSingle();
       if (findErr) throw findErr;
+
+      const existingId: string | null = (existing as any)?.id ? String((existing as any).id) : null;
 
       const payload = {
         ...patch,
         updated_at: new Date().toISOString(),
       } as any;
 
-      if (existing?.id) {
+      if (existingId) {
         const { data, error } = await supabase
           .from("az_pod_idea_overrides" as any)
           .update(payload)
-          .eq("id", existing.id)
+          .eq("id", existingId)
           .select("*")
           .single();
 
