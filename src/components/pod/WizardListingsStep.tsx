@@ -82,13 +82,16 @@ interface Props {
 }
 
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
-  const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url;
+  const cacheBust = (url: string | null | undefined) => (url ? `${url.split("?")[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url);
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
   const { data: settingsData } = usePodSettings();
+
+  const { data: overrideData, isLoading: overridesLoading } = useIdeaOverrides(idea?.id ?? null);
+  const saveOverride = useSaveIdeaOverride();
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
@@ -100,6 +103,12 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
   // Per-shop publish overrides
   const [publishOverrides, setPublishOverrides] = useState<Record<string, boolean>>({});
+
+  // Local (immediate) overrides to drive real-time preview
+  const [marginOverrides, setMarginOverrides] = useState<Record<string, { tshirt_margin_pct: number | null; sticker_margin_pct: number | null }>>({});
+  const [tshirtVariantIds, setTshirtVariantIds] = useState<number[]>([]);
+  const [hydratedOverrides, setHydratedOverrides] = useState(false);
+  const [hydratedColors, setHydratedColors] = useState(false);
 
   const primaryShopId = settingsData?.settings?.printify_shop_id || "";
   const primaryAutoPublish = settingsData?.settings?.auto_publish ?? false;
