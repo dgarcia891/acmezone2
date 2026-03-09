@@ -89,6 +89,57 @@ serve(async (req) => {
       return json({ error: "INVALID_BODY", message: "indicators must be an array." }, 400);
     }
 
+    let aiAnalysis = null;
+    const geminiKey = Deno.env.get("SA_GEMINI_KEY");
+
+    if (geminiKey) {
+      const { data: configRow } = await supabase
+        .from("sa_app_config")
+        .select("value")
+        .eq("key", "ai_review_enabled")
+        .single();
+        
+      if (configRow?.value === true) {
+         const systemPrompt = "You are a scam detection quality reviewer. Analyze a user-submitted scam report.";
+         const userPrompt = `A user submitted a potential scam report.
+URL: ${url}
+Description: ${description || "N/A"}
+Sender Email: ${sender_email || "N/A"}
+Body Preview: ${body_preview || "N/A"}
+Indicators: ${JSON.stringify(indicators || [])}
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "verdict": "SCAM" | "SAFE" | "SUSPICIOUS",
+  "reason": "<max 20 words>",
+  "confidence": <0-100>,
+  "suggested_patterns": ["pattern1", "pattern2"]
+}`;
+
+         try {
+           const geminiResp = await fetch(
+             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+             {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                 system_instruction: { parts: [{ text: systemPrompt }] },
+                 contents: [{ parts: [{ text: userPrompt }] }],
+               }),
+             }
+           );
+           const geminiData = await geminiResp.json();
+           const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+           const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+           if (jsonMatch) {
+             aiAnalysis = JSON.parse(jsonMatch[0]);
+           }
+         } catch (e) {
+           console.error("AI review error:", e);
+         }
+      }
+    }
+
     const { data, error } = await supabase
       .from("sa_user_reports")
       .insert({
@@ -103,6 +154,7 @@ serve(async (req) => {
         indicators: indicators ?? [],
         scan_result: scan_result ?? {},
         extension_version: extension_version ?? null,
+        ai_analysis: aiAnalysis,
       })
       .select("id")
       .single();

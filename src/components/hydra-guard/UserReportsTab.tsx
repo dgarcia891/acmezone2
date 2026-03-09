@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { severityBadgeClass, statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
 import {
   FileWarning, Clock, CheckCircle, XCircle, AlertCircle,
-  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2
+  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2, Sparkles
 } from 'lucide-react';
 
 interface UserReport {
