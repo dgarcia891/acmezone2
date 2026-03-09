@@ -163,7 +163,7 @@ const UserReportsTab = () => {
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(0); }}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {['all', 'pending', 'reviewed', 'dismissed', 'promoted'].map(s => (
+            {['all', 'pending', 'reviewed', 'dismissed', 'flagged'].map(s => (
               <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             ))}
           </SelectContent>
