@@ -43,13 +43,15 @@ const CorrectionsTab = () => {
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const [{ count: pend }, { data: weekData }] = await Promise.all([
+    const [{ count: pend }, { count: needsRev }, { data: weekData }] = await Promise.all([
       supabase.from('sa_corrections').select('*', { count: 'exact', head: true }).eq('review_status', 'pending'),
+      supabase.from('sa_corrections').select('*', { count: 'exact', head: true }).eq('review_status', 'needs_review'),
       supabase.from('sa_corrections').select('review_status, reviewed_at').gte('reviewed_at', weekAgo),
     ]);
     const rows = (weekData as unknown as Correction[]) || [];
     setStats({
       pending: pend ?? 0,
+      needsReview: needsRev ?? 0,
       approvedWeek: rows.filter(r => r.review_status === 'approved').length,
       rejectedWeek: rows.filter(r => r.review_status === 'rejected').length,
     });
