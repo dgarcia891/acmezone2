@@ -473,15 +473,27 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                         </p>
                       </div>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => resetMarginsForShop(shop.shop_id)}
-                        disabled={saveOverride.isPending}
-                      >
-                        Reset
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setAsDefaultForShop(shop, effectiveTshirt, effectiveSticker)}
+                          disabled={saveOverride.isPending || setShopMargin.isPending || saveGlobalSettings.isPending}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Set as Default
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => resetMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        >
+                          Reset
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
