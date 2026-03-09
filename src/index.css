@@ -190,3 +190,27 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-glow);
   }
 }
+
+/* Reduced motion: disable all custom and Tailwind animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hover-scale:hover {
+    transform: none;
+  }
+
+  .story-link::after {
+    transition-duration: 0.01ms;
+  }
+
+  .elevated {
+    transition: none;
+  }
+}
