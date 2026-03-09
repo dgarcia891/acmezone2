@@ -1,4 +1,6 @@
 import { Helmet } from "react-helmet-async";
+import JsonLd, { softwareAppSchema, faqSchema, SITE_URL } from "@/components/seo/JsonLd";
+import FAQSection from "@/components/seo/FAQSection";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Header from "@/components/layout/Header";
