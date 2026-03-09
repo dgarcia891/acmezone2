@@ -323,16 +323,18 @@ Deno.serve(async (req) => {
 
     const overrides: Record<string, boolean> = publish_overrides || {};
 
-    // Run color analysis for t-shirt designs (skip stickers)
+    // Run color analysis for t-shirt designs (skip stickers) unless the user explicitly selected variants
     const colorAnalysisCache: Record<string, ColorAnalysis | null> = {};
-    for (const listing of filteredListings) {
-      if (listing.product_type === "sticker") continue;
-      const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
-      if (designUrl && !colorAnalysisCache[designUrl]) {
-        console.log(`Analyzing design colors for ${listing.product_type}...`);
-        colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
-        if (colorAnalysisCache[designUrl]) {
-          console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+    if (!hasManualTshirtVariants) {
+      for (const listing of filteredListings) {
+        if (listing.product_type === "sticker") continue;
+        const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
+        if (designUrl && !colorAnalysisCache[designUrl]) {
+          console.log(`Analyzing design colors for ${listing.product_type}...`);
+          colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
+          if (colorAnalysisCache[designUrl]) {
+            console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+          }
         }
       }
     }
