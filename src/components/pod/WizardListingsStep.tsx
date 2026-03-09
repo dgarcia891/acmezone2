@@ -293,6 +293,45 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
     });
   };
 
+  const setAsDefaultForShop = async (shop: any, effectiveTshirt: number, effectiveSticker: number) => {
+    try {
+      if (shop.marketplace === "default") {
+        // Update global settings for primary shop
+        await saveGlobalSettings.mutateAsync({
+          tshirt_margin_pct: String(effectiveTshirt),
+          sticker_margin_pct: String(effectiveSticker),
+        });
+      } else {
+        // Update shop-specific defaults
+        const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
+        if (additionalShopData?.id) {
+          await setShopMargin.mutateAsync({
+            id: additionalShopData.id,
+            tshirt_margin_pct: effectiveTshirt,
+            sticker_margin_pct: effectiveSticker,
+          });
+        }
+      }
+
+      // Clear idea-level override since it's now the default
+      if (idea?.id) {
+        await saveOverride.mutateAsync({
+          ideaId: idea.id,
+          shopId: shop.shop_id,
+          patch: { tshirt_margin_pct: null, sticker_margin_pct: null },
+        });
+      }
+
+      // Update local state to reflect cleared override
+      setMarginOverrides((prev) => ({
+        ...prev,
+        [shop.shop_id]: { tshirt_margin_pct: null, sticker_margin_pct: null },
+      }));
+    } catch (error) {
+      console.error("Failed to set as default:", error);
+    }
+  };
+
   const toggleColorGroup = (colorName: string, checked: boolean) => {
     const ids = colorsByName.get(colorName) || [];
     setTshirtVariantIds((prev) => {
