@@ -19,6 +19,7 @@ import DetectionsTab from '@/components/hydra-guard/DetectionsTab';
 import CorrectionsTab from '@/components/hydra-guard/CorrectionsTab';
 import PatternsTab from '@/components/hydra-guard/PatternsTab';
 import UserReportsTab from '@/components/hydra-guard/UserReportsTab';
+import HydraGuardSummary from '@/components/hydra-guard/HydraGuardSummary';
 import { 
   Users, 
   Shield, 
