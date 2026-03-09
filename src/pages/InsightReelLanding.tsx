@@ -134,6 +134,17 @@ export default function InsightReelLanding() {
         <meta name="keywords" content="AI video analysis, transcript analysis, sentiment analysis, video insights, Chrome extension, InsightReel" />
       </Helmet>
 
+      <JsonLd data={[
+        softwareAppSchema({
+          name: "InsightReel",
+          description: "AI-powered Chrome extension for video transcript analysis. Get instant insights, sentiment analysis, and key takeaways.",
+          url: `${SITE_URL}/insightreel`,
+          category: "BrowserApplication",
+          price: "0",
+        }),
+        faqSchema(insightReelFaqs),
+      ]} />
+
       <Header />
 
       <main className="flex-1">
