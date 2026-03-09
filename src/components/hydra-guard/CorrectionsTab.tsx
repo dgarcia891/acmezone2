@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
 import { Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, MessageSquare, Loader2 } from 'lucide-react';
+import DetectionSnapshotView from '@/components/admin/sa/DetectionSnapshotView';
 
 interface Correction {
   id: string;
@@ -22,6 +23,7 @@ interface Correction {
   reviewed_by: string | null;
   ai_review_result: Record<string, unknown> | null;
   ai_analysis: Record<string, unknown> | null;
+  detection_snapshot: Record<string, any> | null;
   created_at: string;
 }
 
@@ -258,6 +260,14 @@ const CorrectionsTab = () => {
                 <div>
                   <span className="font-medium">AI Analysis:</span>
                   <pre className="mt-1 p-3 rounded bg-muted text-xs overflow-x-auto">{JSON.stringify(selected.ai_analysis, null, 2)}</pre>
+                </div>
+              )}
+              {selected.detection_snapshot && (
+                <div>
+                  <span className="font-medium">Detection Snapshot:</span>
+                  <div className="mt-1">
+                    <DetectionSnapshotView snapshot={selected.detection_snapshot} />
+                  </div>
                 </div>
               )}
               {isPending(selected.review_status) && (

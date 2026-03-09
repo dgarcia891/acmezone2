@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS sa_patterns_phrase_unique_idx ON public.sa_patterns (phrase);

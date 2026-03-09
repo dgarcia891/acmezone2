@@ -23,9 +23,18 @@ const FALLBACK_AI_RESULT = {
   suggested_patterns: [],
 };
 
+// Burst protection
+const MAX_CONCURRENT = 10;
+let activeRequests = 0;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (activeRequests >= MAX_CONCURRENT) {
+    return json({ error: "BUSY", message: "Too many concurrent requests. Please retry shortly." }, 429);
+  }
+
+  activeRequests++;
   try {
     // API key auth
     const apiKey = req.headers.get("x-sa-api-key");
@@ -175,7 +184,6 @@ Respond ONLY with valid JSON, no markdown:
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          // Validate shape
           if (
             parsed.verdict &&
             ["ACCEPTED", "DOWNGRADED", "ESCALATED"].includes(parsed.verdict)
@@ -239,5 +247,7 @@ Respond ONLY with valid JSON, no markdown:
   } catch (err) {
     console.error("sa-submit-correction error:", err);
     return json({ error: "SERVER_ERROR", message: String(err) }, 500);
+  } finally {
+    activeRequests--;
   }
 });

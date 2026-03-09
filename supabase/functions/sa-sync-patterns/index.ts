@@ -63,15 +63,12 @@ serve(async (req) => {
     }
 
     const rows = data ?? [];
-    const patterns = rows.filter(
-      (r) => r.category === "phrase" || r.category === "tld" || r.category === "domain"
-    );
-    const keywords = rows.filter((r) => r.category === "keyword");
 
+    // Return all active patterns — the extension handles categorization
     return json({
       ok: true,
-      patterns,
-      keywords,
+      patterns: rows,
+      keywords: [],
       timestamp: Date.now(),
       count: rows.length,
     });
