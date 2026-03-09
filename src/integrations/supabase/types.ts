@@ -154,6 +154,47 @@ export type Database = {
           },
         ]
       }
+      az_pod_idea_overrides: {
+        Row: {
+          created_at: string | null
+          id: string
+          idea_id: string
+          shop_id: string | null
+          sticker_margin_pct: number | null
+          tshirt_color_overrides: Json | null
+          tshirt_margin_pct: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          idea_id: string
+          shop_id?: string | null
+          sticker_margin_pct?: number | null
+          tshirt_color_overrides?: Json | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          idea_id?: string
+          shop_id?: string | null
+          sticker_margin_pct?: number | null
+          tshirt_color_overrides?: Json | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_idea_overrides_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       az_pod_ideas: {
         Row: {
           analysis: Json | null
