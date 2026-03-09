@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import JsonLd, { softwareAppSchema, faqSchema, breadcrumbSchema, SITE_URL } from '@/components/seo/JsonLd';
+import FAQSection from '@/components/seo/FAQSection';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
