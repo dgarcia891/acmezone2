@@ -304,6 +304,7 @@ const PodPipeline = () => {
     }
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
+        setWizardIdea((prev: any) => ({ ...prev, status: "listings" }));
         setStep("listings");
       },
     });
