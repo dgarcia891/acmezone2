@@ -468,6 +468,7 @@ const BackgroundRemover: React.FC = () => {
             </div>
           </div>
         </div>
+        <FAQSection faqs={bgRemoverFaqs} />
       </main>
 
       <Footer />
