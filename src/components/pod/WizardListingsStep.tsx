@@ -979,7 +979,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                 selectedTypes.length === 0 ||
                 tshirtVariantSelectionInvalid
               }
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {(approveListings.isPending || sendToPrintify.isPending) ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
