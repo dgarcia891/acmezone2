@@ -17,6 +17,7 @@ interface Props {
   isApproving: boolean;
   isBgRemoving?: boolean;
   isEditSaving?: boolean;
+  hasListings?: boolean;
 }
 
 const checkerboardStyle = {
