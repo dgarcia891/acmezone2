@@ -17,6 +17,14 @@ env.useBrowserCache = false;
 
 const MAX_IMAGE_DIMENSION = 1024;
 
+const bgRemoverFaqs = [
+  { question: "How does the AI background remover work?", answer: "Our tool uses a transformer-based machine learning model that runs entirely in your browser. It analyzes each pixel of your image to separate the foreground subject from the background, producing a transparent PNG." },
+  { question: "Is my image uploaded to any server?", answer: "No. All processing happens locally in your browser using WebAssembly and JavaScript. Your images never leave your device, making this 100% private." },
+  { question: "What image formats are supported?", answer: "You can upload PNG, JPG, JPEG, and WebP images. The output is always a high-quality transparent PNG file." },
+  { question: "Is there a file size limit?", answer: "Images larger than 1024px on either dimension are automatically resized for optimal processing speed. There's no hard file size limit." },
+  { question: "How much does it cost?", answer: "It's completely free with unlimited uses. No account, no watermarks, no hidden fees." },
+];
+
 const BackgroundRemover: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
