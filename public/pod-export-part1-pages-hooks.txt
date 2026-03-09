@@ -1,0 +1,1639 @@
+================================================================================
+POD PIPELINE CODE EXPORT — PART 1: PAGES & HOOKS
+Generated: 2026-03-09
+================================================================================
+
+
+================================================================================
+FILE: src/pages/PodPipeline.tsx
+================================================================================
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/PipelineStepIndicator";
+import IdeaInputForm from "@/components/pod/IdeaInputForm";
+import AnalysisReview from "@/components/pod/AnalysisReview";
+import DesignGeneration from "@/components/pod/DesignGeneration";
+import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
+import WizardListingsStep from "@/components/pod/WizardListingsStep";
+
+import PodSettingsForm from "@/components/pod/PodSettingsForm";
+import KanbanBoard from "@/components/pod/KanbanBoard";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdeas } from "@/hooks/usePodPipeline";
+import TrendingIdeasDialog from "@/components/pod/TrendingIdeasDialog";
+import { useGenerateListings } from "@/hooks/usePodListings";
+import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type ViewMode = "board" | "settings";
+
+/** Map an idea's DB status to the wizard step */
+function statusToStep(status: string | null | undefined): PipelineStep {
+  switch (status) {
+    case "pending":
+      return "review";
+    case "designing":
+    case "analyzed":
+    case "designs_generated":
+      return "generate";
+    case "bg_removed":
+      return "results";
+    case "listings":
+      return "listings";
+    case "ready":
+    case "production":
+    case "live":
+      return "listings";
+    default:
+      return "input";
+  }
+}
+
+const PodPipeline = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<ViewMode>("board");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardIdea, setWizardIdea] = useState<any>(null);
+  const [step, setStep] = useState<PipelineStep>("input");
+  const [productType, setProductType] = useState("both");
+  const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
+  const [bgRemoving, setBgRemoving] = useState(false);
+  const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
+
+  const analyzeMutation = usePodAnalyze();
+  const generateMutation = usePodGenerateDesigns();
+  const rejectMutation = useRejectIdea();
+  const removeBgMutation = usePodRemoveBg();
+  const suggestMutation = useSuggestIdeas();
+  const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const handleTrendingOpenChange = (open: boolean) => {
+    setTrendingOpen(open);
+    sessionStorage.setItem("pod_trending_open", String(open));
+  };
+  const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
+  const selectVersionMutation = useSelectDesignVersion();
+  const deleteVersionMutation = useDeleteDesignVersion();
+  const generateListings = useGenerateListings();
+  const dropDesignMutation = useDropDesign();
+  const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
+
+  // Track whether auto-bg-removal has been triggered for the current results step
+  const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  // Restore wizard from URL param on mount
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
+
+  // When opening wizard for an existing idea, derive step from status
+  useEffect(() => {
+    if (wizardOpen && wizardIdea) {
+      const derivedStep = statusToStep(wizardIdea.status);
+      setStep(derivedStep);
+      setProductType(wizardIdea.product_type || "both");
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
+    } else if (wizardOpen && !wizardIdea) {
+      setStep("input");
+      setProductType("both");
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
+    }
+  }, [wizardOpen, wizardIdea?.id]);
+
+  // Auto-trigger design generation when entering generate step with no existing designs
+  const [autoGenTriggered, setAutoGenTriggered] = useState(false);
+  useEffect(() => {
+    if (
+      step === "generate" &&
+      wizardIdea &&
+      !wizardIdea.sticker_design_url &&
+      !wizardIdea.tshirt_design_url &&
+      loadingTypes.size === 0 &&
+      !autoGenTriggered
+    ) {
+      setAutoGenTriggered(true);
+      handleGenerate();
+    }
+    if (step !== "generate") {
+      setAutoGenTriggered(false);
+    }
+  }, [step, wizardIdea?.id]);
+
+  const openWizardForNew = () => {
+    setWizardIdea(null);
+    setWizardOpen(true);
+    setSearchParams({});
+  };
+
+  const openWizardForIdea = (idea: any) => {
+    setWizardIdea(idea);
+    setWizardOpen(true);
+    setSearchParams({ idea: idea.id });
+  };
+
+  const closeWizard = () => {
+    setWizardOpen(false);
+    setWizardIdea(null);
+    setStep("input");
+    setProductType("both");
+    setLoadingTypes(new Set());
+    setBgRemoving(false);
+    bgAutoTriggeredRef.current = false;
+    setVariantDefaults(null);
+    setSearchParams({});
+  };
+
+  const handleCreateVariant = (sourceIdea: any) => {
+    const defaults = {
+      idea_text: sourceIdea.idea_text || "",
+      product_type: sourceIdea.product_type || "both",
+      image_url: sourceIdea.image_url || undefined,
+    };
+    setWizardOpen(false);
+    setWizardIdea(null);
+    setStep("input");
+    setProductType(defaults.product_type);
+    setLoadingTypes(new Set());
+    setBgRemoving(false);
+    bgAutoTriggeredRef.current = false;
+    setVariantDefaults(defaults);
+    setTimeout(() => setWizardOpen(true), 0);
+  };
+
+  const handleAnalyze = (data: { idea_text: string; images?: Array<{ base64: string; media_type: string }>; product_type: string }) => {
+    setProductType(data.product_type);
+    analyzeMutation.mutate(data, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setStep("review");
+      },
+    });
+  };
+
+  const applyGeneratedDesignToWizardIdea = (type: "sticker" | "tshirt", idea: any) => {
+    const cb = `?t=${Date.now()}`;
+    const fields: Record<string, any> = { status: idea.status };
+
+    if (type === "sticker") {
+      fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
+      fields.sticker_design_prompt = idea.sticker_design_prompt;
+      fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
+    } else {
+      fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
+      fields.tshirt_design_prompt = idea.tshirt_design_prompt;
+      fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
+    }
+
+    setWizardIdea((prev: any) => ({ ...prev, ...fields }));
+  };
+
+  const handleGenerate = async () => {
+    if (!wizardIdea) return;
+
+    setStep("generate");
+    bgAutoTriggeredRef.current = false;
+
+    const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
+    setLoadingTypes(new Set(types));
+
+    await Promise.allSettled(
+      types.map(async (type) => {
+        try {
+          const res = await generateMutation.mutateAsync({
+            idea_id: wizardIdea.id,
+            product_type: type,
+            sticker_prompt: type === "sticker" ? (wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt) : undefined,
+            tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
+          });
+
+          if (res?.idea) {
+            applyGeneratedDesignToWizardIdea(type, res.idea);
+          }
+        } finally {
+          setLoadingTypes((prev) => {
+            const n = new Set(prev);
+            n.delete(type);
+            return n;
+          });
+        }
+      })
+    );
+  };
+
+  const handleRegenerate = async (type: "sticker" | "tshirt", guidance?: string, customPrompt?: string) => {
+    if (!wizardIdea) return;
+
+    bgAutoTriggeredRef.current = false;
+    setLoadingTypes((prev) => new Set([...prev, type]));
+
+    try {
+      const res = await generateMutation.mutateAsync({
+        idea_id: wizardIdea.id,
+        product_type: type,
+        sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
+        tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
+        sticker_guidance: type === "sticker" ? guidance : undefined,
+        tshirt_guidance: type === "tshirt" ? guidance : undefined,
+      });
+
+      if (res?.idea) {
+        applyGeneratedDesignToWizardIdea(type, res.idea);
+      }
+    } finally {
+      setLoadingTypes((prev) => {
+        const n = new Set(prev);
+        n.delete(type);
+        return n;
+      });
+    }
+  };
+
+  // Auto-trigger bg removal when entering the results step (if not already done)
+  useEffect(() => {
+    if (
+      step === "results" &&
+      !bgRemoving &&
+      !bgAutoTriggeredRef.current &&
+      wizardIdea &&
+      wizardIdea.status !== "bg_removed" &&
+      (wizardIdea.sticker_design_url || wizardIdea.tshirt_design_url)
+    ) {
+      bgAutoTriggeredRef.current = true;
+      triggerBgRemoval();
+    }
+  }, [step, wizardIdea?.id]);
+
+  const triggerBgRemoval = () => {
+    if (!wizardIdea) return;
+    setBgRemoving(true);
+    removeBgMutation.mutate(wizardIdea.id, {
+      onSuccess: (res) => {
+        const cb = `?t=${Date.now()}`;
+        const idea = { ...res.idea };
+        if (idea.sticker_design_url) idea.sticker_design_url += cb;
+        if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
+        if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
+        if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
+        setWizardIdea(idea);
+        setBgRemoving(false);
+      },
+      onError: () => {
+        setBgRemoving(false);
+      },
+    });
+  };
+
+  const handleApproveDesign = () => {
+    // User approved the generated designs — move to results step where bg removal will auto-trigger
+    bgAutoTriggeredRef.current = false;
+    setStep("results");
+  };
+
+  const handleApproveAfterReview = () => {
+    if (!wizardIdea) return;
+    // If listings already generated, skip AI regeneration and navigate directly
+    const hasListings = ["listings", "ready", "production", "live"].includes(wizardIdea.status ?? "");
+    if (hasListings) {
+      setStep("listings");
+      return;
+    }
+    generateListings.mutate(wizardIdea.id, {
+      onSuccess: () => {
+        setWizardIdea((prev: any) => ({ ...prev, status: "listings" }));
+        setStep("listings");
+      },
+    });
+  };
+
+  const handleReject = () => {
+    if (!wizardIdea) return;
+    rejectMutation.mutate({ id: wizardIdea.id }, {
+      onSuccess: () => closeWizard(),
+    });
+  };
+
+  const handleDropDesign = (type: "sticker" | "tshirt") => {
+    if (!wizardIdea) return;
+    if (productType !== "both") {
+      handleReject();
+      return;
+    }
+    dropDesignMutation.mutate({ id: wizardIdea.id, dropType: type }, {
+      onSuccess: (res) => {
+        setWizardIdea(res.idea);
+        setProductType(res.remainingType);
+      },
+    });
+  };
+
+  const handleSelectVersion = (versionId: string, pt: string) => {
+    if (!wizardIdea) return;
+    selectVersionMutation.mutate({ versionId, ideaId: wizardIdea.id, productType: pt }, {
+      onSuccess: (version: any) => {
+        const urlField = pt === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+        setWizardIdea((prev: any) => ({ ...prev, [urlField]: version.image_url }));
+      },
+    });
+  };
+
+  const handleDeleteVersion = (versionId: string) => {
+    deleteVersionMutation.mutate(versionId);
+  };
+
+  return (
+    <>
+      <Helmet><title>POD Pipeline | acme.zone</title></Helmet>
+      <Header />
+      <main id="main-content" className="flex-1">
+        <div className="mx-auto py-8 px-4">
+          {/* Header row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h1 className="text-3xl font-bold">POD Pipeline</h1>
+            <div className="flex items-center gap-3">
+              {!wizardOpen && (
+                <>
+                  <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
+                    <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" /> New Idea
+                  </Button>
+
+              <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => handleTrendingOpenChange(true)}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    Give me an idea
+                  </Button>
+                  <TrendingIdeasDialog
+                    open={trendingOpen}
+                    onOpenChange={handleTrendingOpenChange}
+                    onSelectIdea={(suggestion) => {
+                      openWizardForNew();
+                      setVariantDefaults({
+                        idea_text: suggestion.idea_text,
+                        product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                      });
+                    }}
+                  />
+                  <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
+                    <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
+                      <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" /> Board
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="settings" aria-label="Settings" className="gap-1.5 text-xs">
+                      <Settings className="h-3.5 w-3.5" aria-hidden="true" /> Settings
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </>
+              )}
+              {wizardOpen && (
+                <Button variant="ghost" size="sm" onClick={closeWizard} className="gap-1.5">
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to Board
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Main content */}
+          {wizardOpen ? (
+            <div>
+              <PipelineStepIndicator current={step} />
+
+              {step === "input" && (
+                <IdeaInputForm onSubmit={handleAnalyze} isLoading={analyzeMutation.isPending} defaultValues={variantDefaults} />
+              )}
+
+              {step === "review" && wizardIdea?.analysis && (
+                <AnalysisReview
+                  analysis={wizardIdea.analysis}
+                  productType={productType}
+                  onReject={handleReject}
+                  onGenerate={handleGenerate}
+                  isLoading={rejectMutation.isPending}
+                />
+              )}
+
+              {step === "generate" && (
+                <DesignGeneration
+                  idea={wizardIdea}
+                  productType={productType}
+                  onReject={handleReject}
+                  onApprove={handleApproveDesign}
+                  onRegenerate={handleRegenerate}
+                  onGenerate={handleGenerate}
+                  onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })}
+                  onDropDesign={handleDropDesign}
+                  loadingTypes={loadingTypes}
+                  isApproving={false}
+                  versions={versions}
+                  onSelectVersion={handleSelectVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                  isSelectingVersion={selectVersionMutation.isPending}
+                  isDeletingVersion={deleteVersionMutation.isPending}
+                />
+              )}
+
+              {step === "results" && wizardIdea && (
+                <BackgroundRemovalStep
+                  idea={wizardIdea}
+                  productType={productType}
+                  onApprove={handleApproveAfterReview}
+                  onReject={handleReject}
+                  onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }}
+                  onDropDesign={handleDropDesign}
+                  onEditSave={(type, blob) => {
+                    updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, {
+                      onSuccess: (updatedIdea: any) => {
+                        setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea }));
+                      },
+                    });
+                  }}
+                  isApproving={generateListings.isPending}
+                  isBgRemoving={bgRemoving}
+                  isEditSaving={updateDesignImage.isPending}
+                  hasListings={["listings", "ready", "production", "live"].includes(wizardIdea.status ?? "")}
+                />
+              )}
+
+              {step === "listings" && wizardIdea && (
+                <WizardListingsStep
+                  idea={wizardIdea}
+                  onBack={() => { bgAutoTriggeredRef.current = true; setStep("results"); }}
+                  onClose={closeWizard}
+                  onReject={handleReject}
+                  onDropDesign={handleDropDesign}
+                  onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))}
+                  onCreateVariant={handleCreateVariant}
+                />
+              )}
+            </div>
+          ) : (
+            <>
+              {view === "board" && <KanbanBoard onCardClick={openWizardForIdea} />}
+              {view === "settings" && <PodSettingsForm />}
+            </>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+};
+
+export default PodPipeline;
+
+
+================================================================================
+FILE: src/pages/admin/AdminPodPipeline.tsx
+================================================================================
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import PipelineStepIndicator, { type PipelineStep } from "@/components/pod/PipelineStepIndicator";
+import IdeaInputForm from "@/components/pod/IdeaInputForm";
+import AnalysisReview from "@/components/pod/AnalysisReview";
+import DesignGeneration from "@/components/pod/DesignGeneration";
+import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
+import WizardListingsStep from "@/components/pod/WizardListingsStep";
+import PodSettingsForm from "@/components/pod/PodSettingsForm";
+import KanbanBoard from "@/components/pod/KanbanBoard";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
+import { useGenerateListings } from "@/hooks/usePodListings";
+import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
+import TrendingIdeasDialog from "@/components/pod/TrendingIdeasDialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+type ViewMode = "board" | "settings";
+
+function statusToStep(status: string | null | undefined): PipelineStep {
+  switch (status) {
+    case "pending": return "review";
+    case "designing": case "analyzed": case "designs_generated": return "generate";
+    case "bg_removed": return "results";
+    case "listings": case "ready": case "production": case "live": return "listings";
+    default: return "input";
+  }
+}
+
+export default function AdminPodPipeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<ViewMode>("board");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardIdea, setWizardIdea] = useState<any>(null);
+  const [step, setStep] = useState<PipelineStep>("input");
+  const [productType, setProductType] = useState("both");
+  const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
+  const [bgRemoving, setBgRemoving] = useState(false);
+  const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
+  const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const handleTrendingOpenChange = (open: boolean) => {
+    setTrendingOpen(open);
+    sessionStorage.setItem("pod_trending_open", String(open));
+  };
+
+  const analyzeMutation = usePodAnalyze();
+  const generateMutation = usePodGenerateDesigns();
+  const rejectMutation = useRejectIdea();
+  const removeBgMutation = usePodRemoveBg();
+  const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
+  const selectVersionMutation = useSelectDesignVersion();
+  const deleteVersionMutation = useDeleteDesignVersion();
+  const generateListings = useGenerateListings();
+  const dropDesignMutation = useDropDesign();
+  const updateDesignImage = useUpdateDesignImage();
+  const { data: allIdeas = [] } = usePodIdeas();
+
+  const bgAutoTriggeredRef = useRef(false);
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (restoredRef.current || wizardOpen) return;
+    const ideaId = searchParams.get("idea") || sessionStorage.getItem("pod_wizard_idea");
+    if (ideaId && allIdeas.length > 0) {
+      const found = allIdeas.find((i: any) => i.id === ideaId);
+      if (found) {
+        restoredRef.current = true;
+        openWizardForIdea(found);
+      }
+    }
+  }, [allIdeas, searchParams]);
+
+  useEffect(() => {
+    if (wizardOpen && wizardIdea) {
+      const derivedStep = statusToStep(wizardIdea.status);
+      setStep(derivedStep);
+      setProductType(wizardIdea.product_type || "both");
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
+    } else if (wizardOpen && !wizardIdea) {
+      setStep("input");
+      setProductType("both");
+      setBgRemoving(false);
+      bgAutoTriggeredRef.current = false;
+    }
+  }, [wizardOpen, wizardIdea?.id]);
+
+  const [autoGenTriggered, setAutoGenTriggered] = useState(false);
+  useEffect(() => {
+    if (step === "generate" && wizardIdea && !wizardIdea.sticker_design_url && !wizardIdea.tshirt_design_url && loadingTypes.size === 0 && !autoGenTriggered) {
+      setAutoGenTriggered(true);
+      handleGenerate();
+    }
+    if (step !== "generate") setAutoGenTriggered(false);
+  }, [step, wizardIdea?.id]);
+
+  const openWizardForNew = () => { setWizardIdea(null); setWizardOpen(true); setSearchParams({}); sessionStorage.removeItem("pod_wizard_idea"); };
+  const openWizardForIdea = (idea: any) => { setWizardIdea(idea); setWizardOpen(true); setSearchParams({ idea: idea.id }); sessionStorage.setItem("pod_wizard_idea", idea.id); };
+
+  const closeWizard = () => {
+    setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType("both");
+    setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
+    setSearchParams({});
+    sessionStorage.removeItem("pod_wizard_idea");
+  };
+
+  const handleCreateVariant = (sourceIdea: any) => {
+    const defaults = { idea_text: sourceIdea.idea_text || "", product_type: sourceIdea.product_type || "both", image_url: sourceIdea.image_url || undefined };
+    setWizardOpen(false); setWizardIdea(null); setStep("input"); setProductType(defaults.product_type);
+    setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(defaults);
+    setTimeout(() => setWizardOpen(true), 0);
+  };
+
+  const handleAnalyze = (data: { idea_text: string; images?: Array<{ base64: string; media_type: string }>; product_type: string }) => {
+    setProductType(data.product_type);
+    analyzeMutation.mutate(data, { onSuccess: (res) => { setWizardIdea(res.idea); setStep("review"); } });
+  };
+
+  const applyGeneratedDesignToWizardIdea = (type: "sticker" | "tshirt", idea: any) => {
+    const cb = `?t=${Date.now()}`;
+    const fields: Record<string, any> = { status: idea.status };
+    if (type === "sticker") {
+      fields.sticker_design_url = idea.sticker_design_url ? idea.sticker_design_url + cb : idea.sticker_design_url;
+      fields.sticker_design_prompt = idea.sticker_design_prompt;
+      fields.sticker_raw_url = idea.sticker_raw_url ? idea.sticker_raw_url + cb : idea.sticker_raw_url;
+    } else {
+      fields.tshirt_design_url = idea.tshirt_design_url ? idea.tshirt_design_url + cb : idea.tshirt_design_url;
+      fields.tshirt_design_prompt = idea.tshirt_design_prompt;
+      fields.tshirt_raw_url = idea.tshirt_raw_url ? idea.tshirt_raw_url + cb : idea.tshirt_raw_url;
+    }
+    setWizardIdea((prev: any) => ({ ...prev, ...fields }));
+  };
+
+  const handleGenerate = async () => {
+    if (!wizardIdea) return;
+    setStep("generate"); bgAutoTriggeredRef.current = false;
+    const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
+    setLoadingTypes(new Set(types));
+    await Promise.allSettled(types.map(async (type) => {
+      try {
+        const res = await generateMutation.mutateAsync({
+          idea_id: wizardIdea.id, product_type: type,
+          sticker_prompt: type === "sticker" ? (wizardIdea.sticker_design_prompt || wizardIdea.analysis?.sticker_design_prompt) : undefined,
+          tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
+        });
+        if (res?.idea) applyGeneratedDesignToWizardIdea(type, res.idea);
+      } finally {
+        setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
+      }
+    }));
+  };
+
+  const handleRegenerate = async (type: "sticker" | "tshirt", guidance?: string, customPrompt?: string) => {
+    if (!wizardIdea) return;
+    bgAutoTriggeredRef.current = false;
+    setLoadingTypes((prev) => new Set([...prev, type]));
+    try {
+      const res = await generateMutation.mutateAsync({
+        idea_id: wizardIdea.id, product_type: type,
+        sticker_prompt: type === "sticker" ? (customPrompt || wizardIdea.sticker_design_prompt) : undefined,
+        tshirt_prompt: type === "tshirt" ? (customPrompt || wizardIdea.tshirt_design_prompt) : undefined,
+        sticker_guidance: type === "sticker" ? guidance : undefined,
+        tshirt_guidance: type === "tshirt" ? guidance : undefined,
+      });
+      if (res?.idea) applyGeneratedDesignToWizardIdea(type, res.idea);
+    } finally {
+      setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
+    }
+  };
+
+  useEffect(() => {
+    if (step === "results" && !bgRemoving && !bgAutoTriggeredRef.current && wizardIdea && wizardIdea.status !== "bg_removed" && (wizardIdea.sticker_design_url || wizardIdea.tshirt_design_url)) {
+      bgAutoTriggeredRef.current = true;
+      triggerBgRemoval();
+    }
+  }, [step, wizardIdea?.id]);
+
+  const triggerBgRemoval = () => {
+    if (!wizardIdea) return;
+    setBgRemoving(true);
+    removeBgMutation.mutate(wizardIdea.id, {
+      onSuccess: (res) => {
+        const cb = `?t=${Date.now()}`;
+        const idea = { ...res.idea };
+        if (idea.sticker_design_url) idea.sticker_design_url += cb;
+        if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
+        if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
+        if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
+        setWizardIdea(idea);
+        setBgRemoving(false);
+      },
+      onError: () => { setBgRemoving(false); },
+    });
+  };
+
+  const handleApproveDesign = () => { bgAutoTriggeredRef.current = false; setStep("results"); };
+  const handleApproveAfterReview = () => {
+    if (!wizardIdea) return;
+    generateListings.mutate(wizardIdea.id, { onSuccess: () => { setStep("listings"); } });
+  };
+  const handleReject = () => { if (!wizardIdea) return; rejectMutation.mutate({ id: wizardIdea.id }, { onSuccess: () => closeWizard() }); };
+  const handleDropDesign = (type: "sticker" | "tshirt") => {
+    if (!wizardIdea) return;
+    if (productType !== "both") { handleReject(); return; }
+    dropDesignMutation.mutate({ id: wizardIdea.id, dropType: type }, {
+      onSuccess: (res) => { setWizardIdea(res.idea); setProductType(res.remainingType); },
+    });
+  };
+  const handleSelectVersion = (versionId: string, pt: string) => {
+    if (!wizardIdea) return;
+    selectVersionMutation.mutate({ versionId, ideaId: wizardIdea.id, productType: pt }, {
+      onSuccess: (version: any) => {
+        const urlField = pt === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+        setWizardIdea((prev: any) => ({ ...prev, [urlField]: version.image_url }));
+      },
+    });
+  };
+  const handleDeleteVersion = (versionId: string) => { deleteVersionMutation.mutate(versionId); };
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-3xl font-bold">POD Pipeline</h1>
+        <div className="flex items-center gap-3">
+          {!wizardOpen && (
+            <>
+              <Button size="sm" onClick={openWizardForNew} className="gap-1.5">
+                <PlusCircle className="h-3.5 w-3.5" /> New Idea
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => handleTrendingOpenChange(true)}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Give me an idea
+              </Button>
+              <TrendingIdeasDialog
+                open={trendingOpen}
+                onOpenChange={handleTrendingOpenChange}
+                onSelectIdea={(suggestion) => {
+                  openWizardForNew();
+                  setVariantDefaults({
+                    idea_text: suggestion.idea_text,
+                    product_type: suggestion.product_type === "both" ? "both" : suggestion.product_type,
+                  });
+                }}
+              />
+              <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as ViewMode)}>
+                <ToggleGroupItem value="board" aria-label="Board view" className="gap-1.5 text-xs">
+                  <LayoutGrid className="h-3.5 w-3.5" /> Board
+                </ToggleGroupItem>
+                <ToggleGroupItem value="settings" aria-label="Settings" className="gap-1.5 text-xs">
+                  <Settings className="h-3.5 w-3.5" /> Settings
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </>
+          )}
+          {wizardOpen && (
+            <Button variant="ghost" size="sm" onClick={closeWizard} className="gap-1.5">
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Board
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {wizardOpen ? (
+        <div>
+          <PipelineStepIndicator current={step} />
+          {step === "input" && <IdeaInputForm onSubmit={handleAnalyze} isLoading={analyzeMutation.isPending} defaultValues={variantDefaults} />}
+          {step === "review" && wizardIdea?.analysis && (
+            <AnalysisReview analysis={wizardIdea.analysis} productType={productType} onReject={handleReject} onGenerate={handleGenerate} isLoading={rejectMutation.isPending} />
+          )}
+          {step === "generate" && (
+            <DesignGeneration idea={wizardIdea} productType={productType} onReject={handleReject} onApprove={handleApproveDesign} onRegenerate={handleRegenerate} onGenerate={handleGenerate} onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })} onDropDesign={handleDropDesign} loadingTypes={loadingTypes} isApproving={false} versions={versions} onSelectVersion={handleSelectVersion} onDeleteVersion={handleDeleteVersion} isSelectingVersion={selectVersionMutation.isPending} isDeletingVersion={deleteVersionMutation.isPending} />
+          )}
+          {step === "results" && wizardIdea && (
+            <BackgroundRemovalStep idea={wizardIdea} productType={productType} onApprove={handleApproveAfterReview} onReject={handleReject} onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }} onDropDesign={handleDropDesign} onEditSave={(type, blob) => { updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, { onSuccess: (updatedIdea: any) => { setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea })); } }); }} isApproving={generateListings.isPending} isBgRemoving={bgRemoving} isEditSaving={updateDesignImage.isPending} />
+          )}
+          {step === "listings" && wizardIdea && (
+            <WizardListingsStep idea={wizardIdea} onBack={() => { bgAutoTriggeredRef.current = true; setStep("results"); }} onClose={closeWizard} onReject={handleReject} onDropDesign={handleDropDesign} onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))} onCreateVariant={handleCreateVariant} />
+          )}
+        </div>
+      ) : (
+        <>
+          {view === "board" && <KanbanBoard onCardClick={openWizardForIdea} />}
+          {view === "settings" && <PodSettingsForm />}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+================================================================================
+FILE: src/hooks/usePodPipeline.ts
+================================================================================
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface DesignVersion {
+  id: string;
+  idea_id: string;
+  product_type: "sticker" | "tshirt";
+  image_url: string;
+  prompt: string | null;
+  version_number: number;
+  is_selected: boolean;
+  created_at: string;
+}
+
+export function usePodIdeas() {
+  return useQuery({
+    queryKey: ["pod-ideas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("az_pod_ideas" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}
+
+export function usePodAnalyze() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { idea_text: string; images?: Array<{ base64: string; media_type: string }>; image_base64?: string; image_media_type?: string }) => {
+      const { data, error } = await supabase.functions.invoke("pod-analyze", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Idea analyzed successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function usePodGenerateDesigns() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { idea_id: string; product_type: string; sticker_prompt?: string; tshirt_prompt?: string; sticker_guidance?: string; tshirt_guidance?: string }) => {
+      const { data, error } = await supabase.functions.invoke("pod-generate-designs", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Designs generated successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function usePodApprove() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (idea_id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-approve", { body: { idea_id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Design approved!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function usePodSettings() {
+  return useQuery({
+    queryKey: ["pod-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", { method: "GET" });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return { settings: data?.settings, additional_shops: data?.additional_shops || [] };
+    },
+  });
+}
+
+export function useAddShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { shop_id: string; marketplace: string; label?: string }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "add_shop", ...body },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+      toast.success("Shop added successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useRemoveShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "remove_shop", id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+      toast.success("Shop removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useToggleShop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "toggle_shop", id, is_active },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useSetShopAutoPublish() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, auto_publish }: { id: string; auto_publish: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "set_shop_auto_publish", id, auto_publish },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useSetShopMargin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, tshirt_margin_pct, sticker_margin_pct }: { id: string; tshirt_margin_pct?: number | null; sticker_margin_pct?: number | null }) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        body: { action: "set_shop_margin", id, tshirt_margin_pct, sticker_margin_pct },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useSavePodSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Record<string, string>) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-settings"] });
+      toast.success("Settings saved successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useValidateRemoveBgKey() {
+  return useMutation({
+    mutationFn: async (apiKey: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-settings", {
+        method: "PUT",
+        body: { removebg_api_key: apiKey },
+      });
+      if (error) throw error;
+      if (data?.valid === false) throw new Error(data.error || "Invalid API key");
+      toast.success(`Remove.bg key verified ✓ (${data?.credits?.free ?? "?"} free credits remaining)`);
+      return data;
+    },
+    onError: (err: Error) => toast.error(`Remove.bg key validation failed: ${err.message}`),
+  });
+}
+
+
+export function useFetchPrintifyShops() {
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("pod-printify-shops");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.shops as Array<{ id: string; title: string; sales_channel: string }>;
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function usePodRemoveBg() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (idea_id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-remove-bg", { body: { idea_id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Background removed successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+export function useRejectIdea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+      const { error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ status: "rejected", reject_reason: reason || null, updated_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Idea rejected");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useDesignVersions(ideaId: string | null) {
+  return useQuery({
+    queryKey: ["pod-design-versions", ideaId],
+    queryFn: async () => {
+      if (!ideaId) return [];
+      const { data, error } = await supabase
+        .from("az_pod_design_versions" as any)
+        .select("*")
+        .eq("idea_id", ideaId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as DesignVersion[];
+    },
+    enabled: !!ideaId,
+  });
+}
+
+export function useSelectDesignVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ versionId, ideaId, productType }: { versionId: string; ideaId: string; productType: string }) => {
+      await supabase
+        .from("az_pod_design_versions" as any)
+        .update({ is_selected: false } as any)
+        .eq("idea_id", ideaId)
+        .eq("product_type", productType);
+      const { data: version, error } = await supabase
+        .from("az_pod_design_versions" as any)
+        .update({ is_selected: true } as any)
+        .eq("id", versionId)
+        .select()
+        .single();
+      if (error) throw error;
+      const urlField = productType === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+      await supabase
+        .from("az_pod_ideas" as any)
+        .update({ [urlField]: (version as any).image_url, updated_at: new Date().toISOString() } as any)
+        .eq("id", ideaId);
+      return version;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-design-versions"] });
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Design version selected");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useDeleteDesignVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (versionId: string) => {
+      const { error } = await supabase
+        .from("az_pod_design_versions" as any)
+        .delete()
+        .eq("id", versionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-design-versions"] });
+      toast.success("Version deleted");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useUpdateDesignImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId, productType, blob }: { ideaId: string; productType: "sticker" | "tshirt"; blob: Blob }) => {
+      const filename = `${ideaId}/${productType}-edited-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("pod-assets")
+        .upload(filename, blob, { contentType: "image/png", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filename);
+      const publicUrl = urlData.publicUrl;
+      const urlField = productType === "sticker" ? "sticker_design_url" : "tshirt_design_url";
+      const { data, error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ [urlField]: publicUrl, updated_at: new Date().toISOString() } as any)
+        .eq("id", ideaId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Edited image saved");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useDropDesign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dropType }: { id: string; dropType: "sticker" | "tshirt" }) => {
+      const remainingType = dropType === "sticker" ? "tshirt" : "sticker";
+      const nullFields: Record<string, any> = {
+        product_type: remainingType,
+        updated_at: new Date().toISOString(),
+      };
+      if (dropType === "sticker") {
+        nullFields.sticker_design_url = null;
+        nullFields.sticker_design_prompt = null;
+        nullFields.sticker_raw_url = null;
+      } else {
+        nullFields.tshirt_design_url = null;
+        nullFields.tshirt_design_prompt = null;
+        nullFields.tshirt_raw_url = null;
+      }
+      const { data, error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update(nullFields as any)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { idea: data, remainingType };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Design type removed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export interface TrendingSuggestion {
+  idea_text: string;
+  product_type: string;
+  reasoning: string;
+  target_audience: string;
+  estimated_viability: number;
+  trend_momentum: "rising" | "peaking" | "steady";
+  category: string;
+}
+
+export function useSuggestIdeas() {
+  return useMutation({
+    mutationFn: async ({ category, count }: { category?: string; count?: number } = {}) => {
+      const { data, error } = await supabase.functions.invoke("pod-suggest-idea", {
+        body: { category: category || "any", count: count || 5 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data.suggestions as TrendingSuggestion[];
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+
+================================================================================
+FILE: src/hooks/usePodKanban.ts
+================================================================================
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface PodLabel {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string | null;
+}
+
+export function useUpdateIdeaStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ status, updated_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useUpdateIdeaNotes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ notes, updated_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useUpdateIdeaPriority() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, priority }: { id: string; priority: string }) => {
+      const { error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ priority, updated_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Priority updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function usePodLabels() {
+  return useQuery({
+    queryKey: ["pod-labels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("az_pod_labels" as any)
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as unknown as PodLabel[];
+    },
+  });
+}
+
+export function useIdeaLabels(ideaId: string | null) {
+  return useQuery({
+    queryKey: ["pod-idea-labels", ideaId],
+    queryFn: async () => {
+      if (!ideaId) return [];
+      const { data, error } = await supabase
+        .from("az_pod_idea_labels" as any)
+        .select("label_id")
+        .eq("idea_id", ideaId);
+      if (error) throw error;
+      return ((data || []) as any[]).map((r: any) => r.label_id as string);
+    },
+    enabled: !!ideaId,
+  });
+}
+
+export function useToggleIdeaLabel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ideaId, labelId, add }: { ideaId: string; labelId: string; add: boolean }) => {
+      if (add) {
+        const { error } = await supabase
+          .from("az_pod_idea_labels" as any)
+          .insert({ idea_id: ideaId, label_id: labelId } as any);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("az_pod_idea_labels" as any)
+          .delete()
+          .eq("idea_id", ideaId)
+          .eq("label_id", labelId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-idea-labels"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+
+================================================================================
+FILE: src/hooks/usePodListings.ts
+================================================================================
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface PrintifyProvider {
+  id: number;
+  title: string;
+  location: string;
+}
+
+export function usePrintifyProviders(blueprintId: string | null) {
+  return useQuery({
+    queryKey: ["printify-providers", blueprintId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("pod-printify-providers", {
+        body: { blueprint_id: blueprintId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return (data.providers || []) as PrintifyProvider[];
+    },
+    enabled: !!blueprintId && blueprintId.trim().length > 0,
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function usePodListings(ideaId: string | null) {
+  return useQuery({
+    queryKey: ["pod-listings", ideaId],
+    queryFn: async () => {
+      if (!ideaId) return [];
+      const { data, error } = await supabase
+        .from("az_pod_listings" as any)
+        .select("*")
+        .eq("idea_id", ideaId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!ideaId,
+  });
+}
+
+export function useGenerateListings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (idea_id: string) => {
+      const { data, error } = await supabase.functions.invoke("pod-generate-listings", { body: { idea_id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-listings"] });
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Listing content generated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useUpdateListing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; tags?: string[]; etsy_title?: string; ebay_title?: string; printify_blueprint_id?: string | null; printify_print_provider_id?: string | null }) => {
+      const { error } = await supabase
+        .from("az_pod_listings" as any)
+        .update({ ...updates, updated_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-listings"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useApproveListings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ideaId: string) => {
+      await supabase
+        .from("az_pod_listings" as any)
+        .update({ is_approved: true, updated_at: new Date().toISOString() } as any)
+        .eq("idea_id", ideaId);
+      const { error } = await supabase
+        .from("az_pod_ideas" as any)
+        .update({ status: "ready", updated_at: new Date().toISOString() } as any)
+        .eq("id", ideaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-listings"] });
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Listings approved — ready for Printify");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useSendToPrintify() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ idea_id, product_types, publish_overrides }: { idea_id: string; product_types?: string[]; publish_overrides?: Record<string, boolean> }) => {
+      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id, product_types, publish_overrides } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Product sent to Printify!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+
+================================================================================
+FILE: src/hooks/usePodOverrides.ts
+================================================================================
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export type IdeaOverrideRow = {
+  id: string;
+  idea_id: string;
+  shop_id: string | null;
+  tshirt_margin_pct: number | null;
+  sticker_margin_pct: number | null;
+  tshirt_color_overrides: unknown;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type IdeaOverrides = {
+  rows: IdeaOverrideRow[];
+  perShop: Record<string, IdeaOverrideRow>;
+  global: IdeaOverrideRow | null;
+};
+
+function normalizeOverrideRow(row: any): IdeaOverrideRow {
+  return {
+    id: String(row.id),
+    idea_id: String(row.idea_id),
+    shop_id: row.shop_id == null ? null : String(row.shop_id),
+    tshirt_margin_pct: row.tshirt_margin_pct == null ? null : Number(row.tshirt_margin_pct),
+    sticker_margin_pct: row.sticker_margin_pct == null ? null : Number(row.sticker_margin_pct),
+    tshirt_color_overrides: row.tshirt_color_overrides,
+    created_at: row.created_at ?? null,
+    updated_at: row.updated_at ?? null,
+  };
+}
+
+export function useIdeaOverrides(ideaId: string | null) {
+  return useQuery({
+    queryKey: ["pod-idea-overrides", ideaId],
+    enabled: !!ideaId,
+    queryFn: async (): Promise<IdeaOverrides> => {
+      if (!ideaId) return { rows: [], perShop: {}, global: null };
+
+      const { data, error } = await supabase
+        .from("az_pod_idea_overrides" as any)
+        .select("*")
+        .eq("idea_id", ideaId);
+
+      if (error) throw error;
+
+      const rows = (data || []).map(normalizeOverrideRow);
+      const perShop: Record<string, IdeaOverrideRow> = {};
+      let global: IdeaOverrideRow | null = null;
+
+      for (const r of rows) {
+        if (r.shop_id) perShop[r.shop_id] = r;
+        else global = r;
+      }
+
+      return { rows, perShop, global };
+    },
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useSaveIdeaOverride() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      ideaId: string;
+      shopId: string | null;
+      patch: Partial<Pick<IdeaOverrideRow, "tshirt_margin_pct" | "sticker_margin_pct" | "tshirt_color_overrides">>;
+    }) => {
+      const { ideaId, shopId, patch } = args;
+
+      let finder: any = supabase
+        .from("az_pod_idea_overrides" as any)
+        .select("id")
+        .eq("idea_id", ideaId)
+        .limit(1);
+
+      finder = shopId == null ? finder.is("shop_id", null) : finder.eq("shop_id", shopId);
+
+      const { data: existing, error: findErr } = await (finder as any).maybeSingle();
+      if (findErr) throw findErr;
+
+      const existingId: string | null = (existing as any)?.id ? String((existing as any).id) : null;
+
+      const payload = {
+        ...patch,
+        updated_at: new Date().toISOString(),
+      } as any;
+
+      if (existingId) {
+        const { data, error } = await supabase
+          .from("az_pod_idea_overrides" as any)
+          .update(payload)
+          .eq("id", existingId)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+        return normalizeOverrideRow(data);
+      }
+
+      const { data, error } = await supabase
+        .from("az_pod_idea_overrides" as any)
+        .insert({
+          idea_id: ideaId,
+          shop_id: shopId,
+          ...patch,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return normalizeOverrideRow(data);
+    },
+    onSuccess: (_row, vars) => {
+      qc.invalidateQueries({ queryKey: ["pod-idea-overrides", vars.ideaId] });
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Saved idea overrides");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export type PrintifyVariant = {
+  id: number;
+  title: string;
+  cost?: number | null;
+  options?: Record<string, string>;
+};
+
+export type PrintifyVariantsResponse = {
+  variants: PrintifyVariant[];
+  recommended_variant_ids?: number[];
+  analysis?: { dominance: "dark" | "light" | "medium"; dominant_colors: string[]; excluded_count: number };
+};
+
+export function useFetchVariantColors(args: {
+  blueprintId: string | number | null | undefined;
+  printProviderId: string | number | null | undefined;
+  imageUrl?: string | null;
+}) {
+  const blueprintId = args.blueprintId == null ? null : String(args.blueprintId);
+  const printProviderId = args.printProviderId == null ? null : String(args.printProviderId);
+
+  return useQuery({
+    queryKey: ["printify-variants", blueprintId, printProviderId, args.imageUrl || ""],
+    enabled: !!blueprintId && !!printProviderId,
+    queryFn: async (): Promise<PrintifyVariantsResponse> => {
+      const { data, error } = await supabase.functions.invoke("pod-printify-providers", {
+        body: {
+          action: "get_variants",
+          blueprint_id: blueprintId,
+          print_provider_id: printProviderId,
+          image_url: args.imageUrl || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return {
+        variants: (data?.variants || []) as PrintifyVariant[],
+        recommended_variant_ids: (data?.recommended_variant_ids || []) as number[],
+        analysis: data?.analysis,
+      };
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+}
