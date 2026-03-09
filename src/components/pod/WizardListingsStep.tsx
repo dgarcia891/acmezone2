@@ -936,7 +936,15 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
           {!isReadyOrBeyond && (
             <Button
               onClick={handleSendToPrintify}
-              disabled={approveListings.isPending || sendToPrintify.isPending || listings.length === 0 || selectedTypes.length === 0}
+              disabled={
+                approveListings.isPending ||
+                sendToPrintify.isPending ||
+                saveOverride.isPending ||
+                overridesLoading ||
+                listings.length === 0 ||
+                selectedTypes.length === 0 ||
+                tshirtVariantSelectionInvalid
+              }
               className="bg-green-600 hover:bg-green-700"
             >
               {(approveListings.isPending || sendToPrintify.isPending) ? (
