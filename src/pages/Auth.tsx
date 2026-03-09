@@ -100,7 +100,7 @@ const Auth = () => {
         <meta name="description" content="Access your Pre-Apply AI credit dashboard and manage your job application analysis credits." />
       </Helmet>
       
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" id="main-content">
         <Card className="w-full max-w-md elevated">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-gradient-to-br from-primary to-primary-glow rounded-xl flex items-center justify-center mb-4">
