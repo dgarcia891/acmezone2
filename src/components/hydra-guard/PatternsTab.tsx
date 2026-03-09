@@ -93,6 +93,18 @@ const PatternsTab = () => {
       if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
       else toast({ title: 'Updated', description: 'Pattern updated.' });
     } else {
+      const { data: existing } = await supabase
+        .from('sa_patterns')
+        .select('id, severity_weight')
+        .ilike('phrase', form.phrase.trim())
+        .maybeSingle();
+
+      if (existing) {
+        toast({ title: 'Duplicate Pattern', description: `Phrase already exists (weight ${existing.severity_weight}).`, variant: 'destructive' });
+        setSaving(false);
+        return;
+      }
+
       const { error } = await supabase.from('sa_patterns').insert({ phrase: form.phrase, category: form.category, severity_weight: form.severity_weight, source: form.source } as never);
       if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
       else toast({ title: 'Created', description: 'Pattern added.' });

@@ -231,7 +231,7 @@ const CorrectionsTab = () => {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-3 border-t">
-              <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages}</span>
+              <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({totalCount} total)</span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
                 <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>

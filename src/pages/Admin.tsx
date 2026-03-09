@@ -324,6 +324,7 @@ const Admin = () => {
             </TabsContent>
 
             <TabsContent value="hydra-guard">
+              <HydraGuardSummary />
               <Tabs defaultValue="corrections" className="space-y-4">
                 <TabsList>
                   <TabsTrigger value="detections" className="gap-2"><Eye className="h-4 w-4" />Detections</TabsTrigger>
