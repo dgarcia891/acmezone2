@@ -17,6 +17,7 @@ interface Props {
   isApproving: boolean;
   isBgRemoving?: boolean;
   isEditSaving?: boolean;
+  hasListings?: boolean;
 }
 
 const checkerboardStyle = {
@@ -81,7 +82,7 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop, 
 
 const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(Date.now())}` : url;
 
-export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving, hasListings }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
   const canDrop = productType === "both";
@@ -143,6 +144,8 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
         <Button onClick={onApprove} disabled={isApproving || processing} className="bg-primary hover:bg-primary/90">
           {isApproving ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Listings…</>
+          ) : hasListings ? (
+            <><Send className="h-4 w-4 mr-2" /> Continue to Finalize</>
           ) : (
             <><Send className="h-4 w-4 mr-2" /> Approve &amp; Generate Listings</>
           )}

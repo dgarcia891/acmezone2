@@ -1,47 +1,32 @@
 
-## Root Cause & Fix
 
-### The Actual Bug
-In `PodPipeline.tsx`, `handleApproveAfterReview` calls `generateListings.mutate()` and on success only calls `setStep("listings")`. It never updates `wizardIdea.status` to `"listings"` in local React state.
+# Unified Admin Navigation
 
-So when the user navigates:
-1. Step 4 → Step 5 (first time): AI runs, DB status = "listings", but `wizardIdea.status` in React state is still `"bg_removed"`
-2. Step 5 → Step 4 (go back): `wizardIdea.status` is still `"bg_removed"` in memory
-3. Step 4 → Step 5 (forward again): `hasListings` check sees `"bg_removed"` → `false` → AI regenerates unnecessarily
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-The existing guard at line 300 (`hasListings` check) is correct logic — it's just never actually reached because status was never updated.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-### Fix
-**File: `src/pages/PodPipeline.tsx`** — In `handleApproveAfterReview`, add `setWizardIdea` to update the status after successful listing generation:
+## Changes
 
-```typescript
-const handleApproveAfterReview = () => {
-  if (!wizardIdea) return;
-  const hasListings = ["listings", "ready", "production", "live"].includes(wizardIdea.status ?? "");
-  if (hasListings) {
-    setStep("listings");
-    return;
-  }
-  generateListings.mutate(wizardIdea.id, {
-    onSuccess: () => {
-      setWizardIdea((prev: any) => ({ ...prev, status: "listings" }));  // ← add this
-      setStep("listings");
-    },
-  });
-};
-```
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-Also update the Step 5 `onBack` handler: when the user navigates back from Step 5 to Step 4 AND the idea already has listings (i.e. they've already been through Step 5), the `BackgroundRemovalStep` approve button should say "Continue to Finalize" instead of "Approve & Generate Listings". This requires passing a `hasListings` prop to `BackgroundRemovalStep`.
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-### Two-part change
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
 
-**1. `src/pages/PodPipeline.tsx`** — Update `handleApproveAfterReview` to persist status in local state after generation (one line added).
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
-**2. `src/components/pod/BackgroundRemovalStep.tsx`** — Accept an optional `hasListings` boolean prop. When true, change the approve button label from "Approve & Generate Listings" to "Continue to Finalize".
-
-**3. `src/pages/PodPipeline.tsx` (JSX)** — Pass `hasListings` to `BackgroundRemovalStep`:
-```tsx
-hasListings={["listings","ready","production","live"].includes(wizardIdea?.status ?? "")}
-```
-
-No database, no edge functions, no new dependencies. Three small changes across two files.

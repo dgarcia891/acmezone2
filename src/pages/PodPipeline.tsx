@@ -304,6 +304,7 @@ const PodPipeline = () => {
     }
     generateListings.mutate(wizardIdea.id, {
       onSuccess: () => {
+        setWizardIdea((prev: any) => ({ ...prev, status: "listings" }));
         setStep("listings");
       },
     });
@@ -455,6 +456,7 @@ const PodPipeline = () => {
                   isApproving={generateListings.isPending}
                   isBgRemoving={bgRemoving}
                   isEditSaving={updateDesignImage.isPending}
+                  hasListings={["listings", "ready", "production", "live"].includes(wizardIdea.status ?? "")}
                 />
               )}
 
