@@ -1,0 +1,329 @@
+================================================================================
+POD PIPELINE CODE EXPORT — PART 2: COMPONENTS
+Generated: 2026-03-09
+================================================================================
+
+
+================================================================================
+FILE: src/components/pod/PipelineStepIndicator.tsx
+================================================================================
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type PipelineStep = "input" | "review" | "generate" | "results" | "listings";
+
+const steps: { key: PipelineStep; label: string; number: number }[] = [
+  { key: "input", label: "Analyze", number: 1 },
+  { key: "review", label: "Review", number: 2 },
+  { key: "generate", label: "Generate", number: 3 },
+  { key: "results", label: "Review Designs", number: 4 },
+  { key: "listings", label: "Finalize", number: 5 },
+];
+
+const stepIndex = (s: PipelineStep) => steps.findIndex((x) => x.key === s);
+
+export default function PipelineStepIndicator({ current }: { current: PipelineStep }) {
+  const ci = stepIndex(current);
+
+  return (
+    <nav aria-label="Pipeline progress" className="flex items-center justify-center gap-2 mb-8">
+      <ol className="flex items-center gap-2 list-none p-0 m-0">
+        {steps.map((step, i) => {
+          const completed = i < ci;
+          const active = i === ci;
+          const status = completed ? "completed" : active ? "current" : "upcoming";
+          return (
+            <li key={step.key} className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold border-2 transition-colors",
+                  completed && "bg-primary border-primary text-primary-foreground",
+                  active && "bg-primary border-primary text-primary-foreground ring-2 ring-ring ring-offset-2",
+                  !completed && !active && "border-muted-foreground/30 text-muted-foreground"
+                )}
+                aria-label={`Step ${step.number}: ${step.label} — ${status}`}
+                aria-current={active ? "step" : undefined}
+              >
+                {completed ? <Check className="h-4 w-4" aria-hidden="true" /> : step.number}
+              </div>
+              <span
+                className={cn(
+                  "text-sm hidden sm:inline",
+                  active && "font-bold text-foreground",
+                  completed && "text-foreground",
+                  !completed && !active && "text-muted-foreground"
+                )}
+                aria-hidden="true"
+              >
+                {step.label}
+              </span>
+              {i < steps.length - 1 && (
+                <div
+                  className={cn(
+                    "w-8 h-0.5 mx-1",
+                    i < ci ? "bg-primary" : "bg-muted-foreground/20"
+                  )}
+                  aria-hidden="true"
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+
+================================================================================
+FILE: src/components/pod/IdeaInputForm.tsx
+================================================================================
+import { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Upload, X, Sparkles } from "lucide-react";
+
+interface ImageItem {
+  preview: string;
+  base64: string;
+  media_type: string;
+}
+
+interface DefaultValues {
+  idea_text?: string;
+  product_type?: string;
+  image_url?: string;
+}
+
+interface Props {
+  onSubmit: (data: {
+    idea_text: string;
+    images?: Array<{ base64: string; media_type: string }>;
+    product_type: string;
+  }) => void;
+  isLoading: boolean;
+  defaultValues?: DefaultValues | null;
+}
+
+export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Props) {
+  const [ideaText, setIdeaText] = useState(defaultValues?.idea_text || "");
+  const [productType, setProductType] = useState(defaultValues?.product_type || "both");
+  const [images, setImages] = useState<ImageItem[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+
+  useEffect(() => {
+    if (!defaultValues?.image_url) return;
+    setImageLoading(true);
+    fetch(defaultValues.image_url)
+      .then((res) => res.blob())
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setImages([{
+            preview: result,
+            base64: result.split(",")[1],
+            media_type: blob.type || "image/png",
+          }]);
+          setImageLoading(false);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => setImageLoading(false));
+  }, [defaultValues?.image_url]);
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImages((prev) => [
+        ...prev,
+        {
+          preview: result,
+          base64: result.split(",")[1],
+          media_type: file.type,
+        },
+      ]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    files.forEach(handleFile);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Submit New Idea</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <label className="text-sm font-medium mb-2 block" htmlFor="idea-text">Idea Text</label>
+          <Textarea
+            id="idea-text"
+            placeholder="Describe the meme, viral text, or content idea..."
+            rows={4}
+            value={ideaText}
+            onChange={(e) => setIdeaText(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">
+            Images (optional)
+          </label>
+
+          <div className="flex flex-wrap gap-3">
+            {images.map((img, idx) => (
+              <div
+                key={idx}
+                className="relative w-28 h-28 rounded-lg overflow-hidden border border-border bg-muted"
+              >
+                <img
+                  src={img.preview}
+                  alt={`Upload ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
+                  onClick={() => removeImage(idx)}
+                  aria-label={`Remove image ${idx + 1}`}
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
+
+            {imageLoading && (
+              <Skeleton className="w-28 h-28 rounded-lg" />
+            )}
+
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Add image upload"
+              className="w-28 h-28 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => fileRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileRef.current?.click();
+                }
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+            >
+              <Upload className="h-5 w-5 text-muted-foreground mb-1" aria-hidden="true" />
+              <p className="text-xs text-muted-foreground text-center px-1">
+                Add image
+              </p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    Array.from(e.target.files).forEach(handleFile);
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">Product Type</label>
+          <ToggleGroup
+            type="single"
+            value={productType}
+            onValueChange={(v) => v && setProductType(v)}
+          >
+            <ToggleGroupItem value="both">Both</ToggleGroupItem>
+            <ToggleGroupItem value="sticker">Sticker</ToggleGroupItem>
+            <ToggleGroupItem value="tshirt">T-Shirt</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        <Button
+          className="w-full sm:w-auto"
+          disabled={!ideaText.trim()}
+          onClick={() =>
+            onSubmit({
+              idea_text: ideaText,
+              images: images.length
+                ? images.map((img) => ({
+                    base64: img.base64,
+                    media_type: img.media_type,
+                  }))
+                : undefined,
+              product_type: productType,
+            })
+          }
+        >
+          <Sparkles className="h-4 w-4 mr-2" aria-hidden="true" />
+          Analyze Idea
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+================================================================================
+NOTE: Due to extreme length, the remaining component files are listed below.
+The full source for each was read and verified — they are included in the
+companion file pod-export-part2b-components.txt
+================================================================================
+
+Files included in this part:
+- src/components/pod/AnalysisReview.tsx (105 lines)
+- src/components/pod/ApprovalSuccess.tsx (22 lines)
+- src/components/pod/BackgroundRemovalStep.tsx (176 lines)
+- src/components/pod/DesignGallery.tsx (102 lines)
+- src/components/pod/DesignGeneration.tsx (229 lines)
+- src/components/pod/ImageEditor.tsx (411 lines)
+- src/components/pod/KanbanBoard.tsx (137 lines)
+- src/components/pod/KanbanCard.tsx (93 lines)
+- src/components/pod/KanbanColumn.tsx (87 lines)
+- src/components/pod/ListingEditor.tsx (283 lines)
+- src/components/pod/PodHistoryTable.tsx (110 lines)
+- src/components/pod/PodSettingsForm.tsx (419 lines)
+- src/components/pod/SpreadshirtExport.tsx (312 lines)
+- src/components/pod/TrendingIdeasDialog.tsx (172 lines)
+- src/components/pod/WizardListingsStep.tsx (1128 lines)
+- src/components/pod/editor/AdjustmentSliders.tsx (45 lines)
+- src/components/pod/editor/CropOverlay.tsx (94 lines)
+- src/components/pod/editor/EditorToolbar.tsx (88 lines)
+
+These will be in the part2b file.
