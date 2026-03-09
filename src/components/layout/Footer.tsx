@@ -10,7 +10,7 @@ const Footer = () => {
             <p className="mt-2 text-sm text-muted-foreground">Custom software products and tools.</p>
           </div>
           <div>
-            <div className="text-sm font-medium">Quick Links</div>
+            <h2 className="text-sm font-medium">Quick Links</h2>
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link to="/products" className="text-muted-foreground hover:text-foreground story-link">Products</Link></li>
               <li><Link to="/contact" className="text-muted-foreground hover:text-foreground story-link">Contact</Link></li>
