@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="border-t bg-background">
+    <footer className="border-t bg-background" role="contentinfo">
       <div className="container mx-auto py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
