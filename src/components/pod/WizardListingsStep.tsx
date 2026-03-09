@@ -789,7 +789,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     />
                     <label htmlFor="select-tshirt" className="text-xs font-medium cursor-pointer">T-Shirt</label>
                   </div>
-                  <div className={`w-full rounded border aspect-square overflow-hidden ${!tshirtSelected ? "opacity-40" : ""}`} style={checkerboardStyle}>
+                  <div className={`w-full rounded border aspect-square overflow-hidden flex items-center justify-center p-[12%] ${!tshirtSelected ? "opacity-40" : ""}`} style={{ backgroundColor: representativeTshirtColor }}>
                     <img src={cacheBust(idea.tshirt_design_url)} alt="T-Shirt design" className="w-full h-full object-contain" />
                   </div>
                 </div>
