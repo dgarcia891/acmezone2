@@ -769,8 +769,10 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                           <TableCell className="text-xs py-2 capitalize">{pt === "tshirt" ? "T-Shirt" : "Sticker"}</TableCell>
                           <TableCell className="text-xs py-2 text-right font-mono">
                             {effectiveMargin}%
-                            {isInherited && (
-                              <span className="text-muted-foreground ml-1 text-[10px]">(default)</span>
+                            {source !== "custom" && (
+                              <span className="text-muted-foreground ml-1 text-[10px]">
+                                ({source === "shop" ? "shop default" : "default"})
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right font-mono font-medium">
