@@ -240,15 +240,6 @@ export default function SpreadshirtExport({ idea, listings }: Props) {
     </div>
   );
 
-  const STORAGE_KEY = "pod-spreadshirt-expanded";
-  const [open, setOpen] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
-
   const handleToggle = (value: boolean) => {
     setOpen(value);
     try {
