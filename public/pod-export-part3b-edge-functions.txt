@@ -1,0 +1,2060 @@
+================================================================================
+POD PIPELINE CODE EXPORT — PART 3B: REMAINING EDGE FUNCTIONS
+Generated: 2026-03-09
+================================================================================
+
+
+================================================================================
+FILE: supabase/functions/pod-export-image/index.ts
+================================================================================
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { image_url, width = 4000, height = 4000 } = await req.json();
+
+    if (!image_url) {
+      return new Response(
+        JSON.stringify({ error: "image_url is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate dimensions
+    const targetWidth = Math.min(Math.max(100, Number(width)), 4000);
+    const targetHeight = Math.min(Math.max(100, Number(height)), 4000);
+
+    // Fetch the source image
+    const imageResponse = await fetch(image_url);
+    if (!imageResponse.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch source image" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const imageBlob = await imageResponse.blob();
+    const arrayBuffer = await imageBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // Detect image type from magic bytes
+    const isPng =
+      uint8Array[0] === 0x89 &&
+      uint8Array[1] === 0x50 &&
+      uint8Array[2] === 0x4e &&
+      uint8Array[3] === 0x47;
+
+    const isJpeg = uint8Array[0] === 0xff && uint8Array[1] === 0xd8;
+
+    if (!isPng && !isJpeg) {
+      return new Response(
+        JSON.stringify({ error: "Unsupported image format. Please use PNG or JPEG." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check image dimensions from PNG/JPEG headers
+    let originalWidth = 0;
+    let originalHeight = 0;
+
+    if (isPng) {
+      if (uint8Array.length >= 24) {
+        originalWidth = (uint8Array[16] << 24) | (uint8Array[17] << 16) | (uint8Array[18] << 8) | uint8Array[19];
+        originalHeight = (uint8Array[20] << 24) | (uint8Array[21] << 16) | (uint8Array[22] << 8) | uint8Array[23];
+      }
+    } else if (isJpeg) {
+      for (let i = 2; i < uint8Array.length - 10; i++) {
+        if (uint8Array[i] === 0xff && (uint8Array[i + 1] === 0xc0 || uint8Array[i + 1] === 0xc2)) {
+          originalHeight = (uint8Array[i + 5] << 8) | uint8Array[i + 6];
+          originalWidth = (uint8Array[i + 7] << 8) | uint8Array[i + 8];
+          break;
+        }
+      }
+    }
+
+    console.log(`Original dimensions: ${originalWidth}x${originalHeight}, target: ${targetWidth}x${targetHeight}`);
+
+    if (originalWidth <= targetWidth && originalHeight <= targetHeight && originalWidth > 0) {
+      const base64 = btoa(String.fromCharCode(...uint8Array));
+      return new Response(
+        JSON.stringify({
+          base64,
+          width: originalWidth,
+          height: originalHeight,
+          resized: false,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const base64 = btoa(String.fromCharCode(...uint8Array));
+    
+    return new Response(
+      JSON.stringify({
+        base64,
+        width: originalWidth || targetWidth,
+        height: originalHeight || targetHeight,
+        original_width: originalWidth,
+        original_height: originalHeight,
+        target_width: targetWidth,
+        target_height: targetHeight,
+        resized: false,
+        note: "Image returned at original size. For best results, ensure your design is at least 4000x4000px.",
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error processing image:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Failed to process image" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-generate-designs/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { idea_id, product_type, sticker_prompt, tshirt_prompt, sticker_guidance, tshirt_guidance } = await req.json();
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not found");
+
+    // ---------- AI prompt refinement ----------
+    async function refinePrompt(originalPrompt: string, guidance: string): Promise<string> {
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: "You are a prompt engineer for AI image generation. Given the original image generation prompt and user guidance describing requested changes, rewrite the prompt to incorporate the changes. Keep all technical specifications (resolution, format, background requirements) from the original. Return ONLY the new prompt text, nothing else — no explanation, no markdown."
+              },
+              {
+                role: "user",
+                content: `Original prompt:\n${originalPrompt}\n\nRequested changes:\n${guidance}`
+              }
+            ],
+          })
+        });
+
+        if (!response.ok) {
+          console.error("Prompt refinement failed:", response.status);
+          return originalPrompt;
+        }
+
+        const data = await response.json();
+        const refined = data.choices?.[0]?.message?.content?.trim();
+        if (refined && refined.length > 20) {
+          console.log("Prompt refined by AI");
+          return refined;
+        }
+        return originalPrompt;
+      } catch (err) {
+        console.error("Prompt refinement error:", err);
+        return originalPrompt;
+      }
+    }
+
+    // ---------- AI image generation ----------
+    async function generateDesignImage(prompt: string): Promise<string | null> {
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-pro-image-preview",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"],
+          })
+        });
+
+        if (response.status === 429 || response.status === 402) {
+          console.error(`AI rate/credit limit: ${response.status}`);
+          return null;
+        }
+
+        const data = await response.json();
+        if (!response.ok) {
+          console.error("Image gen error:", JSON.stringify(data));
+          return null;
+        }
+
+        const images = data.choices?.[0]?.message?.images;
+        if (images?.[0]?.image_url?.url) return images[0].image_url.url;
+
+        const content = data.choices?.[0]?.message?.content;
+        if (Array.isArray(content)) {
+          for (const part of content) {
+            if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
+          }
+        }
+
+        return null;
+      } catch (err) {
+        console.error("Design generation failed:", err);
+        return null;
+      }
+    }
+
+    // ---------- Decode base64 URL to bytes ----------
+    function decodeBase64Image(base64Url: string): { bytes: Uint8Array; mimeType: string } | null {
+      if (!base64Url.startsWith("data:")) return null;
+      const [header, b64data] = base64Url.split(",");
+      const mimeType = header.split(":")[1]?.split(";")[0] || "image/png";
+      const bytes = Uint8Array.from(atob(b64data), c => c.charCodeAt(0));
+      return { bytes, mimeType };
+    }
+
+    // ---------- Upload to storage (always PNG) ----------
+    async function uploadDesignImage(imageBytes: Uint8Array, filename: string): Promise<string | null> {
+      try {
+        const filePath = `pod-designs/${filename}-raw.png`;
+        const { error: uploadError } = await supabase.storage
+          .from("pod-assets")
+          .upload(filePath, imageBytes, { contentType: "image/png", upsert: true });
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          return null;
+        }
+
+        const { data: publicUrl } = supabase.storage.from("pod-assets").getPublicUrl(filePath);
+        console.log(`Uploaded raw design: ${publicUrl.publicUrl}`);
+        return publicUrl.publicUrl;
+      } catch (err) {
+        console.error("Upload failed:", err);
+        return null;
+      }
+    }
+
+    // ---------- Full pipeline: refine prompt (if guidance) → generate → upload ----------
+    async function processDesign(basePrompt: string, guidance: string | undefined, filename: string): Promise<{ url: string | null; refinedPrompt: string }> {
+      let finalPrompt = basePrompt;
+      if (guidance && guidance.trim()) {
+        finalPrompt = await refinePrompt(basePrompt, guidance);
+      }
+
+      const base64Url = await generateDesignImage(finalPrompt);
+      if (!base64Url) return { url: null, refinedPrompt: finalPrompt };
+
+      const decoded = decodeBase64Image(base64Url);
+      if (!decoded) {
+        return { url: base64Url, refinedPrompt: finalPrompt };
+      }
+
+      const uploadedUrl = await uploadDesignImage(decoded.bytes, filename);
+      return { url: uploadedUrl, refinedPrompt: finalPrompt };
+    }
+
+    // ---------- Build update payload ----------
+    const updateData: Record<string, any> = {
+      status: "designs_generated",
+      updated_at: new Date().toISOString()
+    };
+
+    const designTasks: Promise<{ key: string; promptKey: string; prompt: string; url: string | null }>[] = [];
+
+    if ((product_type === "sticker" || product_type === "both") && sticker_prompt) {
+      designTasks.push(
+        processDesign(
+          `Create a die-cut sticker design. The artwork MUST fill the ENTIRE canvas from edge to edge with absolutely NO margin, NO padding, and NO white border around it. The design should be a single cohesive graphic that bleeds to all four edges of the image. Make it bold, colorful, and print-ready for die-cut sticker production at 300 DPI. Use a solid pure white (#FFFFFF) background ONLY behind the artwork where needed for internal contrast. Do NOT leave any empty white space around the design. The graphic MUST occupy 95-100% of the total image area. Do NOT include any product mockup, shadow, border, frame, or checkered pattern. ${sticker_prompt}`,
+          sticker_guidance,
+          `sticker-${idea_id}`
+        ).then(r => ({ key: "sticker_design_url", promptKey: "sticker_design_prompt", prompt: r.refinedPrompt, url: r.url }))
+      );
+    }
+
+    if ((product_type === "tshirt" || product_type === "both") && tshirt_prompt) {
+      designTasks.push(
+        processDesign(
+          `Create a t-shirt graphic design at high resolution (4500x5400 pixels or similar print-ready dimensions). The artwork MUST be LARGE and PROMINENT, filling at least 70-80% of the canvas. Make the design bold, oversized, and visually impactful — NOT small or centered in a tiny area. Output ONLY the graphic artwork on a solid pure white (#FFFFFF) background. Do NOT include any t-shirt mockup, fabric texture, clothing outline, shadow, border, or frame. No checkered pattern. Just the isolated artwork on pure white, filling the majority of the canvas. ${tshirt_prompt}`,
+          tshirt_guidance,
+          `tshirt-${idea_id}`
+        ).then(r => ({ key: "tshirt_design_url", promptKey: "tshirt_design_prompt", prompt: r.refinedPrompt, url: r.url }))
+      );
+    }
+
+    const results = await Promise.allSettled(designTasks);
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        updateData[result.value.promptKey] = result.value.prompt;
+        if (result.value.url) {
+          updateData[result.value.key] = result.value.url;
+          const rawKey = result.value.key.replace("_design_url", "_raw_url");
+          updateData[rawKey] = result.value.url;
+        }
+      } else {
+        console.error("Design task failed:", result.reason);
+      }
+    }
+
+    const { data: idea, error: updateError } = await supabase
+      .from("az_pod_ideas")
+      .update(updateData)
+      .eq("id", idea_id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return json({ idea });
+  } catch (error) {
+    console.error("pod-generate-designs error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-generate-listings/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function generateListing(
+  productType: string,
+  idea: any,
+  designPrompt: string,
+  lovableApiKey: string
+) {
+  const analysis = idea.analysis || {};
+
+  const listingPrompt = `You are an expert e-commerce copywriter for print-on-demand products sold on Etsy and eBay.
+
+Based on this product information, generate optimized listing content:
+
+Product type: ${productType}
+Original idea: ${idea.idea_text}
+Design prompt used: ${designPrompt}
+AI Analysis: ${JSON.stringify(analysis)}
+
+Generate a JSON response with:
+{
+  "title": "A compelling product title, max 140 chars, keyword-rich for search",
+  "description": "A detailed product description, 200-400 words, includes materials, sizing, use cases, and emotional appeal. Use line breaks for readability.",
+  "tags": ["array", "of", "13", "relevant", "etsy", "tags", "max", "20", "chars", "each"],
+  "seo_keywords": ["primary keyword", "secondary keyword", "long tail keyword"],
+  "etsy_title": "Etsy-optimized title with relevant keywords, max 140 chars",
+  "ebay_title": "eBay-optimized title with relevant keywords, max 80 chars"
+}
+
+Only output valid JSON, no markdown.`;
+
+  const response = await fetch(
+    "https://ai.gateway.lovable.dev/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: "You are a JSON-only response bot. Output only valid JSON." },
+          { role: "user", content: listingPrompt },
+        ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const t = await response.text();
+    console.error("AI gateway error:", response.status, t);
+    if (response.status === 429) throw new Error("Rate limit exceeded, please try again later.");
+    if (response.status === 402) throw new Error("AI credits exhausted, please add funds.");
+    throw new Error("AI gateway error");
+  }
+
+  const result = await response.json();
+  const content = result.choices?.[0]?.message?.content;
+  if (!content) throw new Error("No content from AI");
+
+  const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
+const PRODUCT_SEARCH: Record<string, string[]> = {
+  sticker: ["sticker", "kiss-cut", "kiss cut"],
+  tshirt: ["unisex", "t-shirt", "tee", "bella", "3001"],
+};
+
+async function discoverPrintifyDefaults(apiKey: string): Promise<Record<string, { blueprint_id: string; print_provider_id: string }>> {
+  const res = await fetch("https://api.printify.com/v1/catalog/blueprints.json", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Printify catalog error ${res.status}`);
+  const blueprints: any[] = await res.json();
+
+  const results: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+
+  for (const [productType, keywords] of Object.entries(PRODUCT_SEARCH)) {
+    const match = blueprints.find((bp: any) =>
+      keywords.some((kw) => bp.title?.toLowerCase().includes(kw))
+    );
+    if (!match) continue;
+
+    const ppRes = await fetch(`https://api.printify.com/v1/catalog/blueprints/${match.id}/print_providers.json`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!ppRes.ok) continue;
+    const providers: any[] = await ppRes.json();
+    if (providers.length === 0) continue;
+
+    results[productType] = {
+      blueprint_id: String(match.id),
+      print_provider_id: String(providers[0].id),
+    };
+  }
+
+  return results;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { idea_id } = await req.json();
+    if (!idea_id) return json({ error: "idea_id is required" }, 400);
+
+    const { data: idea, error: ideaError } = await supabase
+      .from("az_pod_ideas")
+      .select("*")
+      .eq("id", idea_id)
+      .single();
+    if (ideaError || !idea) return json({ error: "Idea not found" }, 404);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key, printify_shop_id")
+      .eq("user_id", user.id)
+      .single();
+
+    let printifyDefaults: Record<string, { blueprint_id: string; print_provider_id: string }> = {};
+    if (settings?.printify_api_key) {
+      try {
+        printifyDefaults = await discoverPrintifyDefaults(settings.printify_api_key);
+        console.log("Discovered Printify defaults:", JSON.stringify(printifyDefaults));
+      } catch (e) {
+        console.warn("Could not auto-discover Printify catalog:", e.message);
+      }
+    }
+
+    await supabase.from("az_pod_listings").delete().eq("idea_id", idea_id);
+
+    const listings: any[] = [];
+
+    const types: { type: string; url: string | null; prompt: string | null }[] = [
+      { type: "sticker", url: idea.sticker_design_url, prompt: idea.sticker_design_prompt },
+      { type: "tshirt", url: idea.tshirt_design_url, prompt: idea.tshirt_design_prompt },
+    ];
+
+    for (const t of types) {
+      if (!t.url) continue;
+
+      const content = await generateListing(t.type, idea, t.prompt || "", LOVABLE_API_KEY);
+      const defaults = printifyDefaults[t.type] || {};
+
+      const { data: listing, error: insertError } = await supabase
+        .from("az_pod_listings")
+        .insert({
+          idea_id,
+          product_type: t.type,
+          title: content.title || "Untitled",
+          description: content.description || "",
+          tags: content.tags || [],
+          seo_keywords: content.seo_keywords || [],
+          etsy_title: content.etsy_title || null,
+          ebay_title: content.ebay_title || null,
+          printify_blueprint_id: defaults.blueprint_id || null,
+          printify_print_provider_id: defaults.print_provider_id || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Insert listing error:", insertError);
+        throw insertError;
+      }
+      listings.push(listing);
+    }
+
+    await supabase
+      .from("az_pod_ideas")
+      .update({ status: "listings", updated_at: new Date().toISOString() })
+      .eq("id", idea_id);
+
+    return json({ listings });
+  } catch (error) {
+    console.error("pod-generate-listings error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-printify-providers/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// ---------- AI color analysis + filtering (shared with send-to-printify) ----------
+
+const DARK_COLORS = new Set([
+  "black", "dark heather", "navy", "dark grey", "dark gray",
+  "forest green", "maroon", "dark chocolate", "charcoal",
+  "dark heather grey", "dark heather gray",
+]);
+
+const LIGHT_COLORS = new Set([
+  "white", "natural", "sport grey", "sport gray", "light blue",
+  "light pink", "sand", "ash", "ice grey", "ice gray",
+  "cream", "soft cream", "heather prism ice blue",
+]);
+
+type ColorDominance = "dark" | "light" | "medium";
+
+interface ColorAnalysis {
+  dominance: ColorDominance;
+  dominant_colors: string[];
+}
+
+async function analyzeDesignColors(imageUrl: string): Promise<ColorAnalysis | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text:
+                  'Analyze this design image for t-shirt printing. What are the dominant colors? Is the design predominantly dark, light, or medium brightness? Respond ONLY with valid JSON: {"dominance": "dark" | "light" | "medium", "dominant_colors": ["color1", "color2"]}',
+              },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed || !["dark", "light", "medium"].includes(parsed.dominance)) return null;
+
+    return {
+      dominance: parsed.dominance as ColorDominance,
+      dominant_colors: Array.isArray(parsed.dominant_colors) ? parsed.dominant_colors : [],
+    };
+  } catch (err) {
+    console.error("color analysis error", err);
+    return null;
+  }
+}
+
+function extractColorName(raw: string): string {
+  return raw.split(" / ")[0].toLowerCase().trim();
+}
+
+function classifyVariantColor(rawName: string): "dark" | "light" | "neutral" {
+  const colorPart = extractColorName(rawName);
+
+  if (DARK_COLORS.has(colorPart)) return "dark";
+  if (LIGHT_COLORS.has(colorPart)) return "light";
+
+  for (const dc of DARK_COLORS) {
+    if (colorPart.includes(dc) || dc.includes(colorPart)) return "dark";
+  }
+  for (const lc of LIGHT_COLORS) {
+    if (colorPart.includes(lc) || lc.includes(colorPart)) return "light";
+  }
+
+  return "neutral";
+}
+
+function recommendVariantsByColor(variants: { id: number; options?: Record<string, string>; title?: string }[], analysis: ColorAnalysis) {
+  if (analysis.dominance === "medium") {
+    return {
+      enabledIds: variants.map((v) => v.id),
+      excludedCount: 0,
+      analysis,
+    };
+  }
+
+  const clashCategory = analysis.dominance;
+  const enabled: number[] = [];
+  let excludedCount = 0;
+
+  for (const v of variants) {
+    const colorName = v.options?.color || v.options?.Color || v.title || "";
+    const category = classifyVariantColor(colorName);
+
+    if (category === clashCategory) {
+      excludedCount++;
+      continue;
+    }
+
+    enabled.push(v.id);
+  }
+
+  if (enabled.length < 3) {
+    return {
+      enabledIds: variants.map((v) => v.id),
+      excludedCount: 0,
+      analysis,
+    };
+  }
+
+  return { enabledIds: enabled, excludedCount, analysis };
+}
+
+// ---------- Printify ----------
+
+async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
+  const res = await fetch(`https://api.printify.com/v1${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("Printify API error:", res.status, JSON.stringify(data));
+    throw new Error(data?.message || data?.error || `Printify API error ${res.status}`);
+  }
+  return data;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!settings?.printify_api_key) {
+      return json({ error: "Printify API key not configured. Please add it in POD Settings." }, 400);
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const action = body?.action;
+
+    if (action === "get_variants") {
+      const blueprint_id = body?.blueprint_id;
+      const print_provider_id = body?.print_provider_id;
+      const image_url = body?.image_url;
+
+      if (!blueprint_id || !print_provider_id) {
+        return json({ error: "blueprint_id and print_provider_id are required" }, 400);
+      }
+
+      const variantsResp = await printifyFetch(
+        `/catalog/blueprints/${blueprint_id}/print_providers/${print_provider_id}/variants.json`,
+        settings.printify_api_key,
+      );
+
+      const variantList = variantsResp?.variants || [];
+
+      let recommended_variant_ids: number[] = [];
+      let analysisMeta: { dominance: ColorDominance; dominant_colors: string[]; excluded_count: number } | undefined;
+
+      if (image_url) {
+        const analysis = await analyzeDesignColors(String(image_url));
+        if (analysis) {
+          const rec = recommendVariantsByColor(variantList, analysis);
+          recommended_variant_ids = rec.enabledIds;
+          analysisMeta = {
+            dominance: rec.analysis.dominance,
+            dominant_colors: rec.analysis.dominant_colors,
+            excluded_count: rec.excludedCount,
+          };
+        }
+      }
+
+      const simplified = variantList.map((v: any) => ({
+        id: v.id,
+        title: v.title,
+        cost: v.cost ?? null,
+        options: v.options || {},
+      }));
+
+      return json({ variants: simplified, recommended_variant_ids, analysis: analysisMeta });
+    }
+
+    // Default action: get providers for blueprint
+    const { blueprint_id } = body || {};
+    if (!blueprint_id) {
+      return json({ error: "blueprint_id is required" }, 400);
+    }
+
+    const providers = await printifyFetch(
+      `/catalog/blueprints/${blueprint_id}/print_providers.json`,
+      settings.printify_api_key,
+    );
+
+    const simplified = (providers || []).map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      location: p.location?.country || "",
+    }));
+
+    return json({ providers: simplified });
+  } catch (error) {
+    console.error("pod-printify-providers error:", error);
+    return json({ error: (error as Error).message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-printify-shops/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!settings?.printify_api_key) {
+      return json({ error: "Printify API key not configured. Please save your API key first." }, 400);
+    }
+
+    const response = await fetch("https://api.printify.com/v1/shops.json", {
+      headers: { Authorization: `Bearer ${settings.printify_api_key}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("Printify shops API error:", response.status, text);
+      if (response.status === 401) {
+        return json({ error: "Invalid Printify API key. Please check your credentials." }, 401);
+      }
+      return json({ error: `Printify API error: ${response.status}` }, response.status);
+    }
+
+    const shops = await response.json();
+
+    const simplified = shops.map((s: any) => ({
+      id: String(s.id),
+      title: s.title || "Untitled Shop",
+      sales_channel: s.sales_channel || "unknown",
+    }));
+
+    return json({ shops: simplified });
+  } catch (error) {
+    console.error("pod-printify-shops error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-remove-bg/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("removebg_api_key")
+      .eq("user_id", user.id)
+      .single();
+
+    const REMOVE_BG_API_KEY = settings?.removebg_api_key;
+    if (!REMOVE_BG_API_KEY) {
+      return json({ error: "Remove.bg API key is not configured. Please add it in POD Settings." }, 400);
+    }
+
+    const { idea_id } = await req.json();
+    if (!idea_id) return json({ error: "idea_id is required" }, 400);
+
+    const { data: idea, error: ideaError } = await supabase
+      .from("az_pod_ideas")
+      .select("*")
+      .eq("id", idea_id)
+      .single();
+    if (ideaError || !idea) return json({ error: "Idea not found" }, 404);
+
+    async function removeBackground(imageUrl: string): Promise<Uint8Array> {
+      const imgResponse = await fetch(imageUrl);
+      if (!imgResponse.ok) throw new Error(`Failed to download image: ${imgResponse.status}`);
+      const imageBytes = new Uint8Array(await imgResponse.arrayBuffer());
+
+      const formData = new FormData();
+      formData.append("image_file", new Blob([imageBytes], { type: "image/png" }), "design.png");
+      formData.append("size", "auto");
+
+      console.log(`Remove.bg: sending ${imageBytes.length} bytes for background removal`);
+
+      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": REMOVE_BG_API_KEY },
+        body: formData,
+      });
+
+      if (response.status === 403) {
+        const errorText = await response.text();
+        console.error(`Remove.bg auth failed: ${errorText}`);
+        throw new Error("Remove.bg API key is invalid. Please update it in POD Settings.");
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Remove.bg failed (${response.status}): ${errorText}`);
+        throw new Error(`Remove.bg failed with status ${response.status}. Please check your API key and account.`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const result = new Uint8Array(arrayBuffer);
+      console.log(`Remove.bg success: input ${imageBytes.length} bytes → output ${result.length} bytes (transparent PNG)`);
+      return result;
+    }
+
+    async function uploadTransparent(imageBytes: Uint8Array, filename: string): Promise<string> {
+      const filePath = `pod-designs/${filename}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("pod-assets")
+        .upload(filePath, imageBytes, { contentType: "image/png", upsert: true });
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+      const { data: publicUrl } = supabase.storage.from("pod-assets").getPublicUrl(filePath);
+      return publicUrl.publicUrl;
+    }
+
+    const updateData: Record<string, any> = {
+      status: "bg_removed",
+      updated_at: new Date().toISOString(),
+    };
+
+    if (idea.sticker_design_url) {
+      updateData.sticker_raw_url = idea.sticker_design_url;
+    }
+    if (idea.tshirt_design_url) {
+      updateData.tshirt_raw_url = idea.tshirt_design_url;
+    }
+
+    const tasks: Promise<void>[] = [];
+
+    if (idea.sticker_design_url) {
+      tasks.push(
+        removeBackground(idea.sticker_design_url)
+          .then(bytes => uploadTransparent(bytes, `sticker-${idea_id}`))
+          .then(url => { updateData.sticker_design_url = url; })
+      );
+    }
+
+    if (idea.tshirt_design_url) {
+      tasks.push(
+        removeBackground(idea.tshirt_design_url)
+          .then(bytes => uploadTransparent(bytes, `tshirt-${idea_id}`))
+          .then(url => { updateData.tshirt_design_url = url; })
+      );
+    }
+
+    if (tasks.length === 0) {
+      return json({ error: "No design URLs found on this idea" }, 400);
+    }
+
+    await Promise.all(tasks);
+
+    const { data: updated, error: updateError } = await supabase
+      .from("az_pod_ideas")
+      .update(updateData)
+      .eq("id", idea_id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return json({ idea: updated });
+  } catch (error) {
+    console.error("pod-remove-bg error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-send-to-printify/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Fallback prices if cost lookup fails (in cents)
+const FALLBACK_PRICE: Record<string, number> = {
+  sticker: 499,
+  tshirt: 2499,
+};
+
+const MARKETPLACE_TITLE_LIMITS: Record<string, number> = {
+  ebay: 80,
+  etsy: 140,
+  shopify: 140,
+  default: 140,
+};
+
+// --------------- Color-aware variant filtering ---------------
+
+const DARK_COLORS = new Set([
+  "black", "dark heather", "navy", "dark grey", "dark gray",
+  "forest green", "maroon", "dark chocolate", "charcoal",
+  "dark heather grey", "dark heather gray",
+]);
+
+const LIGHT_COLORS = new Set([
+  "white", "natural", "sport grey", "sport gray", "light blue",
+  "light pink", "sand", "ash", "ice grey", "ice gray",
+  "cream", "soft cream", "heather prism ice blue",
+]);
+
+type ColorDominance = "dark" | "light" | "medium";
+
+interface ColorAnalysis {
+  dominance: ColorDominance;
+  dominant_colors: string[];
+}
+
+async function analyzeDesignColors(imageUrl: string): Promise<ColorAnalysis | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    console.warn("LOVABLE_API_KEY not set, skipping color analysis");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analyze this design image for t-shirt printing. What are the dominant colors? Is the design predominantly dark, light, or medium brightness? Respond ONLY with valid JSON: {\"dominance\": \"dark\" | \"light\" | \"medium\", \"dominant_colors\": [\"color1\", \"color2\"]}" },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI color analysis failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      console.warn("Could not parse color analysis response:", text);
+      return null;
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!["dark", "light", "medium"].includes(parsed.dominance)) {
+      console.warn("Invalid dominance value:", parsed.dominance);
+      return null;
+    }
+    return {
+      dominance: parsed.dominance as ColorDominance,
+      dominant_colors: Array.isArray(parsed.dominant_colors) ? parsed.dominant_colors : [],
+    };
+  } catch (err) {
+    console.error("Color analysis error:", err);
+    return null;
+  }
+}
+
+function extractColorName(raw: string): string {
+  const colorPart = raw.split(" / ")[0].toLowerCase().trim();
+  return colorPart;
+}
+
+function classifyVariantColor(rawName: string): "dark" | "light" | "neutral" {
+  const colorPart = extractColorName(rawName);
+
+  if (DARK_COLORS.has(colorPart)) return "dark";
+  if (LIGHT_COLORS.has(colorPart)) return "light";
+
+  for (const dc of DARK_COLORS) {
+    if (colorPart.includes(dc) || dc.includes(colorPart)) return "dark";
+  }
+  for (const lc of LIGHT_COLORS) {
+    if (colorPart.includes(lc) || lc.includes(colorPart)) return "light";
+  }
+
+  return "neutral";
+}
+
+interface VariantFilterResult {
+  variantStates: Map<number, boolean>;
+  excludedCount: number;
+  analysis: ColorAnalysis;
+}
+
+function filterVariantsByColor(
+  variants: { id: number; options?: Record<string, string>; title?: string }[],
+  analysis: ColorAnalysis
+): VariantFilterResult {
+  const variantStates = new Map<number, boolean>();
+  let excludedCount = 0;
+
+  if (analysis.dominance === "medium") {
+    for (const v of variants) {
+      variantStates.set(v.id, true);
+    }
+    return { variantStates, excludedCount: 0, analysis };
+  }
+
+  const clashCategory = analysis.dominance;
+
+  for (const v of variants) {
+    const colorName = v.options?.color || v.options?.Color || v.title || "";
+    const extracted = extractColorName(colorName);
+    const category = classifyVariantColor(colorName);
+    console.log(`Variant ${v.id}: raw="${colorName}" → extracted="${extracted}" → ${category}`);
+
+    if (category === clashCategory) {
+      variantStates.set(v.id, false);
+      excludedCount++;
+    } else {
+      variantStates.set(v.id, true);
+    }
+  }
+
+  const enabledCount = variants.length - excludedCount;
+  if (enabledCount < 3) {
+    for (const v of variants) {
+      variantStates.set(v.id, true);
+    }
+    return { variantStates, excludedCount: 0, analysis };
+  }
+
+  return { variantStates, excludedCount, analysis };
+}
+
+// --------------- Helpers ---------------
+
+function sanitizeTitle(title: string | null | undefined, maxLen = 140) {
+  const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
+  return normalized.slice(0, maxLen);
+}
+
+function getTitleForMarketplace(listing: any, marketplace: string): string {
+  const limit = MARKETPLACE_TITLE_LIMITS[marketplace] || 140;
+  if (marketplace === "ebay" && listing.ebay_title) {
+    return sanitizeTitle(listing.ebay_title, limit);
+  }
+  if (marketplace === "etsy" && listing.etsy_title) {
+    return sanitizeTitle(listing.etsy_title, limit);
+  }
+  return sanitizeTitle(listing.title, limit);
+}
+
+async function printifyFetch(path: string, apiKey: string, options: RequestInit = {}) {
+  const res = await fetch(`https://api.printify.com/v1${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("Printify API error:", res.status, JSON.stringify(data));
+    throw new Error(data?.message || data?.error || `Printify API error ${res.status}`);
+  }
+  return data;
+}
+
+// --------------- Main handler ---------------
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { idea_id, product_types, publish_overrides } = await req.json();
+    if (!idea_id) return json({ error: "idea_id is required" }, 400);
+
+    const { data: idea, error: ideaError } = await supabase
+      .from("az_pod_ideas")
+      .select("*")
+      .eq("id", idea_id)
+      .single();
+    if (ideaError || !idea) return json({ error: "Idea not found" }, 404);
+
+    const { data: listings, error: listingsError } = await supabase
+      .from("az_pod_listings")
+      .select("*")
+      .eq("idea_id", idea_id)
+      .eq("is_approved", true);
+    if (listingsError) throw listingsError;
+
+    let filteredListings = listings || [];
+    if (product_types && Array.isArray(product_types) && product_types.length > 0) {
+      filteredListings = filteredListings.filter((l: any) => product_types.includes(l.product_type));
+    }
+    if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
+
+    const { data: overrideRows, error: overrideErr } = await supabase
+      .from("az_pod_idea_overrides")
+      .select("*")
+      .eq("idea_id", idea_id);
+    if (overrideErr) throw overrideErr;
+
+    const perShopOverrides = new Map<string, any>();
+    let globalOverride: any = null;
+    for (const r of overrideRows || []) {
+      if (r?.shop_id) perShopOverrides.set(String(r.shop_id), r);
+      else globalOverride = r;
+    }
+
+    const rawManual = globalOverride?.tshirt_color_overrides;
+    const manualVariantIds = Array.isArray(rawManual)
+      ? rawManual.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+      : [];
+    const manualVariantIdSet = new Set<number>(manualVariantIds);
+    const hasManualTshirtVariants = manualVariantIdSet.size > 0;
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("printify_api_key, printify_shop_id, auto_publish, tshirt_margin_pct, sticker_margin_pct")
+      .eq("user_id", user.id)
+      .single();
+    if (!settings?.printify_api_key || !settings?.printify_shop_id) {
+      return json({ error: "Printify API key and Shop ID are required. Configure them in Settings." }, 400);
+    }
+
+    const { data: additionalShops } = await supabase
+      .from("az_pod_printify_shops")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_active", true);
+
+    const { printify_api_key, printify_shop_id } = settings;
+
+    const shops = [
+      { shop_id: printify_shop_id, marketplace: "default", label: "Primary Shop", auto_publish: settings.auto_publish ?? false, tshirt_margin_pct: null as number | null, sticker_margin_pct: null as number | null },
+      ...(additionalShops || []).map((s: any) => ({
+        shop_id: s.shop_id,
+        marketplace: s.marketplace,
+        label: s.label || `${s.marketplace} Shop`,
+        auto_publish: s.auto_publish ?? false,
+        tshirt_margin_pct: s.tshirt_margin_pct as number | null,
+        sticker_margin_pct: s.sticker_margin_pct as number | null,
+      })),
+    ];
+
+    const globalTshirtMargin = settings.tshirt_margin_pct ?? 100;
+    const globalStickerMargin = settings.sticker_margin_pct ?? 100;
+
+    const overrides: Record<string, boolean> = publish_overrides || {};
+
+    const colorAnalysisCache: Record<string, ColorAnalysis | null> = {};
+    if (!hasManualTshirtVariants) {
+      for (const listing of filteredListings) {
+        if (listing.product_type === "sticker") continue;
+        const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
+        if (designUrl && !colorAnalysisCache[designUrl]) {
+          console.log(`Analyzing design colors for ${listing.product_type}...`);
+          colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
+          if (colorAnalysisCache[designUrl]) {
+            console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+          }
+        }
+      }
+    }
+
+    const results: any[] = [];
+
+    for (const listing of filteredListings) {
+      const designUrl = listing.product_type === "sticker"
+        ? idea.sticker_design_url
+        : idea.tshirt_design_url;
+
+      if (!designUrl) {
+        console.warn(`No design URL for ${listing.product_type}, skipping`);
+        continue;
+      }
+
+      const blueprintId = Number(listing.printify_blueprint_id);
+      const printProviderId = Number(listing.printify_print_provider_id);
+      if (!blueprintId || !printProviderId) {
+        results.push({
+          product_type: listing.product_type,
+          error: `Blueprint ID and Print Provider ID must be configured on the ${listing.product_type} listing before sending to Printify.`,
+        });
+        continue;
+      }
+
+      console.log(`Uploading image for ${listing.product_type}...`);
+      const uploadResult = await printifyFetch("/uploads/images.json", printify_api_key, {
+        method: "POST",
+        body: JSON.stringify({
+          file_name: `${listing.product_type}_design.png`,
+          url: designUrl,
+        }),
+      });
+      const imageId = uploadResult.id;
+      console.log(`Image uploaded: ${imageId}`);
+
+      console.log(`Fetching variants for blueprint ${blueprintId}...`);
+      const variants = await printifyFetch(
+        `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/variants.json`,
+        printify_api_key
+      );
+      const variantList = variants.variants || [];
+      if (!variantList.length) {
+        throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
+      }
+      if (variantList.length > 0) {
+        console.log("Sample variant structure:", JSON.stringify(variantList[0]));
+      }
+
+      const variantCostMap = new Map<number, number>();
+      for (const v of variantList) {
+        if (v.cost != null) {
+          variantCostMap.set(v.id, v.cost);
+        }
+      }
+      console.log(`Cost data available for ${variantCostMap.size}/${variantList.length} variants`);
+
+      const colorAnalysis = !hasManualTshirtVariants && listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
+      let variantFilterResult: VariantFilterResult | null = null;
+
+      if (!hasManualTshirtVariants && colorAnalysis && listing.product_type === "tshirt") {
+        variantFilterResult = filterVariantsByColor(variantList, colorAnalysis);
+        if (variantFilterResult.excludedCount > 0) {
+          console.log(`Color filter: excluded ${variantFilterResult.excludedCount} ${colorAnalysis.dominance} variants`);
+        }
+      }
+
+      if (hasManualTshirtVariants && listing.product_type === "tshirt") {
+        const matching = variantList.filter((v: any) => manualVariantIdSet.has(v.id)).length;
+        if (matching === 0) {
+          results.push({
+            product_type: listing.product_type,
+            error: "Your saved t-shirt color selection doesn't match this Blueprint/Provider. Re-save colors after setting the correct Blueprint + Provider.",
+          });
+          continue;
+        }
+      }
+
+      for (const shop of shops) {
+        const shouldPublish = shop.shop_id in overrides
+          ? overrides[shop.shop_id]
+          : shop.auto_publish;
+
+        const title = getTitleForMarketplace(listing, shop.marketplace);
+        console.log(`Creating product on shop ${shop.shop_id} (${shop.marketplace}), publish=${shouldPublish}: "${title}"`);
+
+        try {
+          const product = await printifyFetch(`/shops/${shop.shop_id}/products.json`, printify_api_key, {
+            method: "POST",
+            body: JSON.stringify({
+              title,
+              description: listing.description,
+              tags: listing.tags || [],
+              blueprint_id: blueprintId,
+              print_provider_id: printProviderId,
+               variants: variantList.map((v: any) => {
+                 const isSticker = listing.product_type === "sticker";
+                 const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
+                 const ideaOverrideRow = perShopOverrides.get(String(shop.shop_id));
+                 const ideaMargin = isSticker ? ideaOverrideRow?.sticker_margin_pct : ideaOverrideRow?.tshirt_margin_pct;
+                 const marginPct = (ideaMargin ?? shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin)) as number;
+
+                 const cost = variantCostMap.get(v.id);
+                 let price: number;
+                 if (cost != null) {
+                   price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
+                 } else {
+                   price = FALLBACK_PRICE[listing.product_type] ?? 1999;
+                 }
+
+                 const isEnabled = listing.product_type === "tshirt" && hasManualTshirtVariants
+                   ? manualVariantIdSet.has(v.id)
+                   : variantFilterResult
+                     ? (variantFilterResult.variantStates.get(v.id) ?? true)
+                     : true;
+
+                 return {
+                   id: v.id,
+                   price,
+                   is_enabled: isEnabled,
+                 };
+               }),
+              print_areas: [{
+                variant_ids: variantList.map((v: any) => v.id),
+                placeholders: [{
+                  position: "front",
+                  images: [{
+                    id: imageId,
+                    x: 0.5,
+                    y: 0.5,
+                    scale: 1,
+                    angle: 0,
+                  }],
+                }],
+              }],
+            }),
+          });
+          console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
+
+          let published = false;
+          if (shouldPublish) {
+            try {
+              await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}/publish.json`, printify_api_key, {
+                method: "POST",
+                body: JSON.stringify({
+                  title: true,
+                  description: true,
+                  images: true,
+                  variants: true,
+                  tags: true,
+                  keyFeatures: true,
+                  shipping_template: true,
+                }),
+              });
+              published = true;
+              console.log(`Product published on ${shop.marketplace}: ${product.id}`);
+            } catch (pubErr) {
+              console.error(`Failed to publish on ${shop.marketplace}:`, pubErr);
+            }
+          }
+          results.push({
+            product_type: listing.product_type,
+            printify_product_id: product.id,
+            printify_url: `https://printify.com/app/editor/${product.id}`,
+            title: product.title || listing.title,
+            shop_id: shop.shop_id,
+            marketplace: shop.marketplace,
+            shop_label: shop.label,
+            images: (product.images || []).map((img: any) => ({
+              src: img.src,
+              is_default: img.is_default,
+            })),
+            variants_count: (product.variants || []).length,
+            variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
+            published,
+             ...(!hasManualTshirtVariants && variantFilterResult && variantFilterResult.excludedCount > 0 ? {
+               color_analysis: {
+                 dominance: variantFilterResult.analysis.dominance,
+                 dominant_colors: variantFilterResult.analysis.dominant_colors,
+                 excluded_count: variantFilterResult.excludedCount,
+               },
+             } : {}),
+          });
+        } catch (shopError) {
+          console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);
+          results.push({
+            product_type: listing.product_type,
+            shop_id: shop.shop_id,
+            marketplace: shop.marketplace,
+            shop_label: shop.label,
+            error: `Failed to create on ${shop.label}: ${shopError.message}`,
+          });
+        }
+      }
+    }
+
+    const successResults = results.filter((r: any) => r.printify_product_id);
+    if (successResults.length === 0) {
+      const errors = results.map((r: any) => r.error).filter(Boolean).join("; ");
+      return json({ error: errors || "No products could be created. Ensure Blueprint ID and Print Provider ID are configured on each listing." }, 400);
+    }
+
+    const primaryResult = successResults.find((r: any) => r.marketplace === "default") || successResults[0];
+    await supabase
+      .from("az_pod_ideas")
+      .update({
+        printify_product_id: primaryResult?.printify_product_id || null,
+        printify_product_url: primaryResult?.printify_url || null,
+        status: "production",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", idea_id);
+
+    return json({ products: results });
+  } catch (error) {
+    console.error("pod-send-to-printify error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-settings/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    if (req.method === "GET") {
+      const { data: settings } = await supabase
+        .from("az_pod_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      const { data: shops } = await supabase
+        .from("az_pod_printify_shops")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      const masked = settings ? {
+        trello_api_key: settings.trello_api_key ? "••••••••" : "",
+        trello_token: settings.trello_token ? "••••••••" : "",
+        printify_api_key: settings.printify_api_key ? "••••••••" : "",
+        printify_shop_id: settings.printify_shop_id || "",
+        removebg_api_key: settings.removebg_api_key ? "••••••••" : "",
+        auto_publish: settings.auto_publish ?? false,
+        tshirt_margin_pct: settings.tshirt_margin_pct ?? 100,
+        sticker_margin_pct: settings.sticker_margin_pct ?? 100,
+        has_trello_api_key: !!settings.trello_api_key,
+        has_trello_token: !!settings.trello_token,
+        has_printify_api_key: !!settings.printify_api_key,
+        has_printify_shop_id: !!settings.printify_shop_id,
+        has_removebg_api_key: !!settings.removebg_api_key,
+      } : {
+        trello_api_key: "", trello_token: "", printify_api_key: "",
+        printify_shop_id: "", removebg_api_key: "", auto_publish: false,
+        tshirt_margin_pct: 100, sticker_margin_pct: 100,
+        has_trello_api_key: false, has_trello_token: false,
+        has_printify_api_key: false, has_printify_shop_id: false,
+        has_removebg_api_key: false,
+      };
+
+      return json({ settings: masked, additional_shops: shops || [] });
+
+    } else if (req.method === "PUT") {
+      const body = await req.json();
+      const keyToValidate = body.removebg_api_key;
+
+      if (!keyToValidate) {
+        return json({ error: "No API key provided for validation" }, 400);
+      }
+
+      try {
+        const response = await fetch("https://api.remove.bg/v1.0/account", {
+          headers: { "X-Api-Key": keyToValidate },
+        });
+
+        if (response.status === 403) {
+          const errorData = await response.text();
+          console.error("Remove.bg key validation failed:", errorData);
+          return json({ valid: false, error: "API key is invalid. Please check your Remove.bg dashboard." }, 400);
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Remove.bg validation error:", errorData);
+          return json({ valid: false, error: `Validation failed with status ${response.status}` }, 400);
+        }
+
+        const accountData = await response.json();
+        console.log("Remove.bg key validated. Account:", JSON.stringify(accountData));
+        return json({ valid: true, credits: accountData?.data?.attributes?.credits });
+      } catch (err) {
+        console.error("Remove.bg validation network error:", err);
+        return json({ valid: false, error: "Could not reach Remove.bg to validate the key" }, 500);
+      }
+
+    } else if (req.method === "POST") {
+      const body = await req.json();
+
+      if (body.action === "add_shop") {
+        const { shop_id, marketplace, label } = body;
+        if (!shop_id || !marketplace) {
+          return json({ error: "shop_id and marketplace are required" }, 400);
+        }
+        const { data, error } = await supabase
+          .from("az_pod_printify_shops")
+          .insert({ user_id: user.id, shop_id, marketplace, label: label || null, auto_publish: false })
+          .select()
+          .single();
+        if (error) throw error;
+        return json({ success: true, shop: data });
+      }
+
+      if (body.action === "remove_shop") {
+        const { id } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      if (body.action === "toggle_shop") {
+        const { id, is_active } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update({ is_active })
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      if (body.action === "set_shop_auto_publish") {
+        const { id, auto_publish } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update({ auto_publish })
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      if (body.action === "set_shop_margin") {
+        const { id, tshirt_margin_pct, sticker_margin_pct } = body;
+        if (!id) return json({ error: "id is required" }, 400);
+        const update: Record<string, any> = {};
+        if (tshirt_margin_pct !== undefined) update.tshirt_margin_pct = tshirt_margin_pct === "" || tshirt_margin_pct === null ? null : Number(tshirt_margin_pct);
+        if (sticker_margin_pct !== undefined) update.sticker_margin_pct = sticker_margin_pct === "" || sticker_margin_pct === null ? null : Number(sticker_margin_pct);
+        if (Object.keys(update).length === 0) return json({ error: "No margin values provided" }, 400);
+        const { error } = await supabase
+          .from("az_pod_printify_shops")
+          .update(update)
+          .eq("id", id)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (body.trello_api_key) updateData.trello_api_key = body.trello_api_key;
+      if (body.trello_token) updateData.trello_token = body.trello_token;
+      if (body.printify_api_key) updateData.printify_api_key = body.printify_api_key;
+      if (body.printify_shop_id !== undefined) updateData.printify_shop_id = body.printify_shop_id;
+      if (body.removebg_api_key) updateData.removebg_api_key = body.removebg_api_key;
+      if (body.auto_publish !== undefined) updateData.auto_publish = body.auto_publish;
+      if (body.tshirt_margin_pct !== undefined) updateData.tshirt_margin_pct = body.tshirt_margin_pct;
+      if (body.sticker_margin_pct !== undefined) updateData.sticker_margin_pct = body.sticker_margin_pct;
+
+      const { error } = await supabase
+        .from("az_pod_settings")
+        .upsert({ user_id: user.id, ...updateData }, { onConflict: "user_id" })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return json({ success: true });
+    }
+
+    return json({ error: "Method not allowed" }, 405);
+  } catch (error) {
+    console.error("pod-settings error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-suggest-idea/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY is not configured" }, 500);
+
+    const body = await req.json().catch(() => ({}));
+    const category = body.category || "any";
+    const count = Math.min(Math.max(body.count || 5, 1), 10);
+
+    const systemPrompt = `You are a Print-on-Demand product trend expert. Your job is to suggest ${count} highly specific, commercially viable product ideas that would sell well on Etsy, eBay, or Amazon.
+
+Focus on what's currently trending, viral, or seasonally relevant. Think about:
+- Current viral memes, pop culture moments, and internet trends
+- Seasonal events, holidays, and upcoming occasions
+- Niche communities with passionate buyers (gamers, pet owners, teachers, nurses, etc.)
+- Trending aesthetic styles (cottagecore, dark academia, retro, Y2K, etc.)
+- Funny/relatable phrases and quotes that resonate with specific audiences
+
+Return ONLY a JSON object with a "suggestions" array containing exactly ${count} ideas, ranked from most viable to least. Each idea object must have:
+- "idea_text": A clear, specific product idea description (2-3 sentences max)
+- "product_type": Either "sticker", "tshirt", or "both"
+- "reasoning": Why this would sell well right now (1-2 sentences)
+- "target_audience": Who would buy this (brief)
+- "estimated_viability": A score from 1-10
+- "trend_momentum": Either "rising", "peaking", or "steady"
+- "category": A short category tag (e.g. "memes", "seasonal", "niche community", "pop culture", "aesthetic", "humor")
+
+Do NOT wrap in markdown code blocks. Return raw JSON only.`;
+
+    const userPrompt = category !== "any"
+      ? `Suggest ${count} trending POD ideas in the "${category}" category. Rank them by viability. Make each specific and actionable.`
+      : `Suggest ${count} trending POD ideas based on what's popular right now in ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Rank them by viability. Make each specific and actionable.`;
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return json({ error: "Rate limit exceeded. Please try again in a moment." }, 429);
+      }
+      if (aiResponse.status === 402) {
+        return json({ error: "AI credits exhausted. Please add funds." }, 402);
+      }
+      const text = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, text);
+      return json({ error: "AI service error" }, 500);
+    }
+
+    const aiData = await aiResponse.json();
+    const content = aiData.choices?.[0]?.message?.content;
+
+    if (!content) return json({ error: "Empty AI response" }, 500);
+
+    let parsed;
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      console.error("Failed to parse AI response:", content);
+      return json({ error: "Failed to parse AI suggestion" }, 500);
+    }
+
+    const suggestions = Array.isArray(parsed) ? parsed : (parsed.suggestions || [parsed]);
+
+    return json({ suggestions });
+  } catch (error) {
+    console.error("pod-suggest-idea error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+FILE: supabase/functions/pod-test-trello/index.ts
+================================================================================
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "No authorization header" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return json({ error: "Invalid token" }, 401);
+
+    const { data: roleData } = await supabase
+      .from("az_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+    if (!roleData) return json({ error: "Admin access required" }, 403);
+
+    const { data: settings } = await supabase
+      .from("az_pod_settings")
+      .select("trello_api_key, trello_token")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!settings?.trello_api_key || !settings?.trello_token) {
+      return json({ error: "Trello credentials not saved yet" }, 400);
+    }
+
+    const listUrl = `https://api.trello.com/1/lists/687449ac29797fd36252a8aa/board?key=${settings.trello_api_key}&token=${settings.trello_token}&fields=name`;
+    const response = await fetch(listUrl);
+    const data = await response.json();
+
+    if (!response.ok) {
+      return json({ error: "Trello connection failed", details: data }, 400);
+    }
+
+    return json({ success: true, board_name: data.name });
+  } catch (error) {
+    console.error("pod-test-trello error:", error);
+    return json({ error: error.message }, 500);
+  }
+});
+
+
+================================================================================
+END OF PART 3B
+================================================================================
