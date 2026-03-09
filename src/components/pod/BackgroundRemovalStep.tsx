@@ -144,6 +144,8 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
         <Button onClick={onApprove} disabled={isApproving || processing} className="bg-primary hover:bg-primary/90">
           {isApproving ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Listings…</>
+          ) : hasListings ? (
+            <><Send className="h-4 w-4 mr-2" /> Continue to Finalize</>
           ) : (
             <><Send className="h-4 w-4 mr-2" /> Approve &amp; Generate Listings</>
           )}
