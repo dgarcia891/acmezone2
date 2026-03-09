@@ -616,7 +616,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                             <div className="flex items-center gap-2">
                               <span
                                 className="inline-block h-3.5 w-3.5 rounded-full border border-border"
-                                style={{ backgroundColor: `hsl(var(--muted))` }}
+                                style={{ backgroundColor: swatchForColorName(colorName) }}
                                 aria-hidden="true"
                               />
                               <span className="text-xs truncate" title={colorName}>{colorName}</span>
