@@ -265,6 +265,27 @@ Deno.serve(async (req) => {
     }
     if (!filteredListings.length) return json({ error: "No approved listings found for the selected product types" }, 400);
 
+    // Fetch per-idea overrides (margins + optional manual t-shirt variant selection)
+    const { data: overrideRows, error: overrideErr } = await supabase
+      .from("az_pod_idea_overrides")
+      .select("*")
+      .eq("idea_id", idea_id);
+    if (overrideErr) throw overrideErr;
+
+    const perShopOverrides = new Map<string, any>();
+    let globalOverride: any = null;
+    for (const r of overrideRows || []) {
+      if (r?.shop_id) perShopOverrides.set(String(r.shop_id), r);
+      else globalOverride = r;
+    }
+
+    const rawManual = globalOverride?.tshirt_color_overrides;
+    const manualVariantIds = Array.isArray(rawManual)
+      ? rawManual.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+      : [];
+    const manualVariantIdSet = new Set<number>(manualVariantIds);
+    const hasManualTshirtVariants = manualVariantIdSet.size > 0;
+
     // Fetch Printify credentials
     const { data: settings } = await supabase
       .from("az_pod_settings")
@@ -302,16 +323,18 @@ Deno.serve(async (req) => {
 
     const overrides: Record<string, boolean> = publish_overrides || {};
 
-    // Run color analysis for t-shirt designs (skip stickers)
+    // Run color analysis for t-shirt designs (skip stickers) unless the user explicitly selected variants
     const colorAnalysisCache: Record<string, ColorAnalysis | null> = {};
-    for (const listing of filteredListings) {
-      if (listing.product_type === "sticker") continue;
-      const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
-      if (designUrl && !colorAnalysisCache[designUrl]) {
-        console.log(`Analyzing design colors for ${listing.product_type}...`);
-        colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
-        if (colorAnalysisCache[designUrl]) {
-          console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+    if (!hasManualTshirtVariants) {
+      for (const listing of filteredListings) {
+        if (listing.product_type === "sticker") continue;
+        const designUrl = listing.product_type === "tshirt" ? idea.tshirt_design_url : null;
+        if (designUrl && !colorAnalysisCache[designUrl]) {
+          console.log(`Analyzing design colors for ${listing.product_type}...`);
+          colorAnalysisCache[designUrl] = await analyzeDesignColors(designUrl);
+          if (colorAnalysisCache[designUrl]) {
+            console.log(`Color analysis: ${JSON.stringify(colorAnalysisCache[designUrl])}`);
+          }
         }
       }
     }
@@ -374,14 +397,26 @@ Deno.serve(async (req) => {
       }
       console.log(`Cost data available for ${variantCostMap.size}/${variantList.length} variants`);
 
-      // Apply color-aware filtering for t-shirts
-      const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
+      // Apply variant selection/filtering for t-shirts
+      const colorAnalysis = !hasManualTshirtVariants && listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
       let variantFilterResult: VariantFilterResult | null = null;
 
-      if (colorAnalysis && listing.product_type === "tshirt") {
+      if (!hasManualTshirtVariants && colorAnalysis && listing.product_type === "tshirt") {
         variantFilterResult = filterVariantsByColor(variantList, colorAnalysis);
         if (variantFilterResult.excludedCount > 0) {
           console.log(`Color filter: excluded ${variantFilterResult.excludedCount} ${colorAnalysis.dominance} variants`);
+        }
+      }
+
+      // If manual selection exists but none match this blueprint/provider, refuse to proceed
+      if (hasManualTshirtVariants && listing.product_type === "tshirt") {
+        const matching = variantList.filter((v: any) => manualVariantIdSet.has(v.id)).length;
+        if (matching === 0) {
+          results.push({
+            product_type: listing.product_type,
+            error: "Your saved t-shirt color selection doesn't match this Blueprint/Provider. Re-save colors after setting the correct Blueprint + Provider.",
+          });
+          continue;
         }
       }
 
@@ -403,27 +438,35 @@ Deno.serve(async (req) => {
               tags: listing.tags || [],
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
-              variants: variantList.map((v: any) => {
-                // Determine margin for this shop + product type
-                const isSticker = listing.product_type === "sticker";
-                const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
-                const marginPct = shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
-                const cost = variantCostMap.get(v.id);
-                let price: number;
-                if (cost != null) {
-                  // cost + markup, minimum $1 profit
-                  price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
-                } else {
-                  price = FALLBACK_PRICE[listing.product_type] ?? 1999;
-                }
-                return {
-                  id: v.id,
-                  price,
-                  is_enabled: variantFilterResult
-                    ? (variantFilterResult.variantStates.get(v.id) ?? true)
-                    : true,
-                };
-              }),
+               variants: variantList.map((v: any) => {
+                 // Determine margin for this shop + product type
+                 const isSticker = listing.product_type === "sticker";
+                 const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
+                 const ideaOverrideRow = perShopOverrides.get(String(shop.shop_id));
+                 const ideaMargin = isSticker ? ideaOverrideRow?.sticker_margin_pct : ideaOverrideRow?.tshirt_margin_pct;
+                 const marginPct = (ideaMargin ?? shopMargin ?? (isSticker ? globalStickerMargin : globalTshirtMargin)) as number;
+
+                 const cost = variantCostMap.get(v.id);
+                 let price: number;
+                 if (cost != null) {
+                   // cost + markup, minimum $1 profit
+                   price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
+                 } else {
+                   price = FALLBACK_PRICE[listing.product_type] ?? 1999;
+                 }
+
+                 const isEnabled = listing.product_type === "tshirt" && hasManualTshirtVariants
+                   ? manualVariantIdSet.has(v.id)
+                   : variantFilterResult
+                     ? (variantFilterResult.variantStates.get(v.id) ?? true)
+                     : true;
+
+                 return {
+                   id: v.id,
+                   price,
+                   is_enabled: isEnabled,
+                 };
+               }),
               print_areas: [{
                 variant_ids: variantList.map((v: any) => v.id),
                 placeholders: [{
@@ -477,14 +520,14 @@ Deno.serve(async (req) => {
             variants_count: (product.variants || []).length,
             variants_enabled: (product.variants || []).filter((v: any) => v.is_enabled).length,
             published,
-            // Color analysis metadata
-            ...(variantFilterResult && variantFilterResult.excludedCount > 0 ? {
-              color_analysis: {
-                dominance: variantFilterResult.analysis.dominance,
-                dominant_colors: variantFilterResult.analysis.dominant_colors,
-                excluded_count: variantFilterResult.excludedCount,
-              },
-            } : {}),
+             // Color analysis metadata (only when AI filtering is used)
+             ...(!hasManualTshirtVariants && variantFilterResult && variantFilterResult.excludedCount > 0 ? {
+               color_analysis: {
+                 dominance: variantFilterResult.analysis.dominance,
+                 dominant_colors: variantFilterResult.analysis.dominant_colors,
+                 excluded_count: variantFilterResult.excludedCount,
+               },
+             } : {}),
           });
         } catch (shopError) {
           console.error(`Error creating product on shop ${shop.shop_id}:`, shopError);

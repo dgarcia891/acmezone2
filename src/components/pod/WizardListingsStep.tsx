@@ -1,26 +1,37 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store,
-  ThumbsDown, ExternalLink, Package, Copy, Palette, DollarSign
+  RefreshCw,
+  CheckCircle2,
+  ArrowLeft,
+  Loader2,
+  Store,
+  ThumbsDown,
+  ExternalLink,
+  Package,
+  Copy,
+  Palette,
+  DollarSign,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 import { usePodSettings } from "@/hooks/usePodPipeline";
+import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
     "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
   backgroundSize: "20px 20px",
   backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-  backgroundColor: "white",
+  backgroundColor: "hsl(var(--background))",
 };
 
 const MARKETPLACE_COLORS: Record<string, string> = {
@@ -31,6 +42,40 @@ const MARKETPLACE_COLORS: Record<string, string> = {
   other: "bg-muted text-muted-foreground",
 };
 
+// Data-driven swatches: keep them subtle + HSL-based; unknown names fall back to theme tokens.
+const COLOR_SWATCH_HSL: Record<string, string> = {
+  black: "hsl(0 0% 10%)",
+  white: "hsl(0 0% 98%)",
+  navy: "hsl(220 55% 25%)",
+  blue: "hsl(215 75% 45%)",
+  lightblue: "hsl(205 80% 75%)",
+  red: "hsl(0 80% 52%)",
+  maroon: "hsl(350 60% 30%)",
+  green: "hsl(140 45% 35%)",
+  forest: "hsl(140 45% 25%)",
+  yellow: "hsl(45 95% 55%)",
+  orange: "hsl(25 90% 55%)",
+  pink: "hsl(330 85% 70%)",
+  purple: "hsl(275 65% 55%)",
+  grey: "hsl(0 0% 55%)",
+  gray: "hsl(0 0% 55%)",
+  charcoal: "hsl(0 0% 25%)",
+  sand: "hsl(35 35% 75%)",
+  natural: "hsl(35 25% 85%)",
+};
+
+function swatchForColorName(colorName: string): string {
+  const key = colorName.toLowerCase().replace(/\s+/g, "");
+  // Try exact key first
+  if (COLOR_SWATCH_HSL[key]) return COLOR_SWATCH_HSL[key];
+
+  // Try partial matches (e.g. "dark heather grey")
+  for (const k of Object.keys(COLOR_SWATCH_HSL)) {
+    if (key.includes(k)) return COLOR_SWATCH_HSL[k];
+  }
+
+  return "hsl(var(--muted))";
+}
 interface PrintifyProductResult {
   product_type: string;
   printify_product_id: string;
@@ -71,13 +116,16 @@ interface Props {
 }
 
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
-  const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url;
+  const cacheBust = (url: string | null | undefined) => (url ? `${url.split("?")[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url);
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
   const sendToPrintify = useSendToPrintify();
   const updateStatus = useUpdateIdeaStatus();
   const { data: settingsData } = usePodSettings();
+
+  const { data: overrideData, isLoading: overridesLoading } = useIdeaOverrides(idea?.id ?? null);
+  const saveOverride = useSaveIdeaOverride();
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
@@ -89,6 +137,12 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
   // Per-shop publish overrides
   const [publishOverrides, setPublishOverrides] = useState<Record<string, boolean>>({});
+
+  // Local (immediate) overrides to drive real-time preview
+  const [marginOverrides, setMarginOverrides] = useState<Record<string, { tshirt_margin_pct: number | null; sticker_margin_pct: number | null }>>({});
+  const [tshirtVariantIds, setTshirtVariantIds] = useState<number[]>([]);
+  const [hydratedOverrides, setHydratedOverrides] = useState(false);
+  const [hydratedColors, setHydratedColors] = useState(false);
 
   const primaryShopId = settingsData?.settings?.printify_shop_id || "";
   const primaryAutoPublish = settingsData?.settings?.auto_publish ?? false;
@@ -107,6 +161,83 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   // Build shops array for listing editor marketplace preview
   const shops = allShops.map((s) => ({ shop_id: s.shop_id, marketplace: s.marketplace, label: s.label }));
 
+  // Hydrate local override state once
+  useEffect(() => {
+    if (hydratedOverrides) return;
+    if (!overrideData) return;
+
+    const next: Record<string, { tshirt_margin_pct: number | null; sticker_margin_pct: number | null }> = {};
+    for (const shop of allShops) {
+      const row = overrideData.perShop?.[shop.shop_id];
+      next[shop.shop_id] = {
+        tshirt_margin_pct: row?.tshirt_margin_pct ?? null,
+        sticker_margin_pct: row?.sticker_margin_pct ?? null,
+      };
+    }
+
+    setMarginOverrides(next);
+    setHydratedOverrides(true);
+  }, [hydratedOverrides, overrideData, allShops]);
+
+  const tshirtListing = useMemo(() => listings.find((l: any) => l.product_type === "tshirt") || null, [listings]);
+  const tshirtBlueprintId = tshirtListing?.printify_blueprint_id ?? null;
+  const tshirtPrintProviderId = tshirtListing?.printify_print_provider_id ?? null;
+
+  const variantsQuery = useFetchVariantColors({
+    blueprintId: tshirtBlueprintId,
+    printProviderId: tshirtPrintProviderId,
+    imageUrl: idea?.tshirt_design_url || null,
+  });
+
+  const variantIdsSet = useMemo(() => new Set(tshirtVariantIds.map((n) => Number(n)).filter((n) => Number.isFinite(n))), [tshirtVariantIds]);
+
+  const colorsByName = useMemo(() => {
+    const map = new Map<string, number[]>();
+    const variants = variantsQuery.data?.variants || [];
+
+    for (const v of variants) {
+      const raw = v.options?.color || v.options?.Color || v.title || "";
+      const colorName = String(raw).split(" / ")[0].trim() || "Unknown";
+      const list = map.get(colorName) || [];
+      list.push(v.id);
+      map.set(colorName, list);
+    }
+
+    return map;
+  }, [variantsQuery.data?.variants]);
+
+  const recommendedVariantSet = useMemo(() => {
+    const ids = variantsQuery.data?.recommended_variant_ids || [];
+    return new Set(ids.map((n) => Number(n)).filter((n) => Number.isFinite(n)));
+  }, [variantsQuery.data?.recommended_variant_ids]);
+
+  useEffect(() => {
+    if (hydratedColors) return;
+    if (!overrideData) return;
+    if (!variantsQuery.data) return;
+
+    const fromDb = overrideData.global?.tshirt_color_overrides;
+    const dbIds = Array.isArray(fromDb) ? fromDb.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n)) : [];
+
+    if (dbIds.length > 0) {
+      setTshirtVariantIds(dbIds);
+      setHydratedColors(true);
+      return;
+    }
+
+    const recommended = variantsQuery.data.recommended_variant_ids || [];
+    const recommendedIds = recommended.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n));
+    if (recommendedIds.length > 0) {
+      setTshirtVariantIds(recommendedIds);
+      setHydratedColors(true);
+      return;
+    }
+
+    const all = (variantsQuery.data.variants || []).map((v) => v.id);
+    setTshirtVariantIds(all);
+    setHydratedColors(true);
+  }, [hydratedColors, overrideData, variantsQuery.data]);
+
   // Initialize overrides from shop defaults
   useEffect(() => {
     if (allShops.length > 0 && Object.keys(publishOverrides).length === 0) {
@@ -122,6 +253,77 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
     setPublishOverrides((prev) => ({ ...prev, [shopId]: value }));
   };
 
+  const setMarginField = (shopId: string, field: "tshirt_margin_pct" | "sticker_margin_pct", value: string) => {
+    const num = value.trim() === "" ? null : Number(value);
+    setMarginOverrides((prev) => ({
+      ...prev,
+      [shopId]: {
+        tshirt_margin_pct: prev[shopId]?.tshirt_margin_pct ?? null,
+        sticker_margin_pct: prev[shopId]?.sticker_margin_pct ?? null,
+        [field]: num == null || Number.isNaN(num) ? null : Math.max(0, Math.min(500, Math.round(num))),
+      },
+    }));
+  };
+
+  const saveMarginsForShop = (shopId: string) => {
+    if (!idea?.id) return;
+    const row = marginOverrides[shopId] || { tshirt_margin_pct: null, sticker_margin_pct: null };
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId,
+      patch: {
+        tshirt_margin_pct: row.tshirt_margin_pct,
+        sticker_margin_pct: row.sticker_margin_pct,
+      },
+    });
+  };
+
+  const resetMarginsForShop = (shopId: string) => {
+    setMarginOverrides((prev) => ({
+      ...prev,
+      [shopId]: { tshirt_margin_pct: null, sticker_margin_pct: null },
+    }));
+    if (!idea?.id) return;
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId,
+      patch: { tshirt_margin_pct: null, sticker_margin_pct: null },
+    });
+  };
+
+  const toggleColorGroup = (colorName: string, checked: boolean) => {
+    const ids = colorsByName.get(colorName) || [];
+    setTshirtVariantIds((prev) => {
+      const next = new Set(prev.map((n) => Number(n)).filter((n) => Number.isFinite(n)));
+      if (checked) {
+        ids.forEach((id) => next.add(id));
+      } else {
+        ids.forEach((id) => next.delete(id));
+      }
+      return Array.from(next);
+    });
+  };
+
+  const saveTshirtColors = () => {
+    if (!idea?.id) return;
+    if (tshirtVariantIds.length === 0) return;
+    saveOverride.mutate({
+      ideaId: idea.id,
+      shopId: null,
+      patch: { tshirt_color_overrides: tshirtVariantIds },
+    });
+  };
+
+  const selectAllTshirtColors = () => {
+    const all = (variantsQuery.data?.variants || []).map((v) => v.id);
+    setTshirtVariantIds(all);
+  };
+
+  const resetTshirtColorsToAi = () => {
+    const ai = Array.from(recommendedVariantSet);
+    if (ai.length > 0) setTshirtVariantIds(ai);
+  };
+
   const selectedTypes: string[] = [];
   if (stickerSelected && hasSticker) selectedTypes.push("sticker");
   if (tshirtSelected && hasTshirt) selectedTypes.push("tshirt");
@@ -131,8 +333,10 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const isProduction = ideaStatus === "production";
   const isLive = ideaStatus === "live";
 
-  const grouped = printifyResults ? groupByMarketplace(printifyResults.filter(r => r.printify_product_id)) : null;
-  const errors = printifyResults?.filter(r => r.error) || [];
+  const grouped = printifyResults ? groupByMarketplace(printifyResults.filter((r) => r.printify_product_id)) : null;
+  const errors = printifyResults?.filter((r) => r.error) || [];
+
+  const tshirtVariantSelectionInvalid = tshirtSelected && hasTshirt && !!variantsQuery.data && tshirtVariantIds.length === 0;
 
   const handleSendToPrintify = async () => {
     // Approve listings first, then send
@@ -222,6 +426,213 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
               listings.map((listing: any) => (
                 <ListingEditor key={listing.id} listing={listing} shops={shops} />
               ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-idea margin overrides */}
+      {!isProduction && !isLive && allShops.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5" /> Margin Overrides (This Idea)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Leave fields blank to inherit shop/global defaults. Changes are saved per shop.
+            </p>
+
+            <div className="space-y-2">
+              {allShops.map((shop) => {
+                const globalTshirtMargin = settingsData?.settings?.tshirt_margin_pct ?? 100;
+                const globalStickerMargin = settingsData?.settings?.sticker_margin_pct ?? 100;
+                const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
+
+                const local = marginOverrides[shop.shop_id] || { tshirt_margin_pct: null, sticker_margin_pct: null };
+
+                const shopTshirtDefault = additionalShopData?.tshirt_margin_pct ?? null;
+                const shopStickerDefault = additionalShopData?.sticker_margin_pct ?? null;
+
+                const effectiveTshirt = (local.tshirt_margin_pct ?? shopTshirtDefault ?? globalTshirtMargin) as number;
+                const effectiveSticker = (local.sticker_margin_pct ?? shopStickerDefault ?? globalStickerMargin) as number;
+
+                return (
+                  <div key={shop.shop_id} className="rounded-md border border-border p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] ${MARKETPLACE_COLORS[shop.marketplace] || MARKETPLACE_COLORS.other}`}>
+                            {shop.marketplace === "default" ? "Primary" : shop.marketplace}
+                          </Badge>
+                          <span className="text-xs font-medium truncate">{shop.label}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Effective: Sticker <span className="font-mono">{effectiveSticker}%</span> · T-Shirt <span className="font-mono">{effectiveTshirt}%</span>
+                        </p>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => resetMarginsForShop(shop.shop_id)}
+                        disabled={saveOverride.isPending}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Sticker margin %</Label>
+                        <Input
+                          inputMode="numeric"
+                          type="number"
+                          min={0}
+                          max={500}
+                          placeholder={`${shopStickerDefault ?? globalStickerMargin}`}
+                          value={local.sticker_margin_pct ?? ""}
+                          onChange={(e) => setMarginField(shop.shop_id, "sticker_margin_pct", e.target.value)}
+                          onBlur={() => saveMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {local.sticker_margin_pct == null ? "Using default" : "Custom"}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">T-Shirt margin %</Label>
+                        <Input
+                          inputMode="numeric"
+                          type="number"
+                          min={0}
+                          max={500}
+                          placeholder={`${shopTshirtDefault ?? globalTshirtMargin}`}
+                          value={local.tshirt_margin_pct ?? ""}
+                          onChange={(e) => setMarginField(shop.shop_id, "tshirt_margin_pct", e.target.value)}
+                          onBlur={() => saveMarginsForShop(shop.shop_id)}
+                          disabled={saveOverride.isPending}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {local.tshirt_margin_pct == null ? "Using default" : "Custom"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-idea t-shirt color selection */}
+      {tshirtSelected && hasTshirt && !isProduction && !isLive && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5" /> T-Shirt Color Variants
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={selectAllTshirtColors}
+                  disabled={!variantsQuery.data || saveOverride.isPending}
+                >
+                  Select all
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={resetTshirtColorsToAi}
+                  disabled={recommendedVariantSet.size === 0 || saveOverride.isPending}
+                >
+                  Reset to AI
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!tshirtListing || !tshirtBlueprintId || !tshirtPrintProviderId ? (
+              <p className="text-xs text-muted-foreground">
+                To customize colors, set a Blueprint ID and Print Provider ID on the T-Shirt listing.
+              </p>
+            ) : variantsQuery.isLoading ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading variants…
+              </div>
+            ) : (variantsQuery.data?.variants || []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">No variants found for this blueprint/provider.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Selected <span className="font-mono">{tshirtVariantIds.length}</span> of <span className="font-mono">{variantsQuery.data?.variants.length}</span> variants
+                  </p>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={saveTshirtColors}
+                    disabled={tshirtVariantIds.length === 0 || saveOverride.isPending}
+                  >
+                    {saveOverride.isPending ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</>
+                    ) : (
+                      "Save colors"
+                    )}
+                  </Button>
+                </div>
+
+                {variantsQuery.data?.analysis && (
+                  <p className="text-[11px] text-muted-foreground">
+                    AI: <span className="font-medium">{variantsQuery.data.analysis.dominance}</span> design — recommended {recommendedVariantSet.size} variants.
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {Array.from(colorsByName.entries())
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([colorName, ids]) => {
+                      const enabledCount = ids.filter((id) => variantIdsSet.has(id)).length;
+                      const checked = enabledCount === ids.length;
+                      const indeterminate = enabledCount > 0 && enabledCount < ids.length;
+                      const aiRecommended = ids.length > 0 && ids.every((id) => recommendedVariantSet.has(id));
+
+                      return (
+                        <div key={colorName} className="flex items-center gap-2 rounded-md border border-border p-2">
+                          <Checkbox
+                            checked={indeterminate ? "indeterminate" : checked}
+                            onCheckedChange={(v) => toggleColorGroup(colorName, !!v)}
+                            aria-label={`Toggle ${colorName}`}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-block h-3.5 w-3.5 rounded-full border border-border"
+                                style={{ backgroundColor: swatchForColorName(colorName) }}
+                                aria-hidden="true"
+                              />
+                              <span className="text-xs truncate" title={colorName}>{colorName}</span>
+                              {aiRecommended && (
+                                <Badge variant="secondary" className="text-[10px]">AI</Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {enabledCount}/{ids.length} enabled
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -368,9 +779,13 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                     return selectedTypes.map((pt) => {
                       const isSticker = pt === "sticker";
                       const additionalShopData = additionalShops.find((s: any) => s.shop_id === shop.shop_id);
-                      const shopOverride = isSticker ? additionalShopData?.sticker_margin_pct : additionalShopData?.tshirt_margin_pct;
-                      const effectiveMargin = shopOverride ?? (isSticker ? globalStickerMargin : globalTshirtMargin);
-                      const isInherited = shopOverride == null;
+
+                      const shopDefault = isSticker ? additionalShopData?.sticker_margin_pct : additionalShopData?.tshirt_margin_pct;
+                      const ideaOverride = isSticker ? marginOverrides[shop.shop_id]?.sticker_margin_pct : marginOverrides[shop.shop_id]?.tshirt_margin_pct;
+                      const globalDefault = isSticker ? globalStickerMargin : globalTshirtMargin;
+
+                      const effectiveMargin = (ideaOverride ?? shopDefault ?? globalDefault) as number;
+                      const source = ideaOverride != null ? "custom" : shopDefault != null ? "shop" : "default";
 
                       const calcPrice = (costCents: number) => {
                         const raw = Math.round(costCents + (costCents * effectiveMargin / 100));
@@ -390,8 +805,10 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                           <TableCell className="text-xs py-2 capitalize">{pt === "tshirt" ? "T-Shirt" : "Sticker"}</TableCell>
                           <TableCell className="text-xs py-2 text-right font-mono">
                             {effectiveMargin}%
-                            {isInherited && (
-                              <span className="text-muted-foreground ml-1 text-[10px]">(default)</span>
+                            {source !== "custom" && (
+                              <span className="text-muted-foreground ml-1 text-[10px]">
+                                ({source === "shop" ? "shop default" : "default"})
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right font-mono font-medium">
@@ -553,8 +970,16 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
           {!isReadyOrBeyond && (
             <Button
               onClick={handleSendToPrintify}
-              disabled={approveListings.isPending || sendToPrintify.isPending || listings.length === 0 || selectedTypes.length === 0}
-              className="bg-green-600 hover:bg-green-700"
+              disabled={
+                approveListings.isPending ||
+                sendToPrintify.isPending ||
+                saveOverride.isPending ||
+                overridesLoading ||
+                listings.length === 0 ||
+                selectedTypes.length === 0 ||
+                tshirtVariantSelectionInvalid
+              }
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {(approveListings.isPending || sendToPrintify.isPending) ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
