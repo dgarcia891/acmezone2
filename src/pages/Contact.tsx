@@ -124,8 +124,9 @@ const Contact = () => {
             {/* Submit only visible when CAPTCHA solved */}
             <div
               className={`transition-all duration-300 ${captchaSolved ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
+              aria-hidden={!captchaSolved}
             >
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} tabIndex={captchaSolved ? 0 : -1}>
                 {loading ? "Sending..." : "Send Message"}
               </Button>
             </div>
