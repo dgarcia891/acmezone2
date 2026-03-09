@@ -397,14 +397,26 @@ Deno.serve(async (req) => {
       }
       console.log(`Cost data available for ${variantCostMap.size}/${variantList.length} variants`);
 
-      // Apply color-aware filtering for t-shirts
-      const colorAnalysis = listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
+      // Apply variant selection/filtering for t-shirts
+      const colorAnalysis = !hasManualTshirtVariants && listing.product_type !== "sticker" ? colorAnalysisCache[designUrl] : null;
       let variantFilterResult: VariantFilterResult | null = null;
 
-      if (colorAnalysis && listing.product_type === "tshirt") {
+      if (!hasManualTshirtVariants && colorAnalysis && listing.product_type === "tshirt") {
         variantFilterResult = filterVariantsByColor(variantList, colorAnalysis);
         if (variantFilterResult.excludedCount > 0) {
           console.log(`Color filter: excluded ${variantFilterResult.excludedCount} ${colorAnalysis.dominance} variants`);
+        }
+      }
+
+      // If manual selection exists but none match this blueprint/provider, refuse to proceed
+      if (hasManualTshirtVariants && listing.product_type === "tshirt") {
+        const matching = variantList.filter((v: any) => manualVariantIdSet.has(v.id)).length;
+        if (matching === 0) {
+          results.push({
+            product_type: listing.product_type,
+            error: "Your saved t-shirt color selection doesn't match this Blueprint/Provider. Re-save colors after setting the correct Blueprint + Provider.",
+          });
+          continue;
         }
       }
 
