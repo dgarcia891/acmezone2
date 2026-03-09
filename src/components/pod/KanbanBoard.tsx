@@ -124,7 +124,7 @@ export default function KanbanBoard({ onCardClick }: Props) {
             <Badge variant="secondary" className="text-[10px] px-1.5">{rejectedIdeas.length}</Badge>
           </button>
           {rejectedOpen && (
-            <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div id="rejected-ideas-list" className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {rejectedIdeas.map((idea: any) => (
                 <KanbanCard key={idea.id} idea={idea} onClick={() => onCardClick(idea)} />
               ))}

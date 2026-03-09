@@ -58,7 +58,7 @@ export default function KanbanColumn({ column, ideas, onCardClick, collapsed, on
       className={`flex flex-col flex-1 min-w-[220px] rounded-lg border border-border bg-muted/30 min-h-[calc(100vh-280px)] ${isOver ? "ring-2 ring-primary/40" : ""}`}
     >
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
-        <span className="text-base">{column.emoji}</span>
+        <span className="text-base" aria-hidden="true">{column.emoji}</span>
         <span className="text-sm font-semibold text-foreground">{column.label}</span>
         <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
           {ideas.length}

@@ -17,43 +17,50 @@ export default function PipelineStepIndicator({ current }: { current: PipelineSt
   const ci = stepIndex(current);
 
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {steps.map((step, i) => {
-        const completed = i < ci;
-        const active = i === ci;
-        return (
-          <div key={step.key} className="flex items-center gap-2">
-            <div
-              className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold border-2 transition-colors",
-                completed && "bg-green-500 border-green-500 text-white",
-                active && "bg-primary border-primary text-primary-foreground",
-                !completed && !active && "border-muted-foreground/30 text-muted-foreground"
-              )}
-            >
-              {completed ? <Check className="h-4 w-4" /> : step.number}
-            </div>
-            <span
-              className={cn(
-                "text-sm hidden sm:inline",
-                active && "font-bold text-foreground",
-                completed && "text-green-600",
-                !completed && !active && "text-muted-foreground"
-              )}
-            >
-              {step.label}
-            </span>
-            {i < steps.length - 1 && (
+    <nav aria-label="Pipeline progress" className="flex items-center justify-center gap-2 mb-8">
+      <ol className="flex items-center gap-2 list-none p-0 m-0">
+        {steps.map((step, i) => {
+          const completed = i < ci;
+          const active = i === ci;
+          const status = completed ? "completed" : active ? "current" : "upcoming";
+          return (
+            <li key={step.key} className="flex items-center gap-2">
               <div
                 className={cn(
-                  "w-8 h-0.5 mx-1",
-                  i < ci ? "bg-green-500" : "bg-muted-foreground/20"
+                  "flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold border-2 transition-colors",
+                  completed && "bg-primary border-primary text-primary-foreground",
+                  active && "bg-primary border-primary text-primary-foreground ring-2 ring-ring ring-offset-2",
+                  !completed && !active && "border-muted-foreground/30 text-muted-foreground"
                 )}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
+                aria-label={`Step ${step.number}: ${step.label} — ${status}`}
+                aria-current={active ? "step" : undefined}
+              >
+                {completed ? <Check className="h-4 w-4" aria-hidden="true" /> : step.number}
+              </div>
+              <span
+                className={cn(
+                  "text-sm hidden sm:inline",
+                  active && "font-bold text-foreground",
+                  completed && "text-foreground",
+                  !completed && !active && "text-muted-foreground"
+                )}
+                aria-hidden="true"
+              >
+                {step.label}
+              </span>
+              {i < steps.length - 1 && (
+                <div
+                  className={cn(
+                    "w-8 h-0.5 mx-1",
+                    i < ci ? "bg-primary" : "bg-muted-foreground/20"
+                  )}
+                  aria-hidden="true"
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }

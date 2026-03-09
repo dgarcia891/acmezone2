@@ -215,7 +215,7 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
             })
           }
         >
-          <Sparkles className="h-4 w-4 mr-2" />
+          <Sparkles className="h-4 w-4 mr-2" aria-hidden="true" />
           Analyze Idea
         </Button>
       </CardContent>

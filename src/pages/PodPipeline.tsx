@@ -349,7 +349,7 @@ const PodPipeline = () => {
     <>
       <Helmet><title>POD Pipeline | acme.zone</title></Helmet>
       <Header />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <div className="mx-auto py-8 px-4">
           {/* Header row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
