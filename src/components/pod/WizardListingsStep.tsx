@@ -821,7 +821,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
               {hasTshirt && (
                 <div>
                   <p className="text-xs font-medium mb-1.5">T-Shirt</p>
-                  <div className="w-full rounded border border-border aspect-square overflow-hidden" style={checkerboardStyle}>
+                  <div className="w-full rounded border border-border aspect-square overflow-hidden flex items-center justify-center p-[12%]" style={{ backgroundColor: representativeTshirtColor }}>
                     <img src={cacheBust(idea.tshirt_design_url)} alt="Completed t-shirt design" className="w-full h-full object-contain" loading="lazy" />
                   </div>
                 </div>
