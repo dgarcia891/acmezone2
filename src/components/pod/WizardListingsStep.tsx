@@ -31,7 +31,7 @@ const checkerboardStyle = {
     "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
   backgroundSize: "20px 20px",
   backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-  backgroundColor: "white",
+  backgroundColor: "hsl(var(--background))",
 };
 
 const MARKETPLACE_COLORS: Record<string, string> = {
