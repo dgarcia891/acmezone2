@@ -105,8 +105,9 @@ export default function IdeaInputForm({ onSubmit, isLoading, defaultValues }: Pr
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <label className="text-sm font-medium mb-2 block">Idea Text</label>
+          <label className="text-sm font-medium mb-2 block" htmlFor="idea-text">Idea Text</label>
           <Textarea
+            id="idea-text"
             placeholder="Describe the meme, viral text, or content idea..."
             rows={4}
             value={ideaText}
