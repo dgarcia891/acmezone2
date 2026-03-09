@@ -1,4 +1,6 @@
 import { Helmet } from "react-helmet-async";
+import JsonLd, { softwareAppSchema, faqSchema, SITE_URL } from "@/components/seo/JsonLd";
+import FAQSection from "@/components/seo/FAQSection";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Header from "@/components/layout/Header";
@@ -26,6 +28,14 @@ const heroFeatures = [
   { icon: Zap, title: "Instant Results", desc: "Analyze transcripts in seconds — no manual review needed." },
   { icon: Shield, title: "Privacy First", desc: "Your data stays secure. We only process what you send." },
   { icon: BarChart3, title: "Usage Dashboard", desc: "Track your analyses and manage your subscription effortlessly." },
+];
+
+const insightReelFaqs = [
+  { question: "What is InsightReel?", answer: "InsightReel is a Chrome extension that uses AI to analyze video transcripts. It extracts key insights, sentiment analysis, and takeaways from any video — right in your browser." },
+  { question: "How many free analyses do I get?", answer: "You get 3 free analyses with no credit card required. After that, you can upgrade to Pro ($8/month for 100 analyses) or use your own API key with the BYOK plan ($3/month, unlimited)." },
+  { question: "What types of videos can I analyze?", answer: "InsightReel works with any video that has a transcript — YouTube, Vimeo, educational platforms, webinars, and more. If there's a transcript, InsightReel can analyze it." },
+  { question: "Is my data private?", answer: "Yes. We only process the transcript text you send for analysis. We don't store video content or share your data with third parties." },
+  { question: "How do I install InsightReel?", answer: "Visit the Chrome Web Store, search for InsightReel, and click 'Add to Chrome'. Sign in with your account and you're ready to analyze videos instantly." },
 ];
 
 const tiers = [
@@ -118,17 +128,30 @@ export default function InsightReelLanding() {
   return (
     <>
       <Helmet>
-        <title>InsightReel – AI Video Transcript Analysis | Acme.zone</title>
-        <meta name="description" content="Analyze any video transcript with AI. Get instant insights, sentiment analysis, and key takeaways. Free trial with 3 analyses — no credit card needed." />
+        <title>InsightReel | AI Video Transcript Analysis Chrome Extension</title>
+        <meta name="description" content="Analyze any video transcript with AI. Get instant insights, sentiment analysis, and key takeaways in seconds. Free trial — 3 analyses, no credit card needed." />
         <link rel="canonical" href="https://acme.zone/insightreel" />
         <meta property="og:type" content="product" />
-        <meta property="og:title" content="InsightReel – AI Video Transcript Analysis" />
-        <meta property="og:description" content="Analyze any video transcript with AI. Free trial included." />
+        <meta property="og:title" content="InsightReel | AI Video Transcript Analysis" />
+        <meta property="og:description" content="Analyze any video transcript with AI. Free trial with 3 analyses." />
         <meta property="og:url" content="https://acme.zone/insightreel" />
+        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="InsightReel – AI Video Transcript Analysis" />
-        <meta name="twitter:description" content="Analyze any video transcript with AI. Free trial included." />
+        <meta name="twitter:title" content="InsightReel | AI Video Transcript Analysis" />
+        <meta name="twitter:description" content="Analyze any video transcript with AI. Free trial with 3 analyses." />
+        <meta name="keywords" content="AI video analysis, transcript analysis, sentiment analysis, video insights, Chrome extension, InsightReel" />
       </Helmet>
+
+      <JsonLd data={[
+        softwareAppSchema({
+          name: "InsightReel",
+          description: "AI-powered Chrome extension for video transcript analysis. Get instant insights, sentiment analysis, and key takeaways.",
+          url: `${SITE_URL}/insightreel`,
+          category: "BrowserApplication",
+          price: "0",
+        }),
+        faqSchema(insightReelFaqs),
+      ]} />
 
       <Header />
 
@@ -290,6 +313,7 @@ export default function InsightReelLanding() {
             </Card>
           </div>
         </section>
+        <FAQSection faqs={insightReelFaqs} />
       </main>
 
       <Footer />
