@@ -1,20 +1,31 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  RefreshCw, CheckCircle2, ArrowLeft, Loader2, Store,
-  ThumbsDown, ExternalLink, Package, Copy, Palette, DollarSign
+  RefreshCw,
+  CheckCircle2,
+  ArrowLeft,
+  Loader2,
+  Store,
+  ThumbsDown,
+  ExternalLink,
+  Package,
+  Copy,
+  Palette,
+  DollarSign,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
 import { usePodSettings } from "@/hooks/usePodPipeline";
+import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
     "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
