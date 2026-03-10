@@ -436,3 +436,31 @@ export function useSuggestIdeas() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export function useColorRefinedVersions(ideaId: string | null) {
+  return useQuery({
+    queryKey: ["pod-color-refined-versions", ideaId],
+    queryFn: async () => {
+      if (!ideaId) return {};
+      const { data, error } = await supabase
+        .from("az_pod_design_versions" as any)
+        .select("*")
+        .eq("idea_id", ideaId)
+        .eq("product_type", "tshirt")
+        .not("color_name", "is", null);
+      if (error) throw error;
+      const map: Record<string, DesignVersion> = {};
+      for (const row of (data || []) as unknown as DesignVersion[]) {
+        if (row.color_name) {
+          const key = row.color_name.toLowerCase().trim();
+          // Keep the latest version per color
+          if (!map[key] || row.version_number > (map[key].version_number || 0)) {
+            map[key] = row;
+          }
+        }
+      }
+      return map;
+    },
+    enabled: !!ideaId,
+  });
+}
