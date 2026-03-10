@@ -211,6 +211,8 @@ IMPORTANT:
         prompt: `Refined for ${color_name}: ${userGuidance}`,
         version_number: nextVersion,
         is_selected: false,
+        color_name: color_name || null,
+        bg_hex: bg_hex || null,
       })
       .select()
       .single();
