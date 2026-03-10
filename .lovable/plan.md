@@ -1,28 +1,32 @@
 
 
-## Fix: Persist POD Pipeline State Across Navigation
+# Unified Admin Navigation
 
-### Root Cause
-Two problems cause state loss when navigating away and back:
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-1. **ScrollToTop component** forces `window.scrollTo(0, 0)` on every route change — so even if state were preserved, scroll position resets
-2. **All wizard state lives in `useState`** — when the component unmounts on navigation, everything (wizard step, idea, scroll position) is destroyed
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-### Fix
+## Changes
 
-**`src/components/ScrollToTop.tsx`**
-- Exclude `/admin/pod-pipeline` from the automatic scroll-to-top behavior so the page doesn't jump on return
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-**`src/pages/PodPipeline.tsx`**
-- Persist key state to `sessionStorage` on every change: `wizardOpen`, `wizardIdea.id`, `step`, `productType`, `scrollY`
-- On mount, restore from sessionStorage: look up the idea ID in the react-query cache (or wait for the query to load), restore the wizard step, and restore scroll position
-- Clear sessionStorage entries in `closeWizard` (user explicitly goes back to board)
-- This means: open wizard → navigate away → come back → wizard reopens at the same step with the same idea, scrolled to where you were
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-### Session keys
-- `pod_wizard_open` — boolean
-- `pod_wizard_idea_id` — string
-- `pod_wizard_step` — step name
-- `pod_wizard_product_type` — string
-- `pod_scroll_y` — number
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
+
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 

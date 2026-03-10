@@ -30,14 +30,15 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 export default function AdminPodPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(() => sessionStorage.getItem("pod_wizard_open") === "true");
   const [wizardIdea, setWizardIdea] = useState<any>(null);
-  const [step, setStep] = useState<PipelineStep>("input");
-  const [productType, setProductType] = useState("both");
+  const [step, setStep] = useState<PipelineStep>(() => (sessionStorage.getItem("pod_wizard_step") as PipelineStep) || "input");
+  const [productType, setProductType] = useState(() => sessionStorage.getItem("pod_wizard_product_type") || "both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
   const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
   const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const restoredFromSession = useRef(false);
   const handleTrendingOpenChange = (open: boolean) => {
     setTrendingOpen(open);
     sessionStorage.setItem("pod_trending_open", String(open));
@@ -58,20 +59,51 @@ export default function AdminPodPipeline() {
   const bgAutoTriggeredRef = useRef(false);
   const restoredRef = useRef(false);
 
+  // Persist wizard state to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("pod_wizard_open", String(wizardOpen));
+    if (!wizardOpen) {
+      sessionStorage.removeItem("pod_wizard_step");
+      sessionStorage.removeItem("pod_wizard_product_type");
+    }
+  }, [wizardOpen]);
+
+  useEffect(() => {
+    if (wizardOpen) sessionStorage.setItem("pod_wizard_step", step);
+  }, [step, wizardOpen]);
+
+  useEffect(() => {
+    if (wizardOpen) sessionStorage.setItem("pod_wizard_product_type", productType);
+  }, [productType, wizardOpen]);
+
   // Restore wizard from URL param or sessionStorage on mount
   useEffect(() => {
-    if (restoredRef.current || wizardOpen) return;
+    if (restoredRef.current) return;
     const ideaId = searchParams.get("idea") || sessionStorage.getItem("pod_wizard_idea");
     if (ideaId && allIdeas.length > 0) {
       const found = allIdeas.find((i: any) => i.id === ideaId);
       if (found) {
         restoredRef.current = true;
-        openWizardForIdea(found);
+        restoredFromSession.current = true;
+        // Restore idea without overriding step/productType from sessionStorage
+        setWizardIdea(found);
+        setWizardOpen(true);
+        setSearchParams({ idea: found.id });
+        // Restore scroll position after render
+        const savedScroll = sessionStorage.getItem("pod_scroll_y");
+        if (savedScroll) {
+          requestAnimationFrame(() => window.scrollTo(0, Number(savedScroll)));
+        }
       }
     }
   }, [allIdeas, searchParams]);
 
+  // Derive step from idea status ONLY on fresh opens (not session restores)
   useEffect(() => {
+    if (restoredFromSession.current) {
+      restoredFromSession.current = false;
+      return;
+    }
     if (wizardOpen && wizardIdea) {
       const derivedStep = statusToStep(wizardIdea.status);
       setStep(derivedStep);
@@ -103,7 +135,20 @@ export default function AdminPodPipeline() {
     setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
     setSearchParams({});
     sessionStorage.removeItem("pod_wizard_idea");
+    sessionStorage.removeItem("pod_wizard_open");
+    sessionStorage.removeItem("pod_wizard_step");
+    sessionStorage.removeItem("pod_wizard_product_type");
+    sessionStorage.removeItem("pod_scroll_y");
   };
+
+  // Save scroll position continuously so it survives navigation away
+  useEffect(() => {
+    const handleScroll = () => {
+      if (wizardOpen) sessionStorage.setItem("pod_scroll_y", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [wizardOpen]);
 
   const handleCreateVariant = (sourceIdea: any) => {
     const defaults = { idea_text: sourceIdea.idea_text || "", product_type: sourceIdea.product_type || "both", image_url: sourceIdea.image_url || undefined };
