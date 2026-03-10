@@ -30,14 +30,15 @@ function statusToStep(status: string | null | undefined): PipelineStep {
 export default function AdminPodPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<ViewMode>("board");
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(() => sessionStorage.getItem("pod_wizard_open") === "true");
   const [wizardIdea, setWizardIdea] = useState<any>(null);
-  const [step, setStep] = useState<PipelineStep>("input");
-  const [productType, setProductType] = useState("both");
+  const [step, setStep] = useState<PipelineStep>(() => (sessionStorage.getItem("pod_wizard_step") as PipelineStep) || "input");
+  const [productType, setProductType] = useState(() => sessionStorage.getItem("pod_wizard_product_type") || "both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
   const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
   const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
+  const restoredFromSession = useRef(false);
   const handleTrendingOpenChange = (open: boolean) => {
     setTrendingOpen(open);
     sessionStorage.setItem("pod_trending_open", String(open));
