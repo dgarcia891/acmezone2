@@ -461,8 +461,16 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
       return; // Don't proceed if approval fails
     }
 
+    // Build color_image_overrides from refined versions
+    const colorOverrides: Record<string, string> = {};
+    for (const [colorKey, version] of Object.entries(colorRefinedMap)) {
+      if (version.image_url) {
+        colorOverrides[colorKey] = version.image_url;
+      }
+    }
+
     sendToPrintify.mutate(
-      { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides },
+      { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides, color_image_overrides: Object.keys(colorOverrides).length > 0 ? colorOverrides : undefined },
       {
         onSuccess: (data) => {
           setPrintifyResults(data?.products || []);
