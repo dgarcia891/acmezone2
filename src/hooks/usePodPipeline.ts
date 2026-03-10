@@ -11,6 +11,8 @@ export interface DesignVersion {
   version_number: number;
   is_selected: boolean;
   created_at: string;
+  color_name: string | null;
+  bg_hex: string | null;
 }
 
 export function usePodIdeas() {
