@@ -362,6 +362,8 @@ Deno.serve(async (req) => {
     }
     console.log(`Color-refined designs available for ${colorImageMap.size} colors: ${Array.from(colorImageMap.keys()).join(", ")}`);
 
+    const results: any[] = [];
+
     for (const listing of filteredListings) {
       const designUrl = listing.product_type === "sticker"
         ? idea.sticker_design_url

@@ -1093,8 +1093,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       )}
 
-      {grouped && Object.entries(grouped).map(([shopLabel, products]) => (
-        <Card key={shopLabel} className="border-primary/30">
+      {grouped && Object.entries(grouped).map(([shopLabel, products], idx) => (
+        <Card key={shopLabel} id={idx === 0 ? "printify-results" : undefined} className="border-primary/30">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
