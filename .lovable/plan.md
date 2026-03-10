@@ -1,19 +1,32 @@
 
 
-## Fix: `results is not defined` Error + Auto-Scroll to Results After Publish
+# Unified Admin Navigation
 
-### Bug: `results is not defined` in `pod-send-to-printify`
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-The edge function references `results.push(...)` on lines 378, 588, and 614, but the `results` array is never declared. This was likely lost during the recent color-refined variants edit.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-**Fix in `supabase/functions/pod-send-to-printify/index.ts`**:
-- Add `const results: any[] = [];` before line 365 (the `for (const listing of filteredListings)` loop)
+## Changes
 
-### UX: Results not obvious after publishing
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-After clicking "Send to Printify", the results cards appear at the bottom of the page but the user has no indication to scroll down. The page stays at the same scroll position.
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-**Fix in `src/components/pod/WizardListingsStep.tsx`**:
-- After `setPrintifyResults(data?.products || [])` in the `onSuccess` callback, use `setTimeout(() => document.getElementById('printify-results')?.scrollIntoView({ behavior: 'smooth' })`, 100)` to auto-scroll to the results section
-- Add `id="printify-results"` to the first results card container (the `grouped` map output around line 1095)
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
+
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
