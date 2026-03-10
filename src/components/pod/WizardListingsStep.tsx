@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   RefreshCw,
   CheckCircle2,
@@ -19,6 +21,9 @@ import {
   Copy,
   Palette,
   DollarSign,
+  Wand2,
+  Check,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
