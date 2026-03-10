@@ -794,9 +794,13 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {displayedColors.map((colorName) => {
+                          const colorKey = colorName.toLowerCase().trim();
+                          const refinedVersion = colorRefinedMap[colorKey];
                           const designUrl = refinedPreview?.colorName === colorName
                             ? refinedPreview.url
-                            : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
+                            : refinedVersion
+                              ? cacheBust(refinedVersion.image_url)
+                              : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
                           const bgColor = swatchForColorName(colorName);
                           const isRefining = refiningColor === colorName;
                           const hasRefinedPreview = refinedPreview?.colorName === colorName;
