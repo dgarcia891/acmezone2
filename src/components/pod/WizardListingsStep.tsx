@@ -121,6 +121,58 @@ interface Props {
   onCreateVariant?: (idea: any) => void;
 }
 
+function ColorRefinePopover({
+  colorName,
+  bgHex,
+  isRefining,
+  onRefine,
+}: {
+  colorName: string;
+  bgHex: string;
+  isRefining: boolean;
+  onRefine: (guidance: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [guidance, setGuidance] = useState(
+    `Make text and details clearly visible on a ${colorName} background`
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-[10px] gap-1 px-2 w-full"
+          disabled={isRefining}
+        >
+          <Wand2 className="h-3 w-3" /> Refine
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-3" side="top">
+        <p className="text-xs font-medium">Refine design for {colorName}</p>
+        <Textarea
+          className="text-xs min-h-[60px]"
+          value={guidance}
+          onChange={(e) => setGuidance(e.target.value)}
+          placeholder="Describe what to fix…"
+        />
+        <Button
+          size="sm"
+          className="w-full h-7 text-xs"
+          onClick={() => {
+            setOpen(false);
+            onRefine(guidance);
+          }}
+          disabled={!guidance.trim()}
+        >
+          <Wand2 className="h-3 w-3 mr-1" /> Run AI Refinement
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
   const cacheBust = (url: string | null | undefined) => (url ? `${url.split("?")[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url);
   const refineForColor = useRefineForColor();
