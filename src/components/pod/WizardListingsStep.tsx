@@ -152,6 +152,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const [tshirtVariantIds, setTshirtVariantIds] = useState<number[]>([]);
   const [hydratedOverrides, setHydratedOverrides] = useState(false);
   const [hydratedColors, setHydratedColors] = useState(false);
+  const [refiningColor, setRefiningColor] = useState<string | null>(null);
+  const [refinedPreview, setRefinedPreview] = useState<{ colorName: string; url: string; versionId?: string } | null>(null);
 
   const primaryShopId = settingsData?.settings?.printify_shop_id || "";
   const primaryAutoPublish = settingsData?.settings?.auto_publish ?? false;
