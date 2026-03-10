@@ -187,6 +187,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const saveOverride = useSaveIdeaOverride();
   const setShopMargin = useSetShopMargin();
   const saveGlobalSettings = useSavePodSettings();
+  const { data: colorRefinedMap = {} } = useColorRefinedVersions(idea?.id ?? null);
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
