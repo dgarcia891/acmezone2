@@ -30,7 +30,7 @@ import ListingEditor from "./ListingEditor";
 import SpreadshirtExport from "./SpreadshirtExport";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
-import { usePodSettings, useSetShopMargin, useSavePodSettings, useRefineForColor } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSetShopMargin, useSavePodSettings, useRefineForColor, useColorRefinedVersions } from "@/hooks/usePodPipeline";
 import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
@@ -187,6 +187,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const saveOverride = useSaveIdeaOverride();
   const setShopMargin = useSetShopMargin();
   const saveGlobalSettings = useSavePodSettings();
+  const { data: colorRefinedMap = {} } = useColorRefinedVersions(idea?.id ?? null);
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
 
@@ -460,8 +461,16 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
       return; // Don't proceed if approval fails
     }
 
+    // Build color_image_overrides from refined versions
+    const colorOverrides: Record<string, string> = {};
+    for (const [colorKey, version] of Object.entries(colorRefinedMap)) {
+      if (version.image_url) {
+        colorOverrides[colorKey] = version.image_url;
+      }
+    }
+
     sendToPrintify.mutate(
-      { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides },
+      { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides, color_image_overrides: Object.keys(colorOverrides).length > 0 ? colorOverrides : undefined },
       {
         onSuccess: (data) => {
           setPrintifyResults(data?.products || []);
@@ -734,6 +743,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                       const checked = enabledCount === ids.length;
                       const indeterminate = enabledCount > 0 && enabledCount < ids.length;
                       const aiRecommended = ids.length > 0 && ids.every((id) => recommendedVariantSet.has(id));
+                      const hasRefinedVersion = !!colorRefinedMap[colorName.toLowerCase().trim()];
 
                       return (
                         <div key={colorName} className="flex items-center gap-2 rounded-md border border-border p-2">
@@ -752,6 +762,11 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                               <span className="text-xs truncate" title={colorName}>{colorName}</span>
                               {aiRecommended && (
                                 <Badge variant="secondary" className="text-[10px]">AI</Badge>
+                              )}
+                              {hasRefinedVersion && (
+                                <Badge variant="outline" className="text-[10px] gap-0.5 border-primary/40 text-primary">
+                                  <Wand2 className="h-2.5 w-2.5" /> Refined
+                                </Badge>
                               )}
                             </div>
                             <p className="text-[11px] text-muted-foreground">
@@ -787,9 +802,13 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {displayedColors.map((colorName) => {
+                          const colorKey = colorName.toLowerCase().trim();
+                          const refinedVersion = colorRefinedMap[colorKey];
                           const designUrl = refinedPreview?.colorName === colorName
                             ? refinedPreview.url
-                            : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
+                            : refinedVersion
+                              ? cacheBust(refinedVersion.image_url)
+                              : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
                           const bgColor = swatchForColorName(colorName);
                           const isRefining = refiningColor === colorName;
                           const hasRefinedPreview = refinedPreview?.colorName === colorName;

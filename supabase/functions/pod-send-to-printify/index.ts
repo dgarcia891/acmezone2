@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
       .single();
     if (!roleData) return json({ error: "Admin access required" }, 403);
 
-    const { idea_id, product_types, publish_overrides } = await req.json();
+    const { idea_id, product_types, publish_overrides, color_image_overrides } = await req.json();
     if (!idea_id) return json({ error: "idea_id is required" }, 400);
 
     // Fetch idea
@@ -339,7 +339,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    const results: any[] = [];
+    // Fetch color-refined design versions for this idea (tshirt only)
+    const { data: refinedVersions } = await supabase
+      .from("az_pod_design_versions")
+      .select("*")
+      .eq("idea_id", idea_id)
+      .eq("product_type", "tshirt")
+      .not("color_name", "is", null);
+
+    // Build color_name → image_url mapping from refined versions
+    // Use client-side overrides first, then fall back to DB refined versions
+    const colorImageMap = new Map<string, string>();
+    for (const rv of (refinedVersions || [])) {
+      if (rv.color_name && rv.image_url) {
+        colorImageMap.set(rv.color_name.toLowerCase().trim(), rv.image_url);
+      }
+    }
+    // Client-side overrides take precedence
+    const clientOverrides: Record<string, string> = color_image_overrides || {};
+    for (const [colorName, url] of Object.entries(clientOverrides)) {
+      if (url) colorImageMap.set(colorName.toLowerCase().trim(), url as string);
+    }
+    console.log(`Color-refined designs available for ${colorImageMap.size} colors: ${Array.from(colorImageMap.keys()).join(", ")}`);
 
     for (const listing of filteredListings) {
       const designUrl = listing.product_type === "sticker"
@@ -361,8 +382,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Upload image once per listing
-      console.log(`Uploading image for ${listing.product_type}...`);
+      // Upload default image
+      console.log(`Uploading default image for ${listing.product_type}...`);
       const uploadResult = await printifyFetch("/uploads/images.json", printify_api_key, {
         method: "POST",
         body: JSON.stringify({
@@ -370,8 +391,42 @@ Deno.serve(async (req) => {
           url: designUrl,
         }),
       });
-      const imageId = uploadResult.id;
-      console.log(`Image uploaded: ${imageId}`);
+      const defaultImageId = uploadResult.id;
+      console.log(`Default image uploaded: ${defaultImageId}`);
+
+      // Upload refined images for matching colors (tshirt only)
+      const colorToImageId = new Map<string, string>(); // color_name → printify image id
+      if (listing.product_type === "tshirt" && colorImageMap.size > 0) {
+        const uploadedUrls = new Set<string>();
+        for (const [colorName, refinedUrl] of colorImageMap.entries()) {
+          if (uploadedUrls.has(refinedUrl)) {
+            // Same URL already uploaded, find the image id
+            for (const [cn, iid] of colorToImageId.entries()) {
+              if (colorImageMap.get(cn) === refinedUrl) {
+                colorToImageId.set(colorName, iid);
+                break;
+              }
+            }
+            continue;
+          }
+          try {
+            console.log(`Uploading refined image for color "${colorName}"...`);
+            const refinedUpload = await printifyFetch("/uploads/images.json", printify_api_key, {
+              method: "POST",
+              body: JSON.stringify({
+                file_name: `${listing.product_type}_refined_${colorName.replace(/\s+/g, "_")}.png`,
+                url: refinedUrl,
+              }),
+            });
+            colorToImageId.set(colorName, refinedUpload.id);
+            uploadedUrls.add(refinedUrl);
+            console.log(`Refined image for "${colorName}" uploaded: ${refinedUpload.id}`);
+          } catch (err) {
+            console.error(`Failed to upload refined image for "${colorName}":`, err);
+            // Fall back to default for this color
+          }
+        }
+      }
 
       // Get variants once
       console.log(`Fetching variants for blueprint ${blueprintId}...`);
@@ -383,12 +438,11 @@ Deno.serve(async (req) => {
       if (!variantList.length) {
         throw new Error(`No variants found for blueprint ${blueprintId} / provider ${printProviderId}`);
       }
-      // Log first variant structure for debugging
       if (variantList.length > 0) {
         console.log("Sample variant structure:", JSON.stringify(variantList[0]));
       }
 
-      // Build cost map from variant data (Printify catalog variants include `cost` in cents)
+      // Build cost map from variant data
       const variantCostMap = new Map<number, number>();
       for (const v of variantList) {
         if (v.cost != null) {
@@ -408,7 +462,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // If manual selection exists but none match this blueprint/provider, refuse to proceed
+      // If manual selection exists but none match this blueprint/provider, refuse
       if (hasManualTshirtVariants && listing.product_type === "tshirt") {
         const matching = variantList.filter((v: any) => manualVariantIdSet.has(v.id)).length;
         if (matching === 0) {
@@ -418,6 +472,46 @@ Deno.serve(async (req) => {
           });
           continue;
         }
+      }
+
+      // Build print_areas: group variants by which image they should use
+      let printAreas: any[];
+      if (listing.product_type === "tshirt" && colorToImageId.size > 0) {
+        // Group variants by their assigned image
+        const imageGroups = new Map<string, number[]>(); // imageId → variant_ids
+        for (const v of variantList) {
+          const colorName = v.options?.color || v.options?.Color || v.title || "";
+          const extracted = extractColorName(colorName);
+          // Find matching refined image (fuzzy match)
+          let assignedImageId = defaultImageId;
+          for (const [refinedColor, imgId] of colorToImageId.entries()) {
+            if (extracted === refinedColor || extracted.includes(refinedColor) || refinedColor.includes(extracted)) {
+              assignedImageId = imgId;
+              break;
+            }
+          }
+          const group = imageGroups.get(assignedImageId) || [];
+          group.push(v.id);
+          imageGroups.set(assignedImageId, group);
+        }
+
+        printAreas = Array.from(imageGroups.entries()).map(([imgId, variantIds]) => ({
+          variant_ids: variantIds,
+          placeholders: [{
+            position: "front",
+            images: [{ id: imgId, x: 0.5, y: 0.5, scale: 1, angle: 0 }],
+          }],
+        }));
+        console.log(`Built ${printAreas.length} print_areas (${colorToImageId.size} color-specific + default)`);
+      } else {
+        // Single image for all variants
+        printAreas = [{
+          variant_ids: variantList.map((v: any) => v.id),
+          placeholders: [{
+            position: "front",
+            images: [{ id: defaultImageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }],
+          }],
+        }];
       }
 
       // Create product on each shop
@@ -439,7 +533,6 @@ Deno.serve(async (req) => {
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
                variants: variantList.map((v: any) => {
-                 // Determine margin for this shop + product type
                  const isSticker = listing.product_type === "sticker";
                  const shopMargin = isSticker ? shop.sticker_margin_pct : shop.tshirt_margin_pct;
                  const ideaOverrideRow = perShopOverrides.get(String(shop.shop_id));
@@ -449,7 +542,6 @@ Deno.serve(async (req) => {
                  const cost = variantCostMap.get(v.id);
                  let price: number;
                  if (cost != null) {
-                   // cost + markup, minimum $1 profit
                    price = Math.max(Math.round(cost + (cost * marginPct / 100)), cost + 100);
                  } else {
                    price = FALLBACK_PRICE[listing.product_type] ?? 1999;
@@ -467,19 +559,7 @@ Deno.serve(async (req) => {
                    is_enabled: isEnabled,
                  };
                }),
-              print_areas: [{
-                variant_ids: variantList.map((v: any) => v.id),
-                placeholders: [{
-                  position: "front",
-                  images: [{
-                    id: imageId,
-                    x: 0.5,
-                    y: 0.5,
-                    scale: 1,
-                    angle: 0,
-                  }],
-                }],
-              }],
+              print_areas: printAreas,
             }),
           });
           console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);

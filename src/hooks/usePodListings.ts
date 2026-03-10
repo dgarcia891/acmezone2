@@ -102,8 +102,8 @@ export function useApproveListings() {
 export function useSendToPrintify() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ idea_id, product_types, publish_overrides }: { idea_id: string; product_types?: string[]; publish_overrides?: Record<string, boolean> }) => {
-      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id, product_types, publish_overrides } });
+    mutationFn: async ({ idea_id, product_types, publish_overrides, color_image_overrides }: { idea_id: string; product_types?: string[]; publish_overrides?: Record<string, boolean>; color_image_overrides?: Record<string, string> }) => {
+      const { data, error } = await supabase.functions.invoke("pod-send-to-printify", { body: { idea_id, product_types, publish_overrides, color_image_overrides } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;

@@ -1,41 +1,32 @@
 
 
-## Auto-Assign Refined Designs to Matching Color Variants on Printify
+# Unified Admin Navigation
 
-### What This Does
-When sending a product to Printify, instead of using a single image for all color variants, the system will automatically assign color-refined designs to their matching variants. For example, a design refined for black backgrounds gets applied to Black/Dark variant SKUs, while the original design applies to White/Light variants.
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-### Changes
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-**`supabase/functions/pod-send-to-printify/index.ts`**
-- Query `az_pod_design_versions` for any color-refined versions linked to the idea
-- Build a color-to-image mapping (e.g., `{ "black": "refined_url", "default": "original_url" }`)
-- When constructing `print_areas`, group variants by color and assign the matching image URL
-- Fall back to the original design for any color without a refinement
+## Changes
 
-**`src/components/pod/WizardListingsStep.tsx`**
-- In the Finalize step, show a visual indicator next to color variants that have a refined image assigned (e.g., small wand badge)
-- Allow toggling per-color: use refined vs. original before submission
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-**`src/hooks/usePodPipeline.ts`**
-- Add a query to fetch approved design versions for an idea, keyed by color
-- Expose this data to the Finalize step UI
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-### How Printify Receives It
-```text
-print_areas: [
-  {
-    variant_ids: [101, 102],  // White, Light Gray
-    placeholders: [{ position: "front", images: [{ id: "original_img_id" }] }]
-  },
-  {
-    variant_ids: [201, 202],  // Black, Dark Gray  
-    placeholders: [{ position: "front", images: [{ id: "refined_img_id" }] }]
-  }
-]
-```
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
 
-### Prerequisites
-- The color refinement feature must store the target `bg_hex`/`color_name` alongside the refined image in `az_pod_design_versions` (already done)
-- Printify variant color names need fuzzy matching to our refinement color names (e.g., "Black" ↔ "#000000")
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
