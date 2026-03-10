@@ -1,21 +1,32 @@
 
 
-## Fix: Toast Duration + Stacking & Edge Function Stack Overflow
+# Unified Admin Navigation
 
-### Issue 1: Toasts disappear too fast and don't stack
+## Problem
+Admin pages are scattered across separate routes (`/admin`, `/hydra-guard/admin`) with no centralized way to navigate between them. The only way to reach Hydra Guard Admin is by typing the URL directly.
 
-The Sonner toaster has no `duration` or `visibleToasts` props set, so it defaults to ~4 seconds and shows only 1 toast.
+## Solution
+Add a **Hydra Guard** tab directly into the main Admin Dashboard (`/admin`), eliminating the need for a separate `/hydra-guard/admin` route entirely. This consolidates all admin functionality into one place.
 
-**Fix in `src/components/ui/sonner.tsx`**:
-- Add `duration={30000}` (30 seconds)
-- Add `visibleToasts={5}` to allow stacking
+## Changes
 
-### Issue 2: `pod-refine-color` crashes with "Maximum call stack size exceeded"
+### 1. Merge Hydra Guard into Admin.tsx
+**File:** `src/pages/Admin.tsx`
+- Add a new "Hydra Guard" tab alongside Users, Products, Analytics, Settings
+- Import the three Hydra Guard tab components (`DetectionsTab`, `CorrectionsTab`, `PatternsTab`)
+- Nest them inside a sub-tabs layout within the Hydra Guard tab content
+- Add the Shield icon with a distinctive color to make it stand out
 
-Line 79: `btoa(String.fromCharCode(...imgBytes))` uses the spread operator on the entire image byte array. For large images (100K+ bytes), this exceeds the JS call stack limit.
+### 2. Redirect old route
+**File:** `src/App.tsx`
+- Replace the `/hydra-guard/admin` route with a redirect to `/admin` (or remove it entirely)
 
-**Fix in `supabase/functions/pod-refine-color/index.ts`**:
-- Replace the one-liner with a chunked base64 conversion that processes bytes in batches of 8192.
+### 3. Remove standalone page
+**File:** `src/pages/HydraGuardAdmin.tsx`
+- Can be deleted since its content now lives inside Admin.tsx
 
-Same pattern exists on line ~120 for the refined image bytes -- fix that too.
+### Result
+- One admin URL: `/admin`
+- All admin tools accessible via tabs: Users | Products | Analytics | Hydra Guard | Settings
+- Header "Admin" link takes you to everything
 
