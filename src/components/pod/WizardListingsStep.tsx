@@ -735,6 +735,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                       const checked = enabledCount === ids.length;
                       const indeterminate = enabledCount > 0 && enabledCount < ids.length;
                       const aiRecommended = ids.length > 0 && ids.every((id) => recommendedVariantSet.has(id));
+                      const hasRefinedVersion = !!colorRefinedMap[colorName.toLowerCase().trim()];
 
                       return (
                         <div key={colorName} className="flex items-center gap-2 rounded-md border border-border p-2">
@@ -753,6 +754,11 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                               <span className="text-xs truncate" title={colorName}>{colorName}</span>
                               {aiRecommended && (
                                 <Badge variant="secondary" className="text-[10px]">AI</Badge>
+                              )}
+                              {hasRefinedVersion && (
+                                <Badge variant="outline" className="text-[10px] gap-0.5 border-primary/40 text-primary">
+                                  <Wand2 className="h-2.5 w-2.5" /> Refined
+                                </Badge>
                               )}
                             </div>
                             <p className="text-[11px] text-muted-foreground">
