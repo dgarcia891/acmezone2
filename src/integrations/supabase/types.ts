@@ -85,6 +85,8 @@ export type Database = {
       }
       az_pod_design_versions: {
         Row: {
+          bg_hex: string | null
+          color_name: string | null
           created_at: string | null
           id: string
           idea_id: string
@@ -95,6 +97,8 @@ export type Database = {
           version_number: number
         }
         Insert: {
+          bg_hex?: string | null
+          color_name?: string | null
           created_at?: string | null
           id?: string
           idea_id: string
@@ -105,6 +109,8 @@ export type Database = {
           version_number?: number
         }
         Update: {
+          bg_hex?: string | null
+          color_name?: string | null
           created_at?: string | null
           id?: string
           idea_id?: string
