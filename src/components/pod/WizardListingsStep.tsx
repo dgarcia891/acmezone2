@@ -735,15 +735,24 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {displayedColors.map((colorName) => {
-                          const designUrl = cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
+                          const designUrl = refinedPreview?.colorName === colorName
+                            ? refinedPreview.url
+                            : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
                           const bgColor = swatchForColorName(colorName);
+                          const isRefining = refiningColor === colorName;
+                          const hasRefinedPreview = refinedPreview?.colorName === colorName;
 
                           return (
                             <div key={colorName} className="flex flex-col gap-1.5">
                               <div
-                                className="w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
+                                className="relative w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
                                 style={{ backgroundColor: bgColor }}
                               >
+                                {isRefining && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                  </div>
+                                )}
                                 {designUrl && (
                                   <img
                                     src={designUrl}
@@ -755,6 +764,60 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                               <p className="text-xs text-center text-muted-foreground truncate" title={colorName}>
                                 {colorName}
                               </p>
+
+                              {/* Refine / Approve-Reject controls */}
+                              {hasRefinedPreview ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={() => {
+                                      // Accept: update the main design URL
+                                      onIdeaUpdated?.({ tshirt_design_url: refinedPreview.url });
+                                      setRefinedPreview(null);
+                                    }}
+                                  >
+                                    <Check className="h-3 w-3" /> Accept
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={() => setRefinedPreview(null)}
+                                  >
+                                    <X className="h-3 w-3" /> Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <ColorRefinePopover
+                                  colorName={colorName}
+                                  bgHex={bgColor}
+                                  isRefining={isRefining}
+                                  onRefine={(guidance) => {
+                                    setRefiningColor(colorName);
+                                    refineForColor.mutate(
+                                      {
+                                        idea_id: idea.id,
+                                        color_name: colorName,
+                                        bg_hex: bgColor,
+                                        guidance,
+                                      },
+                                      {
+                                        onSuccess: (data) => {
+                                          setRefiningColor(null);
+                                          setRefinedPreview({
+                                            colorName,
+                                            url: data.refined_url + `?t=${Date.now()}`,
+                                            versionId: data.version?.id,
+                                          });
+                                        },
+                                        onError: () => setRefiningColor(null),
+                                      }
+                                    );
+                                  }}
+                                />
+                              )}
                             </div>
                           );
                         })}
