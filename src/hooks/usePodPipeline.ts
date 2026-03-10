@@ -403,6 +403,24 @@ export interface TrendingSuggestion {
   category: string;
 }
 
+export function useRefineForColor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { idea_id: string; color_name: string; bg_hex?: string; guidance?: string }) => {
+      const { data, error } = await supabase.functions.invoke("pod-refine-color", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-design-versions"] });
+      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
+      toast.success("Design refined for color");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useSuggestIdeas() {
   return useMutation({
     mutationFn: async ({ category, count }: { category?: string; count?: number } = {}) => {

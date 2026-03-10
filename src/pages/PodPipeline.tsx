@@ -126,18 +126,21 @@ const PodPipeline = () => {
   }, [step, wizardIdea?.id]);
 
   const openWizardForNew = () => {
+    scrollPositionRef.current = window.scrollY;
     setWizardIdea(null);
     setWizardOpen(true);
     setSearchParams({});
   };
 
   const openWizardForIdea = (idea: any) => {
+    scrollPositionRef.current = window.scrollY;
     setWizardIdea(idea);
     setWizardOpen(true);
     setSearchParams({ idea: idea.id });
   };
 
   const closeWizard = () => {
+    const savedScroll = scrollPositionRef.current;
     setWizardOpen(false);
     setWizardIdea(null);
     setStep("input");
@@ -147,6 +150,9 @@ const PodPipeline = () => {
     bgAutoTriggeredRef.current = false;
     setVariantDefaults(null);
     setSearchParams({});
+    requestAnimationFrame(() => {
+      window.scrollTo(0, savedScroll);
+    });
   };
 
   const handleCreateVariant = (sourceIdea: any) => {
