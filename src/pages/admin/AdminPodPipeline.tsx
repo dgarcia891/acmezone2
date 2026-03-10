@@ -135,7 +135,20 @@ export default function AdminPodPipeline() {
     setLoadingTypes(new Set()); setBgRemoving(false); bgAutoTriggeredRef.current = false; setVariantDefaults(null);
     setSearchParams({});
     sessionStorage.removeItem("pod_wizard_idea");
+    sessionStorage.removeItem("pod_wizard_open");
+    sessionStorage.removeItem("pod_wizard_step");
+    sessionStorage.removeItem("pod_wizard_product_type");
+    sessionStorage.removeItem("pod_scroll_y");
   };
+
+  // Save scroll position continuously so it survives navigation away
+  useEffect(() => {
+    const handleScroll = () => {
+      if (wizardOpen) sessionStorage.setItem("pod_scroll_y", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [wizardOpen]);
 
   const handleCreateVariant = (sourceIdea: any) => {
     const defaults = { idea_text: sourceIdea.idea_text || "", product_type: sourceIdea.product_type || "both", image_url: sourceIdea.image_url || undefined };
