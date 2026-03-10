@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   RefreshCw,
   CheckCircle2,
@@ -19,13 +21,16 @@ import {
   Copy,
   Palette,
   DollarSign,
+  Wand2,
+  Check,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ListingEditor from "./ListingEditor";
 import SpreadshirtExport from "./SpreadshirtExport";
 import { usePodListings, useGenerateListings, useApproveListings, useSendToPrintify } from "@/hooks/usePodListings";
 import { useUpdateIdeaStatus } from "@/hooks/usePodKanban";
-import { usePodSettings, useSetShopMargin, useSavePodSettings } from "@/hooks/usePodPipeline";
+import { usePodSettings, useSetShopMargin, useSavePodSettings, useRefineForColor } from "@/hooks/usePodPipeline";
 import { useFetchVariantColors, useIdeaOverrides, useSaveIdeaOverride } from "@/hooks/usePodOverrides";
 const checkerboardStyle = {
   backgroundImage:
@@ -116,8 +121,61 @@ interface Props {
   onCreateVariant?: (idea: any) => void;
 }
 
+function ColorRefinePopover({
+  colorName,
+  bgHex,
+  isRefining,
+  onRefine,
+}: {
+  colorName: string;
+  bgHex: string;
+  isRefining: boolean;
+  onRefine: (guidance: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [guidance, setGuidance] = useState(
+    `Make text and details clearly visible on a ${colorName} background`
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-[10px] gap-1 px-2 w-full"
+          disabled={isRefining}
+        >
+          <Wand2 className="h-3 w-3" /> Refine
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-3" side="top">
+        <p className="text-xs font-medium">Refine design for {colorName}</p>
+        <Textarea
+          className="text-xs min-h-[60px]"
+          value={guidance}
+          onChange={(e) => setGuidance(e.target.value)}
+          placeholder="Describe what to fix…"
+        />
+        <Button
+          size="sm"
+          className="w-full h-7 text-xs"
+          onClick={() => {
+            setOpen(false);
+            onRefine(guidance);
+          }}
+          disabled={!guidance.trim()}
+        >
+          <Wand2 className="h-3 w-3 mr-1" /> Run AI Refinement
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function WizardListingsStep({ idea, onBack, onClose, onReject, onDropDesign, onIdeaUpdated, onCreateVariant }: Props) {
   const cacheBust = (url: string | null | undefined) => (url ? `${url.split("?")[0]}?t=${encodeURIComponent(idea?.updated_at || Date.now())}` : url);
+  const refineForColor = useRefineForColor();
   const { data: listings = [], isLoading } = usePodListings(idea?.id ?? null);
   const generateListings = useGenerateListings();
   const approveListings = useApproveListings();
@@ -146,6 +204,8 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const [tshirtVariantIds, setTshirtVariantIds] = useState<number[]>([]);
   const [hydratedOverrides, setHydratedOverrides] = useState(false);
   const [hydratedColors, setHydratedColors] = useState(false);
+  const [refiningColor, setRefiningColor] = useState<string | null>(null);
+  const [refinedPreview, setRefinedPreview] = useState<{ colorName: string; url: string; versionId?: string } | null>(null);
 
   const primaryShopId = settingsData?.settings?.printify_shop_id || "";
   const primaryAutoPublish = settingsData?.settings?.auto_publish ?? false;
@@ -727,15 +787,24 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {displayedColors.map((colorName) => {
-                          const designUrl = cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
+                          const designUrl = refinedPreview?.colorName === colorName
+                            ? refinedPreview.url
+                            : cacheBust(idea.tshirt_design_url || idea.tshirt_raw_url);
                           const bgColor = swatchForColorName(colorName);
+                          const isRefining = refiningColor === colorName;
+                          const hasRefinedPreview = refinedPreview?.colorName === colorName;
 
                           return (
                             <div key={colorName} className="flex flex-col gap-1.5">
                               <div
-                                className="w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
+                                className="relative w-full aspect-square rounded-lg border border-border overflow-hidden p-[12%]"
                                 style={{ backgroundColor: bgColor }}
                               >
+                                {isRefining && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                  </div>
+                                )}
                                 {designUrl && (
                                   <img
                                     src={designUrl}
@@ -747,6 +816,60 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                               <p className="text-xs text-center text-muted-foreground truncate" title={colorName}>
                                 {colorName}
                               </p>
+
+                              {/* Refine / Approve-Reject controls */}
+                              {hasRefinedPreview ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={() => {
+                                      // Accept: update the main design URL
+                                      onIdeaUpdated?.({ tshirt_design_url: refinedPreview.url });
+                                      setRefinedPreview(null);
+                                    }}
+                                  >
+                                    <Check className="h-3 w-3" /> Accept
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={() => setRefinedPreview(null)}
+                                  >
+                                    <X className="h-3 w-3" /> Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <ColorRefinePopover
+                                  colorName={colorName}
+                                  bgHex={bgColor}
+                                  isRefining={isRefining}
+                                  onRefine={(guidance) => {
+                                    setRefiningColor(colorName);
+                                    refineForColor.mutate(
+                                      {
+                                        idea_id: idea.id,
+                                        color_name: colorName,
+                                        bg_hex: bgColor,
+                                        guidance,
+                                      },
+                                      {
+                                        onSuccess: (data) => {
+                                          setRefiningColor(null);
+                                          setRefinedPreview({
+                                            colorName,
+                                            url: data.refined_url + `?t=${Date.now()}`,
+                                            versionId: data.version?.id,
+                                          });
+                                        },
+                                        onError: () => setRefiningColor(null),
+                                      }
+                                    );
+                                  }}
+                                />
+                              )}
                             </div>
                           );
                         })}
