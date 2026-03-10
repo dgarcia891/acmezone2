@@ -52,4 +52,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sa-report-user]
+
+[functions.pod-refine-color]
 verify_jwt = false
