@@ -475,6 +475,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         onSuccess: (data) => {
           setPrintifyResults(data?.products || []);
           onIdeaUpdated?.({ status: "production" });
+          setTimeout(() => document.getElementById("printify-results")?.scrollIntoView({ behavior: "smooth" }), 150);
         },
       }
     );
