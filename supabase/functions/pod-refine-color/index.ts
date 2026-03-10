@@ -76,7 +76,12 @@ Deno.serve(async (req) => {
     const imgResponse = await fetch(designUrl);
     if (!imgResponse.ok) throw new Error(`Failed to download design: ${imgResponse.status}`);
     const imgBytes = new Uint8Array(await imgResponse.arrayBuffer());
-    const imgBase64 = btoa(String.fromCharCode(...imgBytes));
+    // Chunked base64 to avoid stack overflow on large images
+    let imgBase64 = "";
+    for (let i = 0; i < imgBytes.length; i += 8192) {
+      imgBase64 += String.fromCharCode(...imgBytes.subarray(i, i + 8192));
+    }
+    imgBase64 = btoa(imgBase64);
 
     // Step 2: Send to AI to refine for the target color
     const defaultGuidance = `Adjust this design so all text, details, and elements are clearly visible and look great on a ${color_name} background.`;
