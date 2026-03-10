@@ -75,6 +75,7 @@ const PodPipeline = () => {
   // Track whether auto-bg-removal has been triggered for the current results step
   const bgAutoTriggeredRef = useRef(false);
   const restoredRef = useRef(false);
+  const scrollPositionRef = useRef(0);
 
   // Restore wizard from URL param on mount
   useEffect(() => {
