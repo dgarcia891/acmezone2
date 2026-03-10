@@ -339,7 +339,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    const results: any[] = [];
+    // Fetch color-refined design versions for this idea (tshirt only)
+    const { data: refinedVersions } = await supabase
+      .from("az_pod_design_versions")
+      .select("*")
+      .eq("idea_id", idea_id)
+      .eq("product_type", "tshirt")
+      .not("color_name", "is", null);
+
+    // Build color_name → image_url mapping from refined versions
+    // Use client-side overrides first, then fall back to DB refined versions
+    const colorImageMap = new Map<string, string>();
+    for (const rv of (refinedVersions || [])) {
+      if (rv.color_name && rv.image_url) {
+        colorImageMap.set(rv.color_name.toLowerCase().trim(), rv.image_url);
+      }
+    }
+    // Client-side overrides take precedence
+    const clientOverrides: Record<string, string> = color_image_overrides || {};
+    for (const [colorName, url] of Object.entries(clientOverrides)) {
+      if (url) colorImageMap.set(colorName.toLowerCase().trim(), url as string);
+    }
+    console.log(`Color-refined designs available for ${colorImageMap.size} colors: ${Array.from(colorImageMap.keys()).join(", ")}`);
 
     for (const listing of filteredListings) {
       const designUrl = listing.product_type === "sticker"
