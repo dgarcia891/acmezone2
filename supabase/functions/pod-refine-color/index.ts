@@ -146,7 +146,11 @@ IMPORTANT:
     const base64Match = generatedImage.match(/^data:image\/\w+;base64,(.+)$/);
     if (!base64Match) return json({ error: "Invalid image format from AI" }, 500);
     const refinedBase64 = base64Match[1];
-    const refinedBytes = Uint8Array.from(atob(refinedBase64), (c) => c.charCodeAt(0));
+    const refinedBinary = atob(refinedBase64);
+    const refinedBytes = new Uint8Array(refinedBinary.length);
+    for (let i = 0; i < refinedBinary.length; i++) {
+      refinedBytes[i] = refinedBinary.charCodeAt(i);
+    }
 
     // Step 3: Upload raw refined image
     const rawFilename = `pod-designs/tshirt-refined-raw-${idea_id}-${Date.now()}.png`;
