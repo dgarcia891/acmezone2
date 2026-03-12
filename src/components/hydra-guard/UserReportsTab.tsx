@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { severityBadgeClass, statusBadgeClass, formatDate, PAGE_SIZE } from './severity-utils';
 import {
   FileWarning, Clock, CheckCircle, XCircle, AlertCircle,
-  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2, Sparkles
+  ChevronLeft, ChevronRight, Search, X, ExternalLink, Loader2, Sparkles, Shield
 } from 'lucide-react';
 
 interface UserReport {
@@ -128,6 +128,74 @@ const UserReportsTab = () => {
       setAdminNotes('');
     }
     setActionLoading(null);
+  };
+
+  const handleApproveAndBlock = async (report: UserReport) => {
+    setActionLoading(report.id);
+    try {
+      // 1. Extract patterns from AI analysis or raw indicators
+      let patternsToBlock: string[] = [];
+      const aiData = report.ai_analysis as any;
+      
+      if (aiData?.suggested_patterns && Array.isArray(aiData.suggested_patterns)) {
+         patternsToBlock = aiData.suggested_patterns;
+      } else if (report.indicators && Array.isArray(report.indicators)) {
+         patternsToBlock = report.indicators.map(i => String(i));
+      }
+
+      if (patternsToBlock.length === 0) {
+        toast({ title: 'Notice', description: 'No patterns found to block.', variant: 'default' });
+        updateStatus(report.id, 'reviewed'); // fallback
+        return;
+      }
+
+      // 2. Insert into global sa_patterns
+      const inserts = patternsToBlock.map(phrase => ({
+        phrase,
+        category: report.report_type === 'telemetry' ? 'telemetry_auto' : 'admin_added',
+        severity_weight: 50,
+        active: true,
+        source: 'user_report_promotion'
+      }));
+
+      const { data: insertedPatterns, error: insertError } = await supabase
+        .from('sa_patterns' as any)
+        .insert(inserts as never)
+        .select('id');
+
+      if (insertError) throw insertError;
+
+      // 3. Update the report to mark it as promoted
+      const promotedId = insertedPatterns && insertedPatterns.length > 0 ? insertedPatterns[0].id : null;
+      
+      const { error: updateError } = await supabase
+        .from('sa_user_reports' as any)
+        .update({
+          review_status: 'reviewed',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+          promoted_pattern_id: promotedId,
+          admin_notes: ((adminNotes || '') + ' [Auto-blocked via Admin UI]').trim()
+        } as never)
+        .eq('id', report.id);
+        
+      if (updateError) throw updateError;
+      
+      toast({ 
+        title: 'Successfully Blocked', 
+        description: `Added ${patternsToBlock.length} patterns to the global blocklist.` 
+      });
+      
+      fetchData();
+      fetchStats();
+      setSelected(null);
+      setAdminNotes('');
+      
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to sync patterns.', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const openDetail = (r: UserReport) => {
@@ -331,16 +399,25 @@ const UserReportsTab = () => {
                     onChange={e => setAdminNotes(e.target.value)}
                     rows={2}
                   />
-                  <div className="flex gap-2">
-                    <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'reviewed')}>
-                      <CheckCircle className="h-4 w-4 mr-2" /> Mark Reviewed
+                  <div className="flex flex-col gap-2">
+                    <Button 
+                       className="w-full bg-red-600 hover:bg-red-700 text-white" 
+                       disabled={isLoading(selected.id)} 
+                       onClick={() => handleApproveAndBlock(selected)}
+                    >
+                      <Shield className="h-4 w-4 mr-2" /> Approve & Add to Blocklist
                     </Button>
-                    <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'dismissed')}>
-                      <XCircle className="h-4 w-4 mr-2" /> Dismiss
-                    </Button>
-                    <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'flagged')}>
-                      <AlertCircle className="h-4 w-4 mr-2" /> Flag for Investigation
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'reviewed')}>
+                        <CheckCircle className="h-4 w-4 mr-2" /> Mark Reviewed
+                      </Button>
+                      <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'dismissed')}>
+                        <XCircle className="h-4 w-4 mr-2" /> Dismiss
+                      </Button>
+                      <Button className="flex-1" variant="outline" disabled={isLoading(selected.id)} onClick={() => updateStatus(selected.id, 'flagged')}>
+                        <AlertCircle className="h-4 w-4 mr-2" /> Flag
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
