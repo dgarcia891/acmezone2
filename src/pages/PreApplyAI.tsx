@@ -10,18 +10,12 @@ const PreApplyAI = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Helmet>
-        <title>Pre-Apply AI | AI Job Application Scanner Chrome Extension</title>
-        <meta name="description" content="Screen job listings with AI before you apply. Get company red-flag detection, spam analysis, and employer insights. Chrome extension for smarter job hunting." />
-        <meta property="og:title" content="Pre-Apply AI | AI Job Application Scanner" />
-        <meta property="og:description" content="Screen job listings with AI. Red-flag detection, spam analysis, and employer insights." />
+        <title>Pre-Apply AI | Chrome Extension Credit System</title>
+        <meta name="description" content="Purchase credits for Pre-Apply AI Chrome extension. Get company insights, red-flag detection, and spam analysis for job applications." />
+        <meta property="og:title" content="Pre-Apply AI | Chrome Extension Credit System" />
+        <meta property="og:description" content="Purchase credits for job analysis with our Chrome extension." />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:type" content="product" />
-        <meta property="og:url" content="https://acme.zone/products/pre-apply-ai" />
-        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Pre-Apply AI | AI Job Application Scanner" />
-        <meta name="twitter:description" content="Screen job listings with AI before you apply." />
-        <meta name="keywords" content="AI job scanner, job application AI, red flag detection, Chrome extension, Pre-Apply AI, job hunting tool" />
         <link rel="canonical" href="https://acme.zone/products/pre-apply-ai" />
       </Helmet>
       <Header />

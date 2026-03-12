@@ -16,17 +16,6 @@ import {
 } from "@/components/ui/carousel";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ogImage from "@/assets/og-default.jpg";
-import JsonLd, { organizationSchema, webSiteSchema, SITE_URL } from "@/components/seo/JsonLd";
-import FAQSection from "@/components/seo/FAQSection";
-import { faqSchema } from "@/components/seo/JsonLd";
-
-const homeFaqs = [
-  { question: "What is Acme Zone?", answer: "Acme Zone is a software studio that builds AI-powered tools for automation, image processing, and workflow optimization. All our browser-based tools are free, private, and require no sign-up." },
-  { question: "Are the tools really free?", answer: "Yes! Browser-based tools like Background Remover and HEIC-to-JPG Converter are completely free with unlimited use. Some products like InsightReel offer a free trial with optional paid tiers." },
-  { question: "Is my data safe?", answer: "Absolutely. Our browser-based tools process everything locally on your device — no images or files are ever uploaded to our servers. Products that use cloud processing follow strict data privacy policies." },
-  { question: "What AI technologies do you use?", answer: "We use state-of-the-art machine learning models for background removal, image segmentation, natural language processing, and sentiment analysis. Our tools leverage transformer-based architectures for high accuracy." },
-  { question: "Do I need to create an account?", answer: "No account is needed for our free tools. For premium products like InsightReel and Pre-Apply AI, a free account lets you manage your usage and subscriptions." },
-];
 
 const ProductCard = ({ product }: { product: Product }) => {
   const hasMultipleImages = product.images && product.images.length > 1;
@@ -61,8 +50,8 @@ const ProductCard = ({ product }: { product: Product }) => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" aria-label="Previous image" />
-              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" aria-label="Next image" />
+              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
+              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 hover:bg-background border shadow-lg w-8 h-8 text-foreground" />
             </Carousel>
           ) : (
             <img 
@@ -95,24 +84,21 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>Acme Zone | AI-Powered Software Tools & Automation</title>
-        <meta name="description" content="Free AI-powered tools for background removal, image conversion, video analysis, and workflow automation. Browser-based, private, and no sign-up required." />
+        <title>Acme Zone | Custom Software Products and Tools</title>
+        <meta name="description" content="Discover innovative software products and tools including InsightReel, Pre-Apply AI, and more. Built for speed, clarity, and efficiency." />
         <link rel="canonical" href="https://acme.zone/" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Acme Zone | AI-Powered Software Tools & Automation" />
-        <meta property="og:description" content="Free AI-powered tools for background removal, image conversion, video analysis, and workflow automation." />
+        <meta property="og:title" content="Acme Zone | Custom Software Products and Tools" />
+        <meta property="og:description" content="Discover innovative software products and tools. Built for speed, clarity, and efficiency." />
         <meta property="og:url" content="https://acme.zone/" />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="Acme Zone" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Acme Zone | AI-Powered Software Tools" />
-        <meta name="twitter:description" content="Free AI-powered tools for background removal, image conversion, and automation." />
+        <meta name="twitter:title" content="Acme Zone | Custom Software Products and Tools" />
+        <meta name="twitter:description" content="Discover innovative software products and tools." />
         <meta name="twitter:image" content={ogImage} />
-        <meta name="keywords" content="AI tools, background remover, image converter, automation, Chrome extension, free AI tools, workflow optimization" />
       </Helmet>
-      <JsonLd data={[organizationSchema(), webSiteSchema(), faqSchema(homeFaqs)]} />
       <Header />
-      <main id="main-content" className="flex-1">
+      <main className="flex-1">
         <section className="relative py-20 md:py-28 pb-8 md:pb-12">
           <div className="container mx-auto px-4">
             <div aria-hidden="true" className="pointer-events-none absolute -top-32 inset-x-0 flex justify-center">
@@ -169,7 +155,6 @@ const Index = () => {
             )}
           </div>
         </section>
-        <FAQSection faqs={homeFaqs} />
       </main>
       <Footer />
     </>

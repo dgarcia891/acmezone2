@@ -1,22 +1,20 @@
 ---
-name: Orchestrator
-description: v4.6 Staff Engineer System. Enforces workflows and architectural integrity.
-triggers:
-  - "fix bug"
-  - "new feature"
-  - "deploy"
-  - "update docs"
+name: orchestrator
+description: v6.5 Universal Protocol (Unified)
 ---
-# Orchestrator Skill (v4.6)
+# v6.5 Universal Protocol
 
-## 1. Workflow Routing (Primary Directive)
+## 1. AUTO-DETECTION LOGIC (Bootup Scan)
 
-- **IF** user asks to fix a bug -> **SUGGEST** or **EXECUTE** `/bug`.
-- **IF** user asks for new code -> **SUGGEST** or **EXECUTE** `/feature`.
-- **IF** user asks to deploy -> **REQUIRE** `/deploy`.
+- **Role B (Lovable Architect):** Active if `supabase/config.toml` OR `.lovable` exists.
+  - Rules: Proxy Mode (Read-Only on UI). Supabase Kill-Switch ENABLED.
+- **Role A (Chrome Architect):** Active if `manifest.json` exists.
+  - Rules: Manifest V3 Strictness. Service Worker State.
+- **Role C (Full Stack SaaS):** Active if `next.config.js` OR `vite.config.js` exists.
+  - Rules: React/Next.js Best Practices.
 
-## 2. Safety Constraints (Inherited from v4.5)
+## 2. SAFETY CLAMPS (Always Active)
 
-- **Lovable Hybrid:** UI changes belong in Lovable. Logic belongs in GitHub.
-- **Supabase Lock:** NEVER run migrations/db push. Only generate SQL.
-- **Negative Security:** No absolute paths. No `rm` without confirmation.
+- **500-Line Limit:** Refuse to edit files > 500 lines. Refactor first.
+- **Migration Mandate:** Never run `db push`. Write timestamped SQL files to `supabase/migrations/`.
+- **Secret Air-Gap:** Browser Agent must NEVER access `.env` files.

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -6,13 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
-function generateCaptcha() {
-  const a = Math.floor(Math.random() * 20) + 1;
-  const b = Math.floor(Math.random() * 20) + 1;
-  return { a, b, expected: a + b };
-}
+const WEBHOOK_URL = "https://n8n.srv946115.hstgr.cloud/form-test/contact-us";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -21,19 +16,6 @@ const Contact = () => {
   const [hp, setHp] = useState(""); // honeypot
   const [loading, setLoading] = useState(false);
 
-  const [captcha, setCaptcha] = useState(generateCaptcha);
-  const [captchaAnswer, setCaptchaAnswer] = useState("");
-
-  const captchaSolved = useMemo(
-    () => captchaAnswer.trim() !== "" && parseInt(captchaAnswer, 10) === captcha.expected,
-    [captchaAnswer, captcha.expected]
-  );
-
-  const resetCaptcha = useCallback(() => {
-    setCaptcha(generateCaptcha());
-    setCaptchaAnswer("");
-  }, []);
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -41,7 +23,6 @@ const Contact = () => {
     if (hp) {
       toast({ title: "Thanks!", description: "We received your message." });
       setName(""); setEmail(""); setMessage(""); setHp("");
-      resetCaptcha();
       return;
     }
 
@@ -50,18 +31,16 @@ const Contact = () => {
       return;
     }
 
-    if (!captchaSolved) return;
-
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('contact-notify', {
-        body: { name, email, message, timestamp: new Date().toISOString(), source: window.location.origin },
+      await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        body: JSON.stringify({ name, email, message, timestamp: new Date().toISOString(), source: window.location.origin }),
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
       toast({ title: "Request Sent", description: "Please check your inbox for follow-up." });
       setName(""); setEmail(""); setMessage("");
-      resetCaptcha();
     } catch (err) {
       console.error(err);
       toast({ title: "Error", description: "Failed to send. Try again.", variant: "destructive" });
@@ -73,17 +52,12 @@ const Contact = () => {
   return (
     <>
       <Helmet>
-        <title>Contact Us | Acme Zone – AI Tools Support</title>
-        <meta name="description" content="Get in touch with Acme Zone for product inquiries, support, or partnership opportunities. We build AI-powered tools for automation and image processing." />
+        <title>Contact | Acme Zone</title>
+        <meta name="description" content="Contact Acme Zone for product inquiries and support." />
         <link rel="canonical" href="https://acme.zone/contact" />
-        <meta property="og:title" content="Contact Us | Acme Zone" />
-        <meta property="og:description" content="Get in touch with Acme Zone for product inquiries and support." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://acme.zone/contact" />
-        <meta name="twitter:card" content="summary" />
       </Helmet>
       <Header />
-      <main id="main-content" className="container mx-auto py-12">
+      <main className="container mx-auto py-12">
         <section>
           <h1 className="text-3xl font-semibold tracking-tight">Contact Us</h1>
           <p className="mt-2 text-muted-foreground">We'd love to hear from you.</p>
@@ -97,44 +71,18 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="name">Name</label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" />
+              <label className="text-sm" htmlFor="name">Name</label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="email">Email</label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
+              <label className="text-sm" htmlFor="email">Email</label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="message">Message</label>
+              <label className="text-sm" htmlFor="message">Message</label>
               <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={6} />
             </div>
-
-            {/* Math CAPTCHA */}
-            <fieldset className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
-              <legend className="text-sm font-medium">
-                Quick check: What is {captcha.a} + {captcha.b}?
-              </legend>
-              <Input
-                id="captcha"
-                type="number"
-                inputMode="numeric"
-                value={captchaAnswer}
-                onChange={(e) => setCaptchaAnswer(e.target.value)}
-                placeholder="Your answer"
-                className="max-w-[160px]"
-                aria-label="Captcha answer"
-              />
-            </fieldset>
-
-            {/* Submit only visible when CAPTCHA solved */}
-            <div
-              className={`transition-all duration-300 ${captchaSolved ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
-              aria-hidden={!captchaSolved}
-            >
-              <Button type="submit" disabled={loading} tabIndex={captchaSolved ? 0 : -1}>
-                {loading ? "Sending..." : "Send Message"}
-              </Button>
-            </div>
+            <Button type="submit" disabled={loading}>{loading ? "Sending..." : "Send Message"}</Button>
           </form>
         </section>
       </main>

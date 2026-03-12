@@ -2,8 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import JsonLd, { softwareAppSchema, faqSchema, breadcrumbSchema, SITE_URL } from '@/components/seo/JsonLd';
-import FAQSection from '@/components/seo/FAQSection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, Download, Loader2, RotateCcw, ImageIcon } from 'lucide-react';
@@ -16,14 +14,6 @@ env.allowLocalModels = false;
 env.useBrowserCache = false;
 
 const MAX_IMAGE_DIMENSION = 1024;
-
-const bgRemoverFaqs = [
-  { question: "How does the AI background remover work?", answer: "Our tool uses a transformer-based machine learning model that runs entirely in your browser. It analyzes each pixel of your image to separate the foreground subject from the background, producing a transparent PNG." },
-  { question: "Is my image uploaded to any server?", answer: "No. All processing happens locally in your browser using WebAssembly and JavaScript. Your images never leave your device, making this 100% private." },
-  { question: "What image formats are supported?", answer: "You can upload PNG, JPG, JPEG, and WebP images. The output is always a high-quality transparent PNG file." },
-  { question: "Is there a file size limit?", answer: "Images larger than 1024px on either dimension are automatically resized for optimal processing speed. There's no hard file size limit." },
-  { question: "How much does it cost?", answer: "It's completely free with unlimited uses. No account, no watermarks, no hidden fees." },
-];
 
 const BackgroundRemover: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -233,38 +223,23 @@ const BackgroundRemover: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>AI Background Remover | Free Browser-Based Tool | Acme Zone</title>
+        <title>Background Remover – Free Browser-Based Background Removal Tool | Acme Zone</title>
         <meta
           name="description"
-          content="Remove backgrounds from images instantly with AI in your browser. 100% private — no uploads to servers. Perfect for products, logos, and portraits. Unlimited free uses."
+          content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers. Perfect for products, logos, and portraits. Unlimited free uses."
         />
-        <meta name="keywords" content="AI background remover, remove background, transparent background, free AI tool, browser-based, image editing" />
+        <meta name="keywords" content="background remover, image editing, transparent background, free tool, browser-based" />
         <link rel="canonical" href="https://acme.zone/background-remover" />
         
-        <meta property="og:title" content="AI Background Remover | Free Browser-Based Tool" />
-        <meta property="og:description" content="Remove backgrounds from images instantly with AI. 100% private, no uploads." />
+        <meta property="og:title" content="Background Remover – Free Browser-Based Background Removal Tool" />
+        <meta property="og:description" content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://acme.zone/background-remover" />
-        <meta property="og:site_name" content="Acme Zone" />
         
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="AI Background Remover | Free Browser-Based Tool" />
-        <meta name="twitter:description" content="Remove backgrounds from images instantly with AI. 100% private, no uploads." />
+        <meta name="twitter:title" content="Background Remover – Free Browser-Based Background Removal Tool" />
+        <meta name="twitter:description" content="Remove backgrounds from images instantly in your browser. 100% private, no uploads to servers." />
       </Helmet>
-      <JsonLd data={[
-        softwareAppSchema({
-          name: "Background Remover",
-          description: "Free AI-powered background removal tool. Works entirely in your browser with no uploads to servers.",
-          url: `${SITE_URL}/background-remover`,
-          category: "MultimediaApplication",
-          price: "0",
-        }),
-        faqSchema(bgRemoverFaqs),
-        breadcrumbSchema([
-          { name: "Home", url: SITE_URL },
-          { name: "Background Remover", url: `${SITE_URL}/background-remover` },
-        ]),
-      ]} />
 
       <Header />
       
@@ -468,7 +443,6 @@ const BackgroundRemover: React.FC = () => {
             </div>
           </div>
         </div>
-        <FAQSection faqs={bgRemoverFaqs} />
       </main>
 
       <Footer />
