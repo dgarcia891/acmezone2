@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      az_app_config: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       az_excluded_ips: {
         Row: {
           created_at: string
@@ -59,6 +80,369 @@ export type Database = {
           path?: string
           referrer?: string | null
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      az_pod_design_versions: {
+        Row: {
+          bg_hex: string | null
+          color_name: string | null
+          created_at: string | null
+          id: string
+          idea_id: string
+          image_url: string
+          is_selected: boolean | null
+          product_type: string
+          prompt: string | null
+          version_number: number
+        }
+        Insert: {
+          bg_hex?: string | null
+          color_name?: string | null
+          created_at?: string | null
+          id?: string
+          idea_id: string
+          image_url: string
+          is_selected?: boolean | null
+          product_type: string
+          prompt?: string | null
+          version_number?: number
+        }
+        Update: {
+          bg_hex?: string | null
+          color_name?: string | null
+          created_at?: string | null
+          id?: string
+          idea_id?: string
+          image_url?: string
+          is_selected?: boolean | null
+          product_type?: string
+          prompt?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_design_versions_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      az_pod_idea_labels: {
+        Row: {
+          idea_id: string
+          label_id: string
+        }
+        Insert: {
+          idea_id: string
+          label_id: string
+        }
+        Update: {
+          idea_id?: string
+          label_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_idea_labels_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "az_pod_idea_labels_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      az_pod_idea_overrides: {
+        Row: {
+          created_at: string | null
+          id: string
+          idea_id: string
+          shop_id: string | null
+          sticker_margin_pct: number | null
+          tshirt_color_overrides: Json | null
+          tshirt_margin_pct: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          idea_id: string
+          shop_id?: string | null
+          sticker_margin_pct?: number | null
+          tshirt_color_overrides?: Json | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          idea_id?: string
+          shop_id?: string | null
+          sticker_margin_pct?: number | null
+          tshirt_color_overrides?: Json | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_idea_overrides_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      az_pod_ideas: {
+        Row: {
+          analysis: Json | null
+          created_at: string | null
+          id: string
+          idea_text: string | null
+          image_url: string | null
+          listing_platform: string | null
+          listing_url: string | null
+          notes: string | null
+          printify_product_id: string | null
+          printify_product_url: string | null
+          priority: string | null
+          product_type: string | null
+          reject_reason: string | null
+          status: string | null
+          sticker_design_prompt: string | null
+          sticker_design_url: string | null
+          sticker_raw_url: string | null
+          trello_card_id: string | null
+          trello_card_url: string | null
+          tshirt_design_prompt: string | null
+          tshirt_design_url: string | null
+          tshirt_raw_url: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          idea_text?: string | null
+          image_url?: string | null
+          listing_platform?: string | null
+          listing_url?: string | null
+          notes?: string | null
+          printify_product_id?: string | null
+          printify_product_url?: string | null
+          priority?: string | null
+          product_type?: string | null
+          reject_reason?: string | null
+          status?: string | null
+          sticker_design_prompt?: string | null
+          sticker_design_url?: string | null
+          sticker_raw_url?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
+          tshirt_design_prompt?: string | null
+          tshirt_design_url?: string | null
+          tshirt_raw_url?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis?: Json | null
+          created_at?: string | null
+          id?: string
+          idea_text?: string | null
+          image_url?: string | null
+          listing_platform?: string | null
+          listing_url?: string | null
+          notes?: string | null
+          printify_product_id?: string | null
+          printify_product_url?: string | null
+          priority?: string | null
+          product_type?: string | null
+          reject_reason?: string | null
+          status?: string | null
+          sticker_design_prompt?: string | null
+          sticker_design_url?: string | null
+          sticker_raw_url?: string | null
+          trello_card_id?: string | null
+          trello_card_url?: string | null
+          tshirt_design_prompt?: string | null
+          tshirt_design_url?: string | null
+          tshirt_raw_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_pod_labels: {
+        Row: {
+          color: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      az_pod_listings: {
+        Row: {
+          created_at: string | null
+          description: string
+          ebay_title: string | null
+          etsy_title: string | null
+          id: string
+          idea_id: string
+          is_approved: boolean | null
+          printify_blueprint_id: string | null
+          printify_print_provider_id: string | null
+          product_type: string
+          seo_keywords: string[] | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          ebay_title?: string | null
+          etsy_title?: string | null
+          id?: string
+          idea_id: string
+          is_approved?: boolean | null
+          printify_blueprint_id?: string | null
+          printify_print_provider_id?: string | null
+          product_type: string
+          seo_keywords?: string[] | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          ebay_title?: string | null
+          etsy_title?: string | null
+          id?: string
+          idea_id?: string
+          is_approved?: boolean | null
+          printify_blueprint_id?: string | null
+          printify_print_provider_id?: string | null
+          product_type?: string
+          seo_keywords?: string[] | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "az_pod_listings_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "az_pod_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      az_pod_printify_shops: {
+        Row: {
+          auto_publish: boolean | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string | null
+          marketplace: string
+          shop_id: string
+          sticker_margin_pct: number | null
+          tshirt_margin_pct: number | null
+          user_id: string
+        }
+        Insert: {
+          auto_publish?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          marketplace?: string
+          shop_id: string
+          sticker_margin_pct?: number | null
+          tshirt_margin_pct?: number | null
+          user_id: string
+        }
+        Update: {
+          auto_publish?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          marketplace?: string
+          shop_id?: string
+          sticker_margin_pct?: number | null
+          tshirt_margin_pct?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_pod_settings: {
+        Row: {
+          auto_publish: boolean | null
+          created_at: string | null
+          id: string
+          printify_api_key: string | null
+          printify_shop_id: string | null
+          removebg_api_key: string | null
+          sticker_margin_pct: number | null
+          trello_api_key: string | null
+          trello_token: string | null
+          tshirt_margin_pct: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_publish?: boolean | null
+          created_at?: string | null
+          id?: string
+          printify_api_key?: string | null
+          printify_shop_id?: string | null
+          removebg_api_key?: string | null
+          sticker_margin_pct?: number | null
+          trello_api_key?: string | null
+          trello_token?: string | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_publish?: boolean | null
+          created_at?: string | null
+          id?: string
+          printify_api_key?: string | null
+          printify_shop_id?: string | null
+          removebg_api_key?: string | null
+          sticker_margin_pct?: number | null
+          trello_api_key?: string | null
+          trello_token?: string | null
+          tshirt_margin_pct?: number | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -128,6 +512,69 @@ export type Database = {
         }
         Relationships: []
       }
+      az_profiles: {
+        Row: {
+          created_at: string
+          daily_usage_count: number
+          email: string
+          has_byok_license: boolean
+          id: string
+          is_pro: boolean
+          last_usage_reset: string
+          trial_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_usage_count?: number
+          email: string
+          has_byok_license?: boolean
+          id?: string
+          is_pro?: boolean
+          last_usage_reset?: string
+          trial_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_usage_count?: number
+          email?: string
+          has_byok_license?: boolean
+          id?: string
+          is_pro?: boolean
+          last_usage_reset?: string
+          trial_credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      az_usage_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       az_user_roles: {
         Row: {
           created_at: string
@@ -149,11 +596,289 @@ export type Database = {
         }
         Relationships: []
       }
+      pattern_adjustments: {
+        Row: {
+          adjusted_by: string | null
+          adjustment_reason: string | null
+          correction_id: string | null
+          created_at: string
+          id: string
+          new_weight: number
+          old_weight: number
+          phrase_id: string | null
+        }
+        Insert: {
+          adjusted_by?: string | null
+          adjustment_reason?: string | null
+          correction_id?: string | null
+          created_at?: string
+          id?: string
+          new_weight: number
+          old_weight: number
+          phrase_id?: string | null
+        }
+        Update: {
+          adjusted_by?: string | null
+          adjustment_reason?: string | null
+          correction_id?: string | null
+          created_at?: string
+          id?: string
+          new_weight?: number
+          old_weight?: number
+          phrase_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pattern_adjustments_correction_id_fkey"
+            columns: ["correction_id"]
+            isOneToOne: false
+            referencedRelation: "sa_corrections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pattern_adjustments_phrase_id_fkey"
+            columns: ["phrase_id"]
+            isOneToOne: false
+            referencedRelation: "sa_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sa_app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      sa_corrections: {
+        Row: {
+          ai_analysis: Json | null
+          ai_review_result: Json | null
+          created_at: string
+          detection_id: string | null
+          detection_snapshot: Json | null
+          feedback: string
+          id: string
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          url_hash: string
+          user_comment: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          ai_review_result?: Json | null
+          created_at?: string
+          detection_id?: string | null
+          detection_snapshot?: Json | null
+          feedback: string
+          id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          url_hash: string
+          user_comment?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          ai_review_result?: Json | null
+          created_at?: string
+          detection_id?: string | null
+          detection_snapshot?: Json | null
+          feedback?: string
+          id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          url_hash?: string
+          user_comment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_corrections_detection_id_fkey"
+            columns: ["detection_id"]
+            isOneToOne: false
+            referencedRelation: "sa_detections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sa_detections: {
+        Row: {
+          ai_confidence: number | null
+          ai_verdict: string | null
+          created_at: string
+          extension_version: string | null
+          id: string
+          severity: string
+          signals: Json
+          url_hash: string
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_verdict?: string | null
+          created_at?: string
+          extension_version?: string | null
+          id?: string
+          severity: string
+          signals?: Json
+          url_hash: string
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_verdict?: string | null
+          created_at?: string
+          extension_version?: string | null
+          id?: string
+          severity?: string
+          signals?: Json
+          url_hash?: string
+        }
+        Relationships: []
+      }
+      sa_patterns: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          phrase: string
+          severity_weight: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          id?: string
+          phrase: string
+          severity_weight?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          phrase?: string
+          severity_weight?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sa_user_reports: {
+        Row: {
+          admin_notes: string | null
+          ai_analysis: Json | null
+          body_preview: string | null
+          created_at: string | null
+          description: string | null
+          extension_version: string | null
+          id: string
+          indicators: Json | null
+          promoted_pattern_id: string | null
+          report_type: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scan_result: Json | null
+          sender_email: string | null
+          severity: string | null
+          subject: string | null
+          updated_at: string | null
+          url: string
+          user_notes: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          ai_analysis?: Json | null
+          body_preview?: string | null
+          created_at?: string | null
+          description?: string | null
+          extension_version?: string | null
+          id?: string
+          indicators?: Json | null
+          promoted_pattern_id?: string | null
+          report_type?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scan_result?: Json | null
+          sender_email?: string | null
+          severity?: string | null
+          subject?: string | null
+          updated_at?: string | null
+          url: string
+          user_notes?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          ai_analysis?: Json | null
+          body_preview?: string | null
+          created_at?: string | null
+          description?: string | null
+          extension_version?: string | null
+          id?: string
+          indicators?: Json | null
+          promoted_pattern_id?: string | null
+          report_type?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scan_result?: Json | null
+          sender_email?: string | null
+          severity?: string | null
+          subject?: string | null
+          updated_at?: string | null
+          url?: string
+          user_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_user_reports_promoted_pattern_id_fkey"
+            columns: ["promoted_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "sa_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_adjustment_history: {
+        Args: { _limit?: number }
+        Returns: {
+          adjusted_by: string
+          adjustment_reason: string
+          admin_email: string
+          correction_id: string
+          created_at: string
+          id: string
+          new_weight: number
+          old_weight: number
+          pattern_phrase: string
+          pattern_severity_weight: number
+          phrase_id: string
+        }[]
+      }
       get_my_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
