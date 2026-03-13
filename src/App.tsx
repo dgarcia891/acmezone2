@@ -14,7 +14,16 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminPodPipeline from "./pages/admin/AdminPodPipeline";
+import AdminDetections from "./pages/admin/AdminDetections";
+import AdminCorrections from "./pages/admin/AdminCorrections";
+import AdminPatterns from "./pages/admin/AdminPatterns";
+import AdminUserReports from "./pages/admin/AdminUserReports";
+import AdminSettings from "./pages/admin/AdminSettings";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
 import Support from "./pages/Support";
@@ -51,9 +60,20 @@ const App = () => (
                 } />
                 <Route path="/admin" element={
                   <ProtectedRoute>
-                    <Admin />
+                    <AdminLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<AdminOverview />} />
+                  <Route path="users" element={<AdminOverview />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="analytics" element={<AdminAnalytics />} />
+                  <Route path="pod-pipeline" element={<AdminPodPipeline />} />
+                  <Route path="security/detections" element={<AdminDetections />} />
+                  <Route path="security/corrections" element={<AdminCorrections />} />
+                  <Route path="security/patterns" element={<AdminPatterns />} />
+                  <Route path="security/reports" element={<AdminUserReports />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
                 <Route path="/payment-success" element={
                   <ProtectedRoute>
                     <PaymentSuccess />
