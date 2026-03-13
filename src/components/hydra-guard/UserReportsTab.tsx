@@ -166,7 +166,8 @@ const UserReportsTab = () => {
       if (insertError) throw insertError;
 
       // 3. Update the report to mark it as promoted
-      const promotedId = insertedPatterns && insertedPatterns.length > 0 ? insertedPatterns[0].id : null;
+      const inserted = (insertedPatterns ?? []) as unknown as Array<{ id: string }>;
+      const promotedId = inserted[0]?.id ?? null;
       
       const { error: updateError } = await supabase
         .from('sa_user_reports' as any)
