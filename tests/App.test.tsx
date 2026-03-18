@@ -26,6 +26,11 @@ vi.mock('@/integrations/supabase/client', () => ({
     },
 }));
 
+// Mock heic2any
+vi.mock('heic2any', () => ({
+    default: vi.fn(() => Promise.resolve(new Blob())),
+}));
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
     observe() { }
