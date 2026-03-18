@@ -23,6 +23,8 @@ interface Props {
   onDeleteVersion?: (versionId: string) => void;
   isSelectingVersion?: boolean;
   isDeletingVersion?: boolean;
+  /** Per-type error messages from the generate call */
+  generateErrors?: Record<string, string>;
 }
 
 const statusMessages = [
@@ -71,11 +73,12 @@ function LoadingSpinner({ onCancel }: { onCancel?: () => void }) {
   );
 }
 
-function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onDrop, canDrop, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: {
+function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onDrop, canDrop, versions, productType, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion, error }: {
   label: string; url?: string | null; prompt?: string; onRegenerate: (guidance?: string, customPrompt?: string) => void; isLoading: boolean;
   onCancel?: () => void;
   onDrop?: () => void;
   canDrop?: boolean;
+  error?: string;
   versions?: DesignVersion[]; productType: "sticker" | "tshirt";
   onSelectVersion?: (versionId: string, productType: string) => void;
   onDeleteVersion?: (versionId: string) => void;
@@ -112,6 +115,12 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
       <CardContent>
         {isLoading ? (
           <LoadingSpinner onCancel={onCancel} />
+        ) : error ? (
+          <div className="aspect-square w-full rounded-lg border border-destructive/40 bg-destructive/5 flex flex-col items-center justify-center gap-2 px-4">
+            <XCircle className="h-10 w-10 text-destructive" />
+            <p className="text-sm font-medium text-destructive text-center">Generation failed</p>
+            <p className="text-xs text-muted-foreground text-center break-words max-w-[90%]">{error}</p>
+          </div>
         ) : url ? (
           <img src={url} alt={label} className="rounded-lg object-contain w-full aspect-square bg-muted" />
         ) : (
@@ -178,7 +187,7 @@ function DesignCard({ label, url, prompt, onRegenerate, isLoading, onCancel, onD
   );
 }
 
-export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion }: Props) {
+export default function DesignGeneration({ idea, productType, onReject, onApprove, onRegenerate, onCancel, onDropDesign, loadingTypes, isApproving, versions, onSelectVersion, onDeleteVersion, isSelectingVersion, isDeletingVersion, generateErrors }: Props) {
   const anyLoading = loadingTypes.size > 0;
   const canDrop = productType === "both";
   const disabled = anyLoading || isApproving;
@@ -202,6 +211,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
             onCancel={onCancel ? () => onCancel("sticker") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("sticker") : undefined}
             canDrop={canDrop}
+            error={generateErrors?.["sticker"]}
             versions={versions} productType="sticker" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
         {(productType === "both" || productType === "tshirt") && (
@@ -212,6 +222,7 @@ export default function DesignGeneration({ idea, productType, onReject, onApprov
             onCancel={onCancel ? () => onCancel("tshirt") : undefined}
             onDrop={onDropDesign ? () => onDropDesign("tshirt") : undefined}
             canDrop={canDrop}
+            error={generateErrors?.["tshirt"]}
             versions={versions} productType="tshirt" onSelectVersion={onSelectVersion} onDeleteVersion={onDeleteVersion} isSelectingVersion={isSelectingVersion} isDeletingVersion={isDeletingVersion} />
         )}
       </div>

@@ -36,6 +36,7 @@ export default function AdminPodPipeline() {
   const [productType, setProductType] = useState(() => sessionStorage.getItem("pod_wizard_product_type") || "both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [generateErrors, setGenerateErrors] = useState<Record<string, string>>({});
   const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
   const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
   const restoredFromSession = useRef(false);
@@ -182,6 +183,8 @@ export default function AdminPodPipeline() {
     setStep("generate"); bgAutoTriggeredRef.current = false;
     const types: ("sticker" | "tshirt")[] = productType === "both" ? ["sticker", "tshirt"] : [productType as "sticker" | "tshirt"];
     setLoadingTypes(new Set(types));
+    // Clear previous errors for the types being regenerated
+    setGenerateErrors((prev) => { const next = { ...prev }; types.forEach((t) => delete next[t]); return next; });
     await Promise.allSettled(types.map(async (type) => {
       try {
         const res = await generateMutation.mutateAsync({
@@ -190,6 +193,9 @@ export default function AdminPodPipeline() {
           tshirt_prompt: type === "tshirt" ? (wizardIdea.tshirt_design_prompt || wizardIdea.analysis?.tshirt_design_prompt) : undefined,
         });
         if (res?.idea) applyGeneratedDesignToWizardIdea(type, res.idea);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Generation failed — please try again.";
+        setGenerateErrors((prev) => ({ ...prev, [type]: msg }));
       } finally {
         setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
       }
@@ -200,6 +206,8 @@ export default function AdminPodPipeline() {
     if (!wizardIdea) return;
     bgAutoTriggeredRef.current = false;
     setLoadingTypes((prev) => new Set([...prev, type]));
+    // Clear error for this type on retry
+    setGenerateErrors((prev) => { const next = { ...prev }; delete next[type]; return next; });
     try {
       const res = await generateMutation.mutateAsync({
         idea_id: wizardIdea.id, product_type: type,
@@ -209,6 +217,9 @@ export default function AdminPodPipeline() {
         tshirt_guidance: type === "tshirt" ? guidance : undefined,
       });
       if (res?.idea) applyGeneratedDesignToWizardIdea(type, res.idea);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Generation failed — please try again.";
+      setGenerateErrors((prev) => ({ ...prev, [type]: msg }));
     } finally {
       setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; });
     }
@@ -319,7 +330,7 @@ export default function AdminPodPipeline() {
             <AnalysisReview analysis={wizardIdea.analysis} productType={productType} onReject={handleReject} onGenerate={handleGenerate} isLoading={rejectMutation.isPending} />
           )}
           {step === "generate" && (
-            <DesignGeneration idea={wizardIdea} productType={productType} onReject={handleReject} onApprove={handleApproveDesign} onRegenerate={handleRegenerate} onGenerate={handleGenerate} onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })} onDropDesign={handleDropDesign} loadingTypes={loadingTypes} isApproving={false} versions={versions} onSelectVersion={handleSelectVersion} onDeleteVersion={handleDeleteVersion} isSelectingVersion={selectVersionMutation.isPending} isDeletingVersion={deleteVersionMutation.isPending} />
+            <DesignGeneration idea={wizardIdea} productType={productType} onReject={handleReject} onApprove={handleApproveDesign} onRegenerate={handleRegenerate} onGenerate={handleGenerate} onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })} onDropDesign={handleDropDesign} loadingTypes={loadingTypes} isApproving={false} versions={versions} onSelectVersion={handleSelectVersion} onDeleteVersion={handleDeleteVersion} isSelectingVersion={selectVersionMutation.isPending} isDeletingVersion={deleteVersionMutation.isPending} generateErrors={generateErrors} />
           )}
           {step === "results" && wizardIdea && (
             <BackgroundRemovalStep idea={wizardIdea} productType={productType} onApprove={handleApproveAfterReview} onReject={handleReject} onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }} onDropDesign={handleDropDesign} onEditSave={(type, blob) => { updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, { onSuccess: (updatedIdea: any) => { setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea })); } }); }} isApproving={generateListings.isPending} isBgRemoving={bgRemoving} isEditSaving={updateDesignImage.isPending} />
