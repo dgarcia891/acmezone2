@@ -493,12 +493,28 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Pre-compute enabled variant IDs so print_areas only references them
+      // Printify rejects payloads where print_areas reference disabled variants
+      const isVariantEnabled = (variantId: number): boolean => {
+        if (listing.product_type === "tshirt" && hasManualTshirtVariants) {
+          return manualVariantIdSet.has(variantId);
+        }
+        if (variantFilterResult) {
+          return variantFilterResult.variantStates.get(variantId) ?? true;
+        }
+        return true;
+      };
+
+      const enabledVariantIds = new Set<number>(variantList.map((v: any) => v.id).filter(isVariantEnabled));
+      console.log(`Enabled variants: ${enabledVariantIds.size}/${variantList.length}`);
+
       // Build print_areas: group variants by which image they should use
       let printAreas: any[];
       if (listing.product_type === "tshirt" && colorToImageId.size > 0) {
-        // Group variants by their assigned image
+        // Group variants by their assigned image — only enabled variants
         const imageGroups = new Map<string, number[]>(); // imageId → variant_ids
         for (const v of variantList) {
+          if (!enabledVariantIds.has(v.id)) continue; // Skip disabled variants
           const colorName = v.options?.color || v.options?.Color || v.title || "";
           const extracted = extractColorName(colorName);
           // Find matching refined image (fuzzy match)
@@ -523,14 +539,15 @@ Deno.serve(async (req) => {
         }));
         console.log(`Built ${printAreas.length} print_areas (${colorToImageId.size} color-specific + default)`);
       } else {
-        // Single image for all variants
+        // Single image for all ENABLED variants only
         printAreas = [{
-          variant_ids: variantList.map((v: any) => v.id),
+          variant_ids: Array.from(enabledVariantIds),
           placeholders: [{
             position: "front",
             images: [{ id: defaultImageId, x: 0.5, y: 0.5, scale: 1, angle: 0 }],
           }],
         }];
+        console.log(`Built single print_area for ${enabledVariantIds.size} enabled variants`);
       }
 
       // Create product on each shop
