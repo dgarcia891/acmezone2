@@ -8,119 +8,19 @@ import { Upload, Download, Loader2, RotateCcw, ImageIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
-import { pipeline, env } from '@huggingface/transformers';
-
-env.allowLocalModels = false;
-env.useBrowserCache = false;
-
-const MAX_IMAGE_DIMENSION = 1024;
+import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 
 const BackgroundRemover: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [threshold, setThreshold] = useState([0.5]);
-  const [smoothing, setSmoothing] = useState([1]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const resizeImageIfNeeded = (
-    canvas: HTMLCanvasElement,
-    ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement
-  ) => {
-    let width = image.naturalWidth;
-    let height = image.naturalHeight;
-
-    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
-      if (width > height) {
-        height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
-        width = MAX_IMAGE_DIMENSION;
-      } else {
-        width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
-        height = MAX_IMAGE_DIMENSION;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(image, 0, 0, width, height);
-      return true;
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-    ctx.drawImage(image, 0, 0);
-    return false;
-  };
 
   const removeBackground = async (imageElement: HTMLImageElement): Promise<string> => {
     try {
       console.log('Starting browser-based background removal...');
-      
-      const segmenter = await pipeline(
-        'image-segmentation',
-        'Xenova/segformer-b0-finetuned-ade-512-512',
-        { device: 'webgpu' }
-      );
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) throw new Error('Could not get canvas context');
-
-      const wasResized = resizeImageIfNeeded(canvas, ctx, imageElement);
-      console.log(
-        `Image ${wasResized ? 'was' : 'was not'} resized. Final dimensions: ${canvas.width}x${canvas.height}`
-      );
-
-      const imageData = canvas.toDataURL('image/png', 1.0);
-      console.log('Image converted to base64');
-
-      console.log('Processing with background removal model...');
-      const result = await segmenter(imageData);
-
-      if (!result || !Array.isArray(result) || result.length === 0 || !result[0].mask) {
-        throw new Error('Invalid segmentation result');
-      }
-
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = canvas.width;
-      outputCanvas.height = canvas.height;
-      const outputCtx = outputCanvas.getContext('2d');
-
-      if (!outputCtx) throw new Error('Could not get output canvas context');
-
-      outputCtx.drawImage(canvas, 0, 0);
-
-      const outputImageData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
-      const data = outputImageData.data;
-
-      // Apply threshold and smoothing adjustments
-      const thresholdValue = threshold[0];
-      const smoothValue = smoothing[0];
-
-      // Apply inverted mask to alpha channel (keep subject, remove background)
-      for (let i = 0; i < result[0].mask.data.length; i++) {
-        // Invert the mask value (1 - value) to keep the subject instead of the background
-        let maskValue = 1 - result[0].mask.data[i];
-        
-        // Apply threshold
-        maskValue = maskValue > thresholdValue ? 1 : maskValue < (1 - thresholdValue) ? 0 : maskValue;
-        
-        // Apply smoothing (simple averaging with neighbors)
-        if (smoothValue > 1 && i > 0 && i < result[0].mask.data.length - 1) {
-          const weight = 1 / smoothValue;
-          maskValue = maskValue * (1 - weight) + 
-                     (result[0].mask.data[i - 1] + result[0].mask.data[i + 1]) * weight / 2;
-        }
-        
-        const alpha = Math.round(maskValue * 255);
-        data[i * 4 + 3] = alpha;
-      }
-
-      outputCtx.putImageData(outputImageData, 0, 0);
-      console.log('Mask applied successfully');
-
-      return outputCanvas.toDataURL('image/png');
+      const blob = await imglyRemoveBackground(imageElement.src);
+      return URL.createObjectURL(blob);
     } catch (error) {
       console.error('Error removing background:', error);
       throw error;
@@ -216,7 +116,7 @@ const BackgroundRemover: React.FC = () => {
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
       fileInputRef.current.files = dataTransfer.files;
-      handleFileSelect({ target: { files: dataTransfer.files } } as any);
+      handleFileSelect({ target: { files: dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
 
@@ -284,47 +184,7 @@ const BackgroundRemover: React.FC = () => {
             </Card>
           ) : (
             <div className="space-y-6">
-              {/* Adjustment Controls */}
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle>Adjustment Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <p className="text-sm text-muted-foreground">
-                    Free unlimited processing in your browser. Adjust settings to fine-tune results.
-                  </p>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Edge Threshold: {threshold[0].toFixed(2)}</Label>
-                      <Slider
-                        value={threshold}
-                        onValueChange={setThreshold}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Lower values capture more details but may include background
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Edge Smoothing: {smoothing[0].toFixed(1)}</Label>
-                      <Slider
-                        value={smoothing}
-                        onValueChange={setSmoothing}
-                        min={0}
-                        max={5}
-                        step={0.1}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Higher values create smoother edges
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+
 
               {/* Image Preview Grid */}
               <div className="grid md:grid-cols-2 gap-6">

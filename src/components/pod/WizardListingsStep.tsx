@@ -86,6 +86,7 @@ interface PrintifyProductResult {
   product_type: string;
   printify_product_id: string;
   printify_url: string;
+  published: boolean;
   title: string;
   shop_id?: string;
   marketplace?: string;
@@ -190,6 +191,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
   const { data: colorRefinedMap = {} } = useColorRefinedVersions(idea?.id ?? null);
 
   const [printifyResults, setPrintifyResults] = useState<PrintifyProductResult[] | null>(null);
+  const [printifyError, setPrintifyError] = useState<string | null>(null);
 
   // Product type selection
   const hasSticker = !!idea?.sticker_design_url;
@@ -469,6 +471,7 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
       }
     }
 
+    setPrintifyError(null);
     sendToPrintify.mutate(
       { idea_id: idea.id, product_types: selectedTypes, publish_overrides: publishOverrides, color_image_overrides: Object.keys(colorOverrides).length > 0 ? colorOverrides : undefined },
       {
@@ -476,6 +479,10 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
           setPrintifyResults(data?.products || []);
           onIdeaUpdated?.({ status: "production" });
           setTimeout(() => document.getElementById("printify-results")?.scrollIntoView({ behavior: "smooth" }), 150);
+        },
+        onError: (err) => {
+          setPrintifyError(err instanceof Error ? err.message : "Unknown error sending to Printify. Check your API key and Shop ID in Settings.");
+          setTimeout(() => document.getElementById("printify-send-error")?.scrollIntoView({ behavior: "smooth" }), 150);
         },
       }
     );
@@ -1107,8 +1114,17 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                 )}
               </div>
               {products[0]?.printify_url && (
-                <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => window.open(products[0].printify_url, "_blank")}>
-                  View in Printify <ExternalLink className="h-3 w-3 ml-1" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 gap-1.5"
+                  onClick={() => window.open(products[0].printify_url, "_blank")}
+                >
+                  {products[0].published ? "View in Printify" : "View Draft in Printify"}
+                  {!products[0].published && (
+                    <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">Draft</Badge>
+                  )}
+                  <ExternalLink className="h-3 w-3" />
                 </Button>
               )}
             </div>
@@ -1170,7 +1186,31 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
         </Card>
       ))}
 
-      {/* Error results */}
+      {/* API call error (network/auth failures) */}
+      {printifyError && (
+        <Card id="printify-send-error" className="border-destructive/40 bg-destructive/5">
+          <CardContent className="pt-4 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <span className="text-destructive text-lg leading-none">⚠</span>
+              <div>
+                <p className="text-sm font-medium text-destructive">Failed to send to Printify</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{printifyError}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => setPrintifyError(null)}
+              aria-label="Dismiss error"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-product errors (e.g. wrong blueprint ID) */}
       {errors.length > 0 && (
         <Card className="border-destructive/30">
           <CardContent className="pt-4 space-y-2">

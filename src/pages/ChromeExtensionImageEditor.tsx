@@ -8,11 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Upload, Download, Image as ImageIcon, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { pipeline, env } from '@huggingface/transformers';
-
-// Configure transformers.js
-env.allowLocalModels = false;
-env.useBrowserCache = false;
+import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
 
 const ICON_SIZES = [16, 32, 48, 128] as const;
 
@@ -48,6 +44,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
     if (originalImageElement) {
       drawImageWithCropOverlay();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cropMode, cropSelection, originalImageElement]);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -136,7 +133,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
     setIsSelecting(false);
   };
 
-  const drawImageWithCropOverlay = () => {
+  function drawImageWithCropOverlay() {
     if (!originalImageElement || !imageCanvasRef.current) return;
     
     const canvas = imageCanvasRef.current;
@@ -184,133 +181,9 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const removeBackground = async (imageElement: HTMLImageElement): Promise<Blob> => {
     try {
       console.log('Starting background removal process...');
-      
-      const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b2-finetuned-ade-512-512', {
-        device: 'webgpu',
-      });
-      
-      const originalWidth = imageElement.naturalWidth;
-      const originalHeight = imageElement.naturalHeight;
-      console.log(`Original image dimensions: ${originalWidth}x${originalHeight}`);
-      
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) throw new Error('Could not get canvas context');
-      
-      canvas.width = originalWidth;
-      canvas.height = originalHeight;
-      
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(imageElement, 0, 0);
-      
-      let processCanvas = canvas;
-      let processCtx = ctx;
-      const maxDimension = 1024;
-      
-      if (originalWidth > maxDimension || originalHeight > maxDimension) {
-        processCanvas = document.createElement('canvas');
-        processCtx = processCanvas.getContext('2d');
-        if (!processCtx) throw new Error('Could not get process canvas context');
-        
-        let processWidth = originalWidth;
-        let processHeight = originalHeight;
-        
-        if (originalWidth > originalHeight) {
-          processHeight = Math.round((originalHeight * maxDimension) / originalWidth);
-          processWidth = maxDimension;
-        } else {
-          processWidth = Math.round((originalWidth * maxDimension) / originalHeight);
-          processHeight = maxDimension;
-        }
-        
-        console.log(`Processing at: ${processWidth}x${processHeight}`);
-        
-        processCanvas.width = processWidth;
-        processCanvas.height = processHeight;
-        processCtx.imageSmoothingEnabled = true;
-        processCtx.imageSmoothingQuality = 'high';
-        processCtx.drawImage(imageElement, 0, 0, processWidth, processHeight);
-      }
-      
-      const imageData = processCanvas.toDataURL('image/png', 1.0);
-      console.log('Processing with segmentation model...');
-      
-      const result = await segmenter(imageData);
-      console.log('Segmentation result:', result);
-      
-      if (!result || !Array.isArray(result) || result.length === 0 || !result[0].mask) {
-        throw new Error('Invalid segmentation result');
-      }
-      
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = originalWidth;
-      outputCanvas.height = originalHeight;
-      const outputCtx = outputCanvas.getContext('2d');
-      
-      if (!outputCtx) throw new Error('Could not get output canvas context');
-      
-      outputCtx.imageSmoothingEnabled = true;
-      outputCtx.imageSmoothingQuality = 'high';
-      
-      outputCtx.drawImage(imageElement, 0, 0);
-      
-      const maskWidth = processCanvas.width;
-      const maskHeight = processCanvas.height;
-      console.log(`Mask dimensions: ${maskWidth}x${maskHeight}`);
-      
-      const maskCanvas = document.createElement('canvas');
-      maskCanvas.width = maskWidth;
-      maskCanvas.height = maskHeight;
-      const maskCtx = maskCanvas.getContext('2d');
-      if (!maskCtx) throw new Error('Could not get mask canvas context');
-      
-      const maskImageData = maskCtx.createImageData(maskWidth, maskHeight);
-      for (let i = 0; i < result[0].mask.data.length; i++) {
-        const value = Math.round((1 - result[0].mask.data[i]) * 255);
-        maskImageData.data[i * 4] = value;
-        maskImageData.data[i * 4 + 1] = value;
-        maskImageData.data[i * 4 + 2] = value;
-        maskImageData.data[i * 4 + 3] = 255;
-      }
-      maskCtx.putImageData(maskImageData, 0, 0);
-      
-      if (maskWidth !== originalWidth || maskHeight !== originalHeight) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = originalWidth;
-        tempCanvas.height = originalHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (!tempCtx) throw new Error('Could not get temp canvas context');
-        
-        tempCtx.imageSmoothingEnabled = true;
-        tempCtx.imageSmoothingQuality = 'high';
-        tempCtx.drawImage(maskCanvas, 0, 0, originalWidth, originalHeight);
-        
-        outputCtx.globalCompositeOperation = 'destination-in';
-        outputCtx.drawImage(tempCanvas, 0, 0);
-      } else {
-        outputCtx.globalCompositeOperation = 'destination-in';
-        outputCtx.drawImage(maskCanvas, 0, 0);
-      }
-      
-      outputCtx.globalCompositeOperation = 'source-over';
+      const blob = await imglyRemoveBackground(imageElement.src);
       console.log('Background removal completed');
-      
-      return new Promise((resolve, reject) => {
-        outputCanvas.toBlob(
-          (blob) => {
-            if (blob) {
-              console.log(`Output blob size: ${blob.size} bytes`);
-              resolve(blob);
-            } else {
-              reject(new Error('Failed to create blob'));
-            }
-          },
-          'image/png',
-          1.0
-        );
-      });
+      return blob;
     } catch (error) {
       console.error('Error removing background:', error);
       throw error;
@@ -641,7 +514,7 @@ const ChromeExtensionImageEditor: React.FC = () => {
                               variant={previewSettings.scaleMode === value ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => 
-                                setPreviewSettings(prev => ({ ...prev, scaleMode: value as any }))
+                                setPreviewSettings(prev => ({ ...prev, scaleMode: value as 'fit' | 'fill' | 'crop' }))
                               }
                             >
                               {label}
