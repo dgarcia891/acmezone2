@@ -478,7 +478,12 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
       {
         onSuccess: (data) => {
           setPrintifyResults(data?.products || []);
-          onIdeaUpdated?.({ status: "production" });
+          // Persist public URL to the idea so the button survives page refresh
+          if (data?.printify_public_url) {
+            onIdeaUpdated?.({ status: "production", printify_public_url: data.printify_public_url });
+          } else {
+            onIdeaUpdated?.({ status: "production" });
+          }
           setTimeout(() => document.getElementById("printify-results")?.scrollIntoView({ behavior: "smooth" }), 150);
         },
         onError: (err) => {
@@ -1120,13 +1125,9 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                   size="sm"
                   className="text-xs h-7 gap-1.5"
                   onClick={() => {
-                    const url = (products[0].published && products[0].external_handle) 
-                      ? products[0].external_handle 
-                      : products[0].printify_url;
-                    // Printify external_handles are sometimes relative paths, sometimes absolute URLs.
-                    // If it's relative, assume it belongs to the shop's domain. But wait — external_handle is usually a full URL!
-                    // Let's ensure it has https:// if it doesn't already.
-                    const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+                    // Priority: per-product external_handle → idea-level public URL → internal editor
+                    const raw = products[0].external_handle || idea?.printify_public_url || products[0].printify_url;
+                    const finalUrl = raw?.startsWith('http') ? raw : `https://${raw}`;
                     window.open(finalUrl, "_blank");
                   }}
                 >

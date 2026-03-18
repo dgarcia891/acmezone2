@@ -670,17 +670,20 @@ Deno.serve(async (req) => {
     }
 
     const primaryResult = successResults.find((r: any) => r.marketplace === "default") || successResults[0];
+    // Prefer the external public URL; fall back to editor URL
+    const publicUrl = primaryResult?.external_handle || primaryResult?.printify_url || null;
     await supabase
       .from("az_pod_ideas")
       .update({
         printify_product_id: primaryResult?.printify_product_id || null,
         printify_product_url: primaryResult?.printify_url || null,
+        printify_public_url: publicUrl,
         status: "production",
         updated_at: new Date().toISOString(),
       })
       .eq("id", idea_id);
 
-    return json({ products: results });
+    return json({ products: results, printify_public_url: publicUrl });
   } catch (error) {
     console.error("pod-send-to-printify error:", error);
     return json({ error: error.message }, 500);
