@@ -41,7 +41,11 @@ function DesignPreview({ label, url, checkerboard }: { label: string; url?: stri
             className={`w-full h-full rounded-lg overflow-hidden ${checkerboard ? "bg-[length:20px_20px]" : "bg-muted"}`}
             style={checkerboard ? checkerboardStyle : undefined}
           >
-            <img src={url} alt={label} className="w-full h-full object-contain" />
+            <img 
+              src={url ? `${url.split('?')[0]}?t=${Date.now()}` : url} 
+              alt={label} 
+              className="w-full h-full object-contain" 
+            />
           </div>
         </AspectRatio>
       </CardContent>

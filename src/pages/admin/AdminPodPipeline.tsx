@@ -238,39 +238,67 @@ export default function AdminPodPipeline() {
   const triggerBgRemoval = async () => {
     if (!wizardIdea) return;
     setBgRemoving(true);
-    
-    try {
-      const updateData: Record<string, any> = {
-        status: "bg_removed",
-        updated_at: new Date().toISOString(),
-      };
-
-      if (wizardIdea.sticker_design_url) {
-        updateData.sticker_raw_url = wizardIdea.sticker_design_url;
-      }
-      if (wizardIdea.tshirt_design_url) {
-        updateData.tshirt_raw_url = wizardIdea.tshirt_design_url;
-      }
-
+     try {
       const processAndUpload = async (url: string, type: "sticker" | "tshirt") => {
-        // 1. Remove background locally
-        const blob = await imglyRemoveBackground(url);
+        console.log(`[POD] Starting bg removal for ${type}:`, url);
         
-        // 2. Upload transparent PNG to Supabase Storage
+        // 1. Fetch image to blob first (helps with CORS and verification)
+        const baseUrl = url.split('?')[0];
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Could not fetch ${type} image: ${response.statusText}`);
+        const inputBlob = await response.blob();
+        console.log(`[POD] Fetched ${type} input blob:`, inputBlob.size, inputBlob.type);
+
+        // 2. Remove background locally
+        const outputBlob = await imglyRemoveBackground(inputBlob, {
+          debug: true,
+          model: 'medium'
+        });
+        console.log(`[POD] ${type} background removed. Output blob:`, outputBlob.size, outputBlob.type);
+        
+        // 3. Upload transparent PNG to Supabase Storage
         const filename = `${wizardIdea.id}/${type}-transparent-${Date.now()}.png`;
         const { error: uploadError } = await supabase.storage
           .from("pod-assets")
-          .upload(filename, blob, { contentType: "image/png", upsert: true });
+          .upload(filename, outputBlob, { contentType: "image/png", upsert: true });
         
         if (uploadError) throw new Error(`Upload failed for ${type}: ${uploadError.message}`);
         
-        // 3. Get public URL
+        // 4. Get public URL
         const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filename);
-        if (type === "sticker") {
-          updateData.sticker_design_url = urlData.publicUrl;
-        } else {
-          updateData.tshirt_design_url = urlData.publicUrl;
+        const newUrl = urlData.publicUrl;
+        
+        // 5. Update DB immediately for this item
+        const updateData: Record<string, any> = {
+          [`${type}_design_url`]: newUrl,
+          updated_at: new Date().toISOString(),
+          status: "bg_removed"
+        };
+
+        // Preserve raw url if we haven't already
+        const rawUrlField = `${type}_raw_url`;
+        if (!wizardIdea[rawUrlField]) {
+          updateData[rawUrlField] = baseUrl;
         }
+
+        console.log(`[POD] Updating DB for ${type}...`);
+        const { data: updated, error: updateError } = await supabase
+          .from("az_pod_ideas" as any)
+          .update(updateData as any)
+          .eq("id", wizardIdea.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        
+        // Update local state incrementally
+        const cb = `?t=${Date.now()}`;
+        setWizardIdea((prev: any) => ({ 
+          ...prev, 
+          ...updated,
+          [`${type}_design_url`]: updated[`${type}_design_url`] + cb,
+          [`${type}_raw_url`]: (updated[`${type}_raw_url`] || prev?.[`${type}_raw_url`]) + cb
+        }));
       };
 
       if (wizardIdea.sticker_design_url) {
@@ -280,28 +308,10 @@ export default function AdminPodPipeline() {
         await processAndUpload(wizardIdea.tshirt_design_url, "tshirt");
       }
 
-      // 4. Update the idea record
-      const { data: updatedIdea, error: updateError } = await supabase
-        .from("az_pod_ideas" as any)
-        .update(updateData as any)
-        .eq("id", wizardIdea.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-
-      const cb = `?t=${Date.now()}`;
-      const idea = { ...updatedIdea };
-      if (idea.sticker_design_url) idea.sticker_design_url += cb;
-      if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
-      if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
-      if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
-      
-      setWizardIdea(idea);
-      toast.success("Background removed successfully");
+      toast.success("Backgrounds processed successfully");
     } catch (error) {
-      console.error("Local background removal failed:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to remove background. Please try again or use the edit tool.");
+      console.error("[POD] Background removal chain failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to remove background.");
     } finally {
       setBgRemoving(false);
     }
