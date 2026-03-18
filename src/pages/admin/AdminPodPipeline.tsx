@@ -252,8 +252,6 @@ export default function AdminPodPipeline() {
         updateData.tshirt_raw_url = wizardIdea.tshirt_design_url;
       }
 
-      const tasks: Promise<void>[] = [];
-
       const processAndUpload = async (url: string, type: "sticker" | "tshirt") => {
         // 1. Remove background locally
         const blob = await imglyRemoveBackground(url);
@@ -275,10 +273,12 @@ export default function AdminPodPipeline() {
         }
       };
 
-      if (wizardIdea.sticker_design_url) tasks.push(processAndUpload(wizardIdea.sticker_design_url, "sticker"));
-      if (wizardIdea.tshirt_design_url) tasks.push(processAndUpload(wizardIdea.tshirt_design_url, "tshirt"));
-
-      await Promise.all(tasks);
+      if (wizardIdea.sticker_design_url) {
+        await processAndUpload(wizardIdea.sticker_design_url, "sticker");
+      }
+      if (wizardIdea.tshirt_design_url) {
+        await processAndUpload(wizardIdea.tshirt_design_url, "tshirt");
+      }
 
       // 4. Update the idea record
       const { data: updatedIdea, error: updateError } = await supabase
