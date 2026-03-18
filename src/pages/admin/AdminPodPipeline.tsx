@@ -9,9 +9,12 @@ import BackgroundRemovalStep from "@/components/pod/BackgroundRemovalStep";
 import WizardListingsStep from "@/components/pod/WizardListingsStep";
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, useDropDesign, useUpdateDesignImage, usePodIdeas } from "@/hooks/usePodPipeline";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
+import { removeBackground as imglyRemoveBackground } from "@imgly/background-removal";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import TrendingIdeasDialog from "@/components/pod/TrendingIdeasDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -232,22 +235,73 @@ export default function AdminPodPipeline() {
     }
   }, [step, wizardIdea?.id]);
 
-  const triggerBgRemoval = () => {
+  const triggerBgRemoval = async () => {
     if (!wizardIdea) return;
     setBgRemoving(true);
-    removeBgMutation.mutate(wizardIdea.id, {
-      onSuccess: (res) => {
-        const cb = `?t=${Date.now()}`;
-        const idea = { ...res.idea };
-        if (idea.sticker_design_url) idea.sticker_design_url += cb;
-        if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
-        if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
-        if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
-        setWizardIdea(idea);
-        setBgRemoving(false);
-      },
-      onError: () => { setBgRemoving(false); },
-    });
+    
+    try {
+      const updateData: Record<string, any> = {
+        status: "bg_removed",
+        updated_at: new Date().toISOString(),
+      };
+
+      if (wizardIdea.sticker_design_url) {
+        updateData.sticker_raw_url = wizardIdea.sticker_design_url;
+      }
+      if (wizardIdea.tshirt_design_url) {
+        updateData.tshirt_raw_url = wizardIdea.tshirt_design_url;
+      }
+
+      const tasks: Promise<void>[] = [];
+
+      const processAndUpload = async (url: string, type: "sticker" | "tshirt") => {
+        // 1. Remove background locally
+        const blob = await imglyRemoveBackground(url);
+        
+        // 2. Upload transparent PNG to Supabase Storage
+        const filename = `${wizardIdea.id}/${type}-transparent-${Date.now()}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from("pod-assets")
+          .upload(filename, blob, { contentType: "image/png", upsert: true });
+        
+        if (uploadError) throw new Error(`Upload failed for ${type}: ${uploadError.message}`);
+        
+        // 3. Get public URL
+        const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filename);
+        if (type === "sticker") updateData.sticker_design_url = urlData.publicUrl;
+        else updateData.tshirt_design_url = urlData.publicUrl;
+      };
+
+      if (wizardIdea.sticker_design_url) tasks.push(processAndUpload(wizardIdea.sticker_design_url, "sticker"));
+      if (wizardIdea.tshirt_design_url) tasks.push(processAndUpload(wizardIdea.tshirt_design_url, "tshirt"));
+
+      await Promise.all(tasks);
+
+      // 4. Update the idea record
+      const { data: updatedIdea, error: updateError } = await supabase
+        .from("az_pod_ideas" as any)
+        .update(updateData as any)
+        .eq("id", wizardIdea.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      const cb = `?t=${Date.now()}`;
+      const idea = { ...updatedIdea };
+      if (idea.sticker_design_url) idea.sticker_design_url += cb;
+      if (idea.tshirt_design_url) idea.tshirt_design_url += cb;
+      if (idea.sticker_raw_url) idea.sticker_raw_url += cb;
+      if (idea.tshirt_raw_url) idea.tshirt_raw_url += cb;
+      
+      setWizardIdea(idea);
+      toast.success("Background removed successfully");
+    } catch (error) {
+      console.error("Local background removal failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to remove background. Please try again or use the edit tool.");
+    } finally {
+      setBgRemoving(false);
+    }
   };
 
   const handleApproveDesign = () => { bgAutoTriggeredRef.current = false; setStep("results"); };

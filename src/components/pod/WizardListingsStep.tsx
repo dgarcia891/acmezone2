@@ -86,6 +86,7 @@ interface PrintifyProductResult {
   product_type: string;
   printify_product_id: string;
   printify_url: string;
+  external_handle?: string;
   published: boolean;
   title: string;
   shop_id?: string;
@@ -1118,9 +1119,18 @@ export default function WizardListingsStep({ idea, onBack, onClose, onReject, on
                   variant="outline"
                   size="sm"
                   className="text-xs h-7 gap-1.5"
-                  onClick={() => window.open(products[0].printify_url, "_blank")}
+                  onClick={() => {
+                    const url = (products[0].published && products[0].external_handle) 
+                      ? products[0].external_handle 
+                      : products[0].printify_url;
+                    // Printify external_handles are sometimes relative paths, sometimes absolute URLs.
+                    // If it's relative, assume it belongs to the shop's domain. But wait — external_handle is usually a full URL!
+                    // Let's ensure it has https:// if it doesn't already.
+                    const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+                    window.open(finalUrl, "_blank");
+                  }}
                 >
-                  {products[0].published ? "View in Printify" : "View Draft in Printify"}
+                  {products[0].published ? "View in Printify Store" : "View Draft in Editor"}
                   {!products[0].published && (
                     <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">Draft</Badge>
                   )}

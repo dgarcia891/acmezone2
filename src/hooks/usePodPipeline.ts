@@ -230,22 +230,6 @@ export function useFetchPrintifyShops() {
   });
 }
 
-export function usePodRemoveBg() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (idea_id: string) => {
-      const { data, error } = await supabase.functions.invoke("pod-remove-bg", { body: { idea_id } });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pod-ideas"] });
-      toast.success("Background removed successfully");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-}
 export function useRejectIdea() {
   const qc = useQueryClient();
   return useMutation({

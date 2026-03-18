@@ -567,6 +567,8 @@ Deno.serve(async (req) => {
           console.log(`Product created as draft on ${shop.marketplace}: ${product.id}`);
 
           let published = false;
+          let externalHandle: string | undefined = undefined;
+          
           if (shouldPublish) {
             try {
               await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}/publish.json`, printify_api_key, {
@@ -583,6 +585,18 @@ Deno.serve(async (req) => {
               });
               published = true;
               console.log(`Product published on ${shop.marketplace}: ${product.id}`);
+              
+              // Printify assigns the handle asynchronously. Pause briefly then fetch it.
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              try {
+                const refreshed = await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}.json`, printify_api_key);
+                if (refreshed?.external?.handle) {
+                  externalHandle = refreshed.external.handle;
+                  console.log(`Fetched external handle for ${product.id}: ${externalHandle}`);
+                }
+              } catch (refreshErr) {
+                console.warn(`Could not fetch external handle for ${product.id}:`, refreshErr);
+              }
             } catch (pubErr) {
               console.error(`Failed to publish on ${shop.marketplace}:`, pubErr);
             }
@@ -591,6 +605,7 @@ Deno.serve(async (req) => {
             product_type: listing.product_type,
             printify_product_id: product.id,
             printify_url: `https://printify.com/app/editor/${product.id}`,
+            external_handle: externalHandle,
             title: product.title || listing.title,
             shop_id: shop.shop_id,
             marketplace: shop.marketplace,
