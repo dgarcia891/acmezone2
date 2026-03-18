@@ -181,7 +181,20 @@ function filterVariantsByColor(
 
 function sanitizeTitle(title: string | null | undefined, maxLen = 140) {
   const normalized = (title || "Untitled Product").replace(/\s+/g, " ").trim();
-  return normalized.slice(0, maxLen);
+  if (normalized.length <= maxLen) return normalized;
+  // Truncate at the last space before maxLen to avoid cutting words
+  const truncated = normalized.slice(0, maxLen);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
+}
+
+function sanitizeTags(tags: string[] | null | undefined, maxTags = 13, maxTagLen = 20): string[] {
+  if (!tags || !Array.isArray(tags)) return [];
+  return tags
+    .map(tag => String(tag).trim())
+    .filter(tag => tag.length > 0)
+    .map(tag => tag.length > maxTagLen ? tag.slice(0, maxTagLen).trim() : tag)
+    .slice(0, maxTags);
 }
 
 function getTitleForMarketplace(listing: any, marketplace: string): string {
@@ -535,7 +548,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               title,
               description: listing.description,
-              tags: listing.tags || [],
+              tags: sanitizeTags(listing.tags),
               blueprint_id: blueprintId,
               print_provider_id: printProviderId,
                variants: variantList.map((v: any) => {
