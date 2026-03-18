@@ -51,7 +51,7 @@ export default function AdminPodPipeline() {
   const analyzeMutation = usePodAnalyze();
   const generateMutation = usePodGenerateDesigns();
   const rejectMutation = useRejectIdea();
-  const removeBgMutation = usePodRemoveBg();
+
   const { data: versions = [] } = useDesignVersions(wizardIdea?.id ?? null);
   const selectVersionMutation = useSelectDesignVersion();
   const deleteVersionMutation = useDeleteDesignVersion();
@@ -268,8 +268,11 @@ export default function AdminPodPipeline() {
         
         // 3. Get public URL
         const { data: urlData } = supabase.storage.from("pod-assets").getPublicUrl(filename);
-        if (type === "sticker") updateData.sticker_design_url = urlData.publicUrl;
-        else updateData.tshirt_design_url = urlData.publicUrl;
+        if (type === "sticker") {
+          updateData.sticker_design_url = urlData.publicUrl;
+        } else {
+          updateData.tshirt_design_url = urlData.publicUrl;
+        }
       };
 
       if (wizardIdea.sticker_design_url) tasks.push(processAndUpload(wizardIdea.sticker_design_url, "sticker"));

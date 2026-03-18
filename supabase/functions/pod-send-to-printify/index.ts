@@ -206,8 +206,9 @@ async function printifyFetch(path: string, apiKey: string, options: RequestInit 
   });
   const data = await res.json();
   if (!res.ok) {
-    console.error("Printify API error:", res.status, JSON.stringify(data));
-    throw new Error(data?.message || data?.error || `Printify API error ${res.status}`);
+    const errorDetail = data?.message || data?.error || (data ? JSON.stringify(data) : `Status ${res.status}`);
+    console.error("Printify API error:", res.status, errorDetail);
+    throw new Error(errorDetail);
   }
   return data;
 }
@@ -386,11 +387,13 @@ Deno.serve(async (req) => {
 
       // Upload default image
       console.log(`Uploading default image for ${listing.product_type}...`);
+      // Strip cache busters for Printify
+      const cleanDesignUrl = designUrl.split('?')[0];
       const uploadResult = await printifyFetch("/uploads/images.json", printify_api_key, {
         method: "POST",
         body: JSON.stringify({
           file_name: `${listing.product_type}_design.png`,
-          url: designUrl,
+          url: cleanDesignUrl,
         }),
       });
       const defaultImageId = uploadResult.id;
@@ -413,11 +416,12 @@ Deno.serve(async (req) => {
           }
           try {
             console.log(`Uploading refined image for color "${colorName}"...`);
+            const cleanRefinedUrl = refinedUrl.split('?')[0];
             const refinedUpload = await printifyFetch("/uploads/images.json", printify_api_key, {
               method: "POST",
               body: JSON.stringify({
                 file_name: `${listing.product_type}_refined_${colorName.replace(/\s+/g, "_")}.png`,
-                url: refinedUrl,
+                url: cleanRefinedUrl,
               }),
             });
             colorToImageId.set(colorName, refinedUpload.id);
@@ -586,16 +590,23 @@ Deno.serve(async (req) => {
               published = true;
               console.log(`Product published on ${shop.marketplace}: ${product.id}`);
               
-              // Printify assigns the handle asynchronously. Pause briefly then fetch it.
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              try {
-                const refreshed = await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}.json`, printify_api_key);
-                if (refreshed?.external?.handle) {
-                  externalHandle = refreshed.external.handle;
-                  console.log(`Fetched external handle for ${product.id}: ${externalHandle}`);
+              // Printify assigns the handle asynchronously. Pause briefly then fetch it with retries.
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                console.log(`Fetching external handle attempt ${attempt} for ${product.id}...`);
+                await new Promise(resolve => setTimeout(resolve, 3000 * attempt)); // Exponentialish backoff
+                try {
+                  const refreshed = await printifyFetch(`/shops/${shop.shop_id}/products/${product.id}.json`, printify_api_key);
+                  if (refreshed?.external?.handle) {
+                    externalHandle = refreshed.external.handle;
+                    console.log(`Fetched external handle for ${product.id}: ${externalHandle}`);
+                    break;
+                  } else {
+                    console.log(`No handle yet for ${product.id}`);
+                  }
+                } catch (refreshErr) {
+                  console.warn(`Could not fetch external handle for ${product.id}:`, refreshErr);
+                  // Don't break, try again
                 }
-              } catch (refreshErr) {
-                console.warn(`Could not fetch external handle for ${product.id}:`, refreshErr);
               }
             } catch (pubErr) {
               console.error(`Failed to publish on ${shop.marketplace}:`, pubErr);
