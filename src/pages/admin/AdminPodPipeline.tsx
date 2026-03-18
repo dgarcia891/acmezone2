@@ -39,6 +39,7 @@ export default function AdminPodPipeline() {
   const [productType, setProductType] = useState(() => sessionStorage.getItem("pod_wizard_product_type") || "both");
   const [loadingTypes, setLoadingTypes] = useState<Set<string>>(new Set());
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [bgStatus, setBgStatus] = useState<string | null>(null);
   const [generateErrors, setGenerateErrors] = useState<Record<string, string>>({});
   const [variantDefaults, setVariantDefaults] = useState<{ idea_text?: string; product_type?: string; image_url?: string } | null>(null);
   const [trendingOpen, setTrendingOpen] = useState(() => sessionStorage.getItem("pod_trending_open") === "true");
@@ -238,8 +239,11 @@ export default function AdminPodPipeline() {
   const triggerBgRemoval = async () => {
     if (!wizardIdea) return;
     setBgRemoving(true);
+    setBgStatus(null);
      try {
       const processAndUpload = async (url: string, type: "sticker" | "tshirt") => {
+        const label = type === "sticker" ? "Sticker" : "T-Shirt";
+        setBgStatus(`Removing background from ${label}…`);
         console.log(`[POD] Starting bg removal for ${type}:`, url);
         
         // 1. Fetch image to blob first (helps with CORS and verification)
@@ -252,7 +256,7 @@ export default function AdminPodPipeline() {
         // 2. Remove background locally
         const outputBlob = await imglyRemoveBackground(inputBlob, {
           debug: true,
-          model: 'medium'
+          model: 'isnet'
         });
         console.log(`[POD] ${type} background removed. Output blob:`, outputBlob.size, outputBlob.type);
         
@@ -314,6 +318,7 @@ export default function AdminPodPipeline() {
       toast.error(error instanceof Error ? error.message : "Failed to remove background.");
     } finally {
       setBgRemoving(false);
+      setBgStatus(null);
     }
   };
 
@@ -400,7 +405,7 @@ export default function AdminPodPipeline() {
             <DesignGeneration idea={wizardIdea} productType={productType} onReject={handleReject} onApprove={handleApproveDesign} onRegenerate={handleRegenerate} onGenerate={handleGenerate} onCancel={(type) => setLoadingTypes((prev) => { const n = new Set(prev); n.delete(type); return n; })} onDropDesign={handleDropDesign} loadingTypes={loadingTypes} isApproving={false} versions={versions} onSelectVersion={handleSelectVersion} onDeleteVersion={handleDeleteVersion} isSelectingVersion={selectVersionMutation.isPending} isDeletingVersion={deleteVersionMutation.isPending} generateErrors={generateErrors} />
           )}
           {step === "results" && wizardIdea && (
-            <BackgroundRemovalStep idea={wizardIdea} productType={productType} onApprove={handleApproveAfterReview} onReject={handleReject} onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }} onDropDesign={handleDropDesign} onEditSave={(type, blob) => { updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, { onSuccess: (updatedIdea: any) => { setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea })); } }); }} isApproving={generateListings.isPending} isBgRemoving={bgRemoving} isEditSaving={updateDesignImage.isPending} />
+            <BackgroundRemovalStep idea={wizardIdea} productType={productType} onApprove={handleApproveAfterReview} onReject={handleReject} onBack={() => { bgAutoTriggeredRef.current = false; setStep("generate"); }} onDropDesign={handleDropDesign} onEditSave={(type, blob) => { updateDesignImage.mutate({ ideaId: wizardIdea.id, productType: type, blob }, { onSuccess: (updatedIdea: any) => { setWizardIdea((prev: any) => ({ ...prev, ...updatedIdea })); } }); }} isApproving={generateListings.isPending} isBgRemoving={bgRemoving} bgStatus={bgStatus} isEditSaving={updateDesignImage.isPending} />
           )}
           {step === "listings" && wizardIdea && (
             <WizardListingsStep idea={wizardIdea} onBack={() => { bgAutoTriggeredRef.current = true; setStep("results"); }} onClose={closeWizard} onReject={handleReject} onDropDesign={handleDropDesign} onIdeaUpdated={(updated: any) => setWizardIdea((prev: any) => ({ ...prev, ...updated }))} onCreateVariant={handleCreateVariant} />

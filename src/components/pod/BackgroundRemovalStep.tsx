@@ -16,16 +16,17 @@ interface Props {
   onEditSave?: (type: "sticker" | "tshirt", blob: Blob) => void;
   isApproving: boolean;
   isBgRemoving?: boolean;
+  bgStatus?: string | null;
   isEditSaving?: boolean;
   hasListings?: boolean;
 }
 
 const checkerboardStyle = {
   backgroundImage:
-    "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
+    "linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)",
   backgroundSize: "20px 20px",
   backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-  backgroundColor: "white",
+  backgroundColor: "#fff",
 };
 
 function DesignPreview({ label, url, checkerboard }: { label: string; url?: string | null; checkerboard?: boolean }) {
@@ -86,7 +87,7 @@ function BeforeAfterComparison({ type, rawUrl, transparentUrl, canDrop, onDrop, 
 
 const cacheBust = (url: string | null | undefined) => url ? `${url.split('?')[0]}?t=${encodeURIComponent(Date.now())}` : url;
 
-export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, isEditSaving, hasListings }: Props) {
+export default function BackgroundRemovalStep({ idea, productType, onApprove, onReject, onBack, onDropDesign, onEditSave, isApproving, isBgRemoving, bgStatus, isEditSaving, hasListings }: Props) {
   const hasSticker = (productType === "both" || productType === "sticker") && idea?.sticker_design_url;
   const hasTshirt = (productType === "both" || productType === "tshirt") && idea?.tshirt_design_url;
   const canDrop = productType === "both";
@@ -107,9 +108,25 @@ export default function BackgroundRemovalStep({ idea, productType, onApprove, on
       </div>
 
       {processing ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-12">
+        <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Processing background removal…</p>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium">{bgStatus || "Processing background removal…"}</p>
+            <p className="text-xs text-muted-foreground">This may take 10–30 seconds per image.</p>
+          </div>
+          {/* Show which images have already completed */}
+          <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+            {(productType === "both" || productType === "sticker") && idea?.sticker_design_url && (
+              <span className={idea?.sticker_raw_url ? "text-green-600 font-medium" : ""}>
+                {idea?.sticker_raw_url ? "✓" : "○"} Sticker
+              </span>
+            )}
+            {(productType === "both" || productType === "tshirt") && idea?.tshirt_design_url && (
+              <span className={idea?.tshirt_raw_url ? "text-green-600 font-medium" : ""}>
+                {idea?.tshirt_raw_url ? "✓" : "○"} T-Shirt
+              </span>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
