@@ -86,6 +86,7 @@ const App = () => (
                 <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
                 <Route path="/products/heic-to-jpg" element={<HeicToJpg />} />
                 <Route path="/background-remover" element={<BackgroundRemover />} />
+                <Route path="/products/trellobridge" element={<TrelloBridge />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
