@@ -181,7 +181,9 @@ const ChromeExtensionImageEditor: React.FC = () => {
   const removeBackground = async (imageElement: HTMLImageElement): Promise<Blob> => {
     try {
       console.log('Starting background removal process...');
-      const blob = await imglyRemoveBackground(imageElement.src);
+      const blob = await imglyRemoveBackground(imageElement.src, {
+        publicPath: "https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/"
+      });
       console.log('Background removal completed');
       return blob;
     } catch (error) {

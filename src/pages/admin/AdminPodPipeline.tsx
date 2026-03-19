@@ -256,7 +256,8 @@ export default function AdminPodPipeline() {
         // 2. Remove background locally
         const outputBlob = await imglyRemoveBackground(inputBlob, {
           debug: true,
-          model: 'isnet'
+          model: 'isnet',
+          publicPath: "https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/"
         });
         console.log(`[POD] ${type} background removed. Output blob:`, outputBlob.size, outputBlob.type);
         

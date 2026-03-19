@@ -19,7 +19,9 @@ const BackgroundRemover: React.FC = () => {
   const removeBackground = async (imageElement: HTMLImageElement): Promise<string> => {
     try {
       console.log('Starting browser-based background removal...');
-      const blob = await imglyRemoveBackground(imageElement.src);
+      const blob = await imglyRemoveBackground(imageElement.src, {
+        publicPath: "https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/"
+      });
       return URL.createObjectURL(blob);
     } catch (error) {
       console.error('Error removing background:', error);
