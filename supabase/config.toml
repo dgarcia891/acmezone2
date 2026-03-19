@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.track-pageview]
 verify_jwt = false
+
+[functions.tb-create-checkout]
+verify_jwt = false
+
+[functions.tb-stripe-webhook]
+verify_jwt = false
+
+[functions.tb-verify-license]
+verify_jwt = false
