@@ -13,7 +13,7 @@ import WizardListingsStep from "@/components/pod/WizardListingsStep";
 
 import PodSettingsForm from "@/components/pod/PodSettingsForm";
 import KanbanBoard from "@/components/pod/KanbanBoard";
-import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdeas } from "@/hooks/usePodPipeline";
+import { usePodAnalyze, usePodGenerateDesigns, useRejectIdea, useDesignVersions, useSelectDesignVersion, useDeleteDesignVersion, usePodRemoveBg, useDropDesign, useUpdateDesignImage, usePodIdeas, useSuggestIdeas } from "@/hooks/usePodPipeline";
 import TrendingIdeasDialog from "@/components/pod/TrendingIdeasDialog";
 import { useGenerateListings } from "@/hooks/usePodListings";
 import { LayoutGrid, PlusCircle, Settings, ArrowLeft, Sparkles } from "lucide-react";
