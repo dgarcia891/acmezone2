@@ -28,6 +28,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PreApplyAI from "./pages/PreApplyAI";
 import Support from "./pages/Support";
 import ChromeExtensionImageEditor from "./pages/ChromeExtensionImageEditor";
+import TrelloBridge from "./pages/TrelloBridge";
 import BackgroundRemover from "./pages/BackgroundRemover";
 import HeicToJpg from "./pages/HeicToJpg";
 import ScrollToTop from "./components/ScrollToTop";
