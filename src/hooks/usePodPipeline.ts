@@ -448,3 +448,37 @@ export function useColorRefinedVersions(ideaId: string | null) {
     enabled: !!ideaId,
   });
 }
+
+export function usePodRemoveBg() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ideaId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pod-remove-bg`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ idea_id: ideaId }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any)?.error || "Background removal failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pod-ideas"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Background removal failed");
+    },
+  });
+}
