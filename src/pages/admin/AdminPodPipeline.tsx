@@ -297,11 +297,12 @@ export default function AdminPodPipeline() {
         
         // Update local state incrementally
         const cb = `?t=${Date.now()}`;
+        const updatedObj = updated as Record<string, any>;
         setWizardIdea((prev: any) => ({ 
           ...prev, 
-          ...updated,
-          [`${type}_design_url`]: updated[`${type}_design_url`] + cb,
-          [`${type}_raw_url`]: (updated[`${type}_raw_url`] || prev?.[`${type}_raw_url`]) + cb
+          ...updatedObj,
+          [`${type}_design_url`]: updatedObj[`${type}_design_url`] + cb,
+          [`${type}_raw_url`]: (updatedObj[`${type}_raw_url`] || prev?.[`${type}_raw_url`]) + cb
         }));
       };
 
