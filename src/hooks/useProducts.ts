@@ -36,7 +36,7 @@ export const useProducts = () => {
       const { data, error: fetchError } = await supabase
         .from('az_products')
         .select('*')
-        .order('display_order', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
       
