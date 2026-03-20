@@ -4,7 +4,8 @@
 
 UPDATE public.az_products 
 SET 
+  slug = 'heic-to-jpg', -- Force the slug to match the custom App.tsx route
   image = '/lovable-uploads/heic-to-jpg-hero.png',
-  link = NULL, -- Remove explicit link to use the default /products/:slug route which is working
+  link = NULL, -- Remove explicit link to use the default /products/:slug route
   updated_at = now()
-WHERE slug = 'heic-to-jpg';
+WHERE id = 'heic-to-jpg-converter';
