@@ -31,6 +31,7 @@ import ChromeExtensionImageEditor from "./pages/ChromeExtensionImageEditor";
 import TrelloBridge from "./pages/TrelloBridge";
 import BackgroundRemover from "./pages/BackgroundRemover";
 import HeicToJpg from "./pages/HeicToJpg";
+import ResuFill from "./pages/ResuFill";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
                 <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
                 <Route path="/products/heic-to-jpg" element={<HeicToJpg />} />
+                <Route path="/products/resufill" element={<ResuFill />} />
                 <Route path="/background-remover" element={<BackgroundRemover />} />
                 <Route path="/products/trellobridge" element={<TrelloBridge />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
