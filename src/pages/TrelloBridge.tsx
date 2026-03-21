@@ -15,6 +15,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { useState, useEffect } from "react";
+import { trackEvent } from "@/utils/analytics";
 
 const IMAGES = [
   "/lovable-uploads/ff84c184-f45b-4bef-ae67-83422faff51b.png",
@@ -157,7 +158,12 @@ const TrelloBridge = () => {
 
                 <div className="flex gap-3 pt-4">
                   <Button asChild>
-                    <a href="https://chrome.google.com/webstore" target="_blank" rel="noopener noreferrer">
+                    <a 
+                      href="https://chrome.google.com/webstore" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onClick={() => trackEvent('get_extension', { product: 'trellobridge' })}
+                    >
                       Get the Extension
                     </a>
                   </Button>

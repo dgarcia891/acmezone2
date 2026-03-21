@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Upload, Download, Loader2, RotateCcw, ImageIcon, ExternalLink, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import heic2any from 'heic2any';
+import { trackEvent } from '@/utils/analytics';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const HeicToJpg: React.FC = () => {
@@ -45,6 +46,7 @@ const HeicToJpg: React.FC = () => {
       const blob = Array.isArray(result) ? result[0] : result;
       const url = URL.createObjectURL(blob);
       setConvertedUrl(url);
+      trackEvent('convert_heic_to_jpg', { success: true });
       toast.success('Conversion successful!');
     } catch (error) {
       console.error('Error converting HEIC:', error);
@@ -62,6 +64,7 @@ const HeicToJpg: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    trackEvent('download_converted_jpg');
     toast.success('Image downloaded!');
   };
 

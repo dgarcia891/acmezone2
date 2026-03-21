@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Chrome
 } from "lucide-react";
+import { trackEvent } from "@/utils/analytics";
 
 const features = [
   {
@@ -69,6 +70,8 @@ export default function ResuFill() {
       });
 
       if (!response.ok) throw new Error("Failed to submit");
+      
+      trackEvent('join_waitlist', { product: 'resufill' });
       
       toast({ title: "Success!", description: "You have been added to the beta waitlist. We'll be in touch." });
       setEmail("");
