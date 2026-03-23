@@ -22,6 +22,8 @@ import {
   ArrowRight,
   Chrome,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { trackEvent } from "@/utils/analytics";
 
 const heroFeatures = [
   { icon: Brain, title: "AI-Powered Analysis", desc: "Get sentiment, key takeaways, and patterns from any video transcript." },
@@ -93,6 +95,45 @@ export default function InsightReelLanding() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !name) {
+      toast({ title: "Error", description: "Please provide both name and email.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("https://bnzylhssukmctoqqtzqy.supabase.co/functions/v1/contact-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          message: "I am interested in joining the InsightReel Beta.",
+          source: "InsightReel Beta Waitlist",
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) throw new Error("Failed to submit");
+      
+      trackEvent('join_waitlist', { product: 'insightreel' });
+      
+      toast({ title: "Success!", description: "You have been added to the beta waitlist. We'll be in touch." });
+      setEmail("");
+      setName("");
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Failed to join waitlist. Please try again later.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleCta = async (tierName: string) => {
     if (!user) {
@@ -157,14 +198,14 @@ export default function InsightReelLanding() {
 
       <main className="flex-1">
         {/* ── Hero ────────────────────────────────── */}
-        <section className="relative py-24 md:py-32 overflow-hidden">
+        <section className="relative pt-24 pb-12 md:pt-32 md:pb-16 overflow-hidden">
           <div aria-hidden="true" className="pointer-events-none absolute -top-40 inset-x-0 flex justify-center">
             <span className="h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
           </div>
 
           <div className="container max-w-5xl mx-auto px-4 relative z-10 text-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 mb-6 text-xs font-semibold tracking-wider uppercase rounded-full bg-primary/10 text-primary">
-              <Play className="h-3 w-3" /> Chrome Extension
+              <Chrome className="h-3 w-3" /> Coming Soon
             </span>
 
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 leading-tight">
@@ -177,25 +218,37 @@ export default function InsightReelLanding() {
               sentiment analysis, and key takeaways — right from your browser.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="hover-scale gap-2" onClick={() => handleCta("Free Trial")}>
-                Start Free Trial <ArrowRight className="h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="hover-scale gap-2" asChild>
-                <a href="https://chromewebstore.google.com/detail/insightreel/plohgpfkkhnennkgoneolbpomnhoclmk" target="_blank" rel="noopener noreferrer">
-                  <Chrome className="h-4 w-4" /> Install Extension
-                </a>
-              </Button>
+            <div className="bg-card elevated p-6 flex flex-col gap-4 max-w-md mx-auto border border-border/50 text-left">
+              <div>
+                <h3 className="font-semibold text-lg mb-1">Get Early Access</h3>
+                <p className="text-sm text-muted-foreground">The InsightReel extension beta is free.</p>
+              </div>
+              <form onSubmit={handleWaitlistSubmit} className="flex flex-col gap-3">
+                <Input 
+                  placeholder="Your Name" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="bg-background"
+                />
+                <Input 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-background"
+                />
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Joining..." : "Join Beta Waitlist"} <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </form>
             </div>
-
-            <p className="text-sm text-muted-foreground mt-4">
-              3 free analyses · No credit card required
-            </p>
           </div>
         </section>
 
         {/* ── Features Grid ──────────────────────── */}
-        <section className="py-20">
+        <section className="pt-8 pb-20">
           <div className="container max-w-5xl mx-auto px-4">
             <div className="text-center mb-14">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How It Works</h2>
@@ -300,11 +353,14 @@ export default function InsightReelLanding() {
                 Ready to unlock smarter video insights?
               </h2>
               <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                Install the extension, sign in, and get your first 3 analyses completely free.
+                Join our waitlist for early access to the beta program.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="hover-scale gap-2" onClick={() => handleCta("Free Trial")}>
-                  Start Free Trial <ArrowRight className="h-4 w-4" />
+                <Button size="lg" className="hover-scale gap-2" onClick={() => {
+                  const el = document.querySelector('form');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}>
+                  Join Waitlist <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button size="lg" variant="outline" className="hover-scale" asChild>
                   <Link to="/insightreel/pricing">View Full Pricing</Link>
