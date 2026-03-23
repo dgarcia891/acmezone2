@@ -8,6 +8,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import Index from "./pages/Index";
+import InsightReelLanding from "./pages/InsightReelLanding";
+import InsightReelPricing from "./pages/InsightReelPricing";
+import InsightReelDashboard from "./pages/InsightReelDashboard";
+import InsightReelSuccess from "./pages/InsightReelSuccess";
 import NotFound from "./pages/NotFound";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -92,6 +96,18 @@ const App = () => (
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/insightreel" element={<InsightReelLanding />} />
+                <Route path="/insightreel/pricing" element={<InsightReelPricing />} />
+                <Route path="/insightreel/dashboard" element={
+                  <ProtectedRoute>
+                    <InsightReelDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/insightreel/success" element={
+                  <ProtectedRoute>
+                    <InsightReelSuccess />
+                  </ProtectedRoute>
+                } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
