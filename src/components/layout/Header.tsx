@@ -23,6 +23,7 @@ const Header = () => {
         <nav className="flex items-center gap-6 text-sm">
           <NavLink to="/" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Home</NavLink>
           <NavLink to="/products" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Products</NavLink>
+          <NavLink to="/insightreel" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>InsightReel</NavLink>
           <NavLink to="/contact" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>Contact</NavLink>
           
           {!loading && (

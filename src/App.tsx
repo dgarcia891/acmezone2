@@ -96,6 +96,18 @@ const App = () => (
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/insightreel" element={<InsightReelLanding />} />
+                <Route path="/insightreel/pricing" element={<InsightReelPricing />} />
+                <Route path="/insightreel/dashboard" element={
+                  <ProtectedRoute>
+                    <InsightReelDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/insightreel/success" element={
+                  <ProtectedRoute>
+                    <InsightReelSuccess />
+                  </ProtectedRoute>
+                } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
