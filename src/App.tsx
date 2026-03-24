@@ -11,6 +11,7 @@ import InsightReelLanding from "./pages/InsightReelLanding";
 import InsightReelPricing from "./pages/InsightReelPricing";
 import InsightReelDashboard from "./pages/InsightReelDashboard";
 import InsightReelSuccess from "./pages/InsightReelSuccess";
+import InsightReelSubscribe from "./pages/InsightReelSubscribe";
 import NotFound from "./pages/NotFound";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -90,16 +91,9 @@ const App = () => (
                 <Route path="/support" element={<Support />} />
                 <Route path="/insightreel" element={<InsightReelLanding />} />
                 <Route path="/insightreel/pricing" element={<InsightReelPricing />} />
-                <Route path="/insightreel/dashboard" element={
-                  <ProtectedRoute>
-                    <InsightReelDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/insightreel/success" element={
-                  <ProtectedRoute>
-                    <InsightReelSuccess />
-                  </ProtectedRoute>
-                } />
+                <Route path="/insightreel/dashboard" element={<InsightReelDashboard />} />
+                <Route path="/insightreel/success" element={<InsightReelSuccess />} />
+                <Route path="/insightreel/subscribe" element={<InsightReelSubscribe />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

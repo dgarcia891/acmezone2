@@ -43,7 +43,23 @@ serve(async (req) => {
       return new Response("Missing user id", { status: 400 });
     }
 
-    if (session.mode === "subscription") {
+    if (session.metadata?.type === 'dashboard_pro') {
+      // Dashboard Subscription (No Supabase Auth)
+      const { error } = await supabase
+        .from("dashboard_subscriptions")
+        .update({ 
+          status: 'active',
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: session.subscription as string
+        })
+        .eq("submitter_id", userId);
+
+      if (error) {
+        console.error("Failed to activate dashboard subscription:", error);
+        return new Response("DB error", { status: 500 });
+      }
+      console.log(`Submitter ${userId} activated dashboard Pro`);
+    } else if (session.mode === "subscription") {
       // Managed Pro subscription
       const { error } = await supabase
         .from("az_profiles")
@@ -72,13 +88,34 @@ serve(async (req) => {
 
   if (event.type === "customer.subscription.deleted") {
     const subscription = event.data.object as Stripe.Subscription;
+    
+    // Stripe subscriptions don't always carry the original session metadata easily in the deleted event.
+    // So we search BOTH our tables by stripe_customer_id to downgrade whatever they had.
+    const customerId = subscription.customer as string;
+
+    // 1. Check if it was a Dashboard subscription
+    const { data: dashSub } = await supabase
+      .from("dashboard_subscriptions")
+      .select("submitter_id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+
+    if (dashSub) {
+      await supabase
+        .from("dashboard_subscriptions")
+        .update({ status: 'inactive' })
+        .eq("submitter_id", dashSub.submitter_id);
+      console.log(`Dashboard subscription for ${dashSub.submitter_id} deactivated`);
+    }
+
+    // 2. Fallback to normal Pro subscription logic
     const sessions = await stripe.checkout.sessions.list({
-      customer: subscription.customer as string,
+      customer: customerId,
       limit: 1,
     });
     const userId = sessions.data[0]?.client_reference_id;
 
-    if (userId) {
+    if (userId && !dashSub) {
       await supabase
         .from("az_profiles")
         .update({ is_pro: false })
