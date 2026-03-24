@@ -748,6 +748,110 @@ export type Database = {
         }
         Relationships: []
       }
+      sa_domain_reports: {
+        Row: {
+          ai_reviewed: boolean
+          ai_reviewed_at: string | null
+          created_at: string
+          description: string | null
+          domain: string
+          domain_id: string
+          id: string
+          report_type: string
+          reporter_hash: string | null
+          score: number
+          url: string | null
+        }
+        Insert: {
+          ai_reviewed?: boolean
+          ai_reviewed_at?: string | null
+          created_at?: string
+          description?: string | null
+          domain: string
+          domain_id: string
+          id?: string
+          report_type: string
+          reporter_hash?: string | null
+          score: number
+          url?: string | null
+        }
+        Update: {
+          ai_reviewed?: boolean
+          ai_reviewed_at?: string | null
+          created_at?: string
+          description?: string | null
+          domain?: string
+          domain_id?: string
+          id?: string
+          report_type?: string
+          reporter_hash?: string | null
+          score?: number
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sa_domain_reports_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "sa_domain_reputation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sa_domain_reputation: {
+        Row: {
+          ai_modifier: number
+          ai_next_review: string | null
+          ai_reviewed_at: string | null
+          created_at: string
+          distinct_reporters: number
+          domain: string
+          external_checked_at: string | null
+          external_flagged: boolean
+          external_source: string | null
+          id: string
+          last_activity_at: string | null
+          report_count: number
+          status: string
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          ai_modifier?: number
+          ai_next_review?: string | null
+          ai_reviewed_at?: string | null
+          created_at?: string
+          distinct_reporters?: number
+          domain: string
+          external_checked_at?: string | null
+          external_flagged?: boolean
+          external_source?: string | null
+          id?: string
+          last_activity_at?: string | null
+          report_count?: number
+          status?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_modifier?: number
+          ai_next_review?: string | null
+          ai_reviewed_at?: string | null
+          created_at?: string
+          distinct_reporters?: number
+          domain?: string
+          external_checked_at?: string | null
+          external_flagged?: boolean
+          external_source?: string | null
+          id?: string
+          last_activity_at?: string | null
+          report_count?: number
+          status?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sa_patterns: {
         Row: {
           active: boolean
