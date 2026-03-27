@@ -43,8 +43,8 @@ serve(async (req) => {
     const sinceParam = url.searchParams.get("since");
 
     let query = supabase
-      .from("sa_patterns")
-      .select("id, phrase, category, severity_weight, source, created_at, updated_at")
+      .from("sa_blocklist")
+      .select("id, url, source, created_at, updated_at")
       .eq("active", true);
 
     if (sinceParam) {
@@ -58,44 +58,20 @@ serve(async (req) => {
     const { data, error } = await query;
 
     if (error) {
-      console.error("sa-sync-patterns query error:", error);
+      console.error("sa-sync-blocklist query error:", error);
       return json({ error: "QUERY_ERROR", message: error.message }, 500);
     }
 
     const rows = data ?? [];
 
-    // Also fetch dynamic heuristic rules
-    let rulesQuery = supabase
-      .from("sa_heuristic_rules")
-      .select("rule_key, pattern_regex, score_weight")
-      .eq("active", true);
-      
-    if (sinceParam) {
-      const sinceMs = parseInt(sinceParam, 10);
-      if (!isNaN(sinceMs)) {
-        const sinceDate = new Date(sinceMs).toISOString();
-        rulesQuery = rulesQuery.gt("updated_at", sinceDate);
-      }
-    }
-    
-    const { data: rulesData, error: rulesError } = await rulesQuery;
-    if (rulesError) {
-      console.error("sa-sync-patterns rules query error:", rulesError);
-      // Non-fatal, we can still return patterns
-    }
-    const ruleRows = rulesData ?? [];
-
-    // Return all active patterns — the extension handles categorization
     return json({
       ok: true,
-      patterns: rows,
-      keywords: [],
-      rules: ruleRows,
+      blocklist: rows,
       timestamp: Date.now(),
       count: rows.length,
     });
   } catch (err) {
-    console.error("sa-sync-patterns error:", err);
+    console.error("sa-sync-blocklist error:", err);
     return json({ error: "SERVER_ERROR", message: String(err) }, 500);
   }
 });

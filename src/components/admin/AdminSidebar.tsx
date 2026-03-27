@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   Settings,
   Shield,
   ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,19 +34,45 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
-
-const hydraGuardItems = [
-  { title: "Detections", url: "/admin/security/detections", icon: Eye },
-  { title: "Corrections", url: "/admin/security/corrections", icon: MessageSquare },
-  { title: "Patterns", url: "/admin/security/patterns", icon: Database },
-  { title: "User Reports", url: "/admin/security/reports", icon: FileWarning },
-];
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
 
+  useEffect(() => {
+    const fetchPending = async () => {
+      const { count } = await supabase
+        .from('sa_user_reports' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('review_status', 'pending');
+      setPendingCount(count || 0);
+    };
+    
+    fetchPending();
+
+    const channel = supabase
+      .channel('sidebar-reports-check')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sa_user_reports' }, () => fetchPending())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const hydraGuardItems = [
+    { title: "Detections", url: "/admin/security/detections", icon: Eye },
+    { title: "Corrections", url: "/admin/security/corrections", icon: MessageSquare },
+    { title: "Patterns", url: "/admin/security/patterns", icon: Database },
+    { 
+      title: "User Reports", 
+      url: "/admin/security/reports", 
+      icon: FileWarning,
+      badge: pendingCount > 0 ? pendingCount : undefined
+    },
+  ];
   const isActive = (url: string, end?: boolean) => {
     if (end) return location.pathname === url;
     return location.pathname.startsWith(url);
@@ -127,7 +155,12 @@ export default function AdminSidebar() {
                           <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
                             <Link to={item.url}>
                               <item.icon className="h-4 w-4" />
-                              <span>{item.title}</span>
+                              <span className="flex-1">{item.title}</span>
+                              {item.badge && (
+                                <Badge variant="destructive" className="ml-auto h-5 px-1.5 py-0 text-[10px] min-w-[1.25rem] flex items-center justify-center">
+                                  {item.badge}
+                                </Badge>
+                              )}
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

@@ -57,6 +57,7 @@ const UserReportsTab = () => {
   const [adminNotes, setAdminNotes] = useState('');
   // Leading-edge debounce: collapse burst inserts into at most 2 fetches per 5s window
   const reportsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('general');
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -167,7 +168,7 @@ const UserReportsTab = () => {
       // 2. Insert into global sa_patterns
       const inserts = patternsToBlock.map(phrase => ({
         phrase,
-        category: report.report_type === 'telemetry' ? 'telemetry_auto' : 'admin_added',
+        category: report.report_type === 'telemetry' ? 'telemetry_auto' : selectedCategory,
         severity_weight: 50,
         active: true,
         source: 'user_report_promotion'
@@ -179,6 +180,20 @@ const UserReportsTab = () => {
         .select('id');
 
       if (insertError) throw insertError;
+
+      // 3. Insert URL into global sa_blocklist
+      if (report.url) {
+         try {
+           await supabase.from('sa_blocklist' as any).insert({
+             url: report.url,
+             source: 'admin_promotion',
+             added_by: user?.id,
+             active: true
+           } as never);
+         } catch (blocklistErr) {
+           console.warn('Failed to insert into blocklist (already exists?):', blocklistErr);
+         }
+      }
 
       // 3. Update the report to mark it as promoted
       const inserted = (insertedPatterns ?? []) as unknown as Array<{ id: string }>;
@@ -217,6 +232,7 @@ const UserReportsTab = () => {
   const openDetail = (r: UserReport) => {
     setSelected(r);
     setAdminNotes(r.admin_notes || '');
+    setSelectedCategory('general');
   };
 
   const isPending = (s: string) => s === 'pending';
@@ -415,6 +431,24 @@ const UserReportsTab = () => {
                     onChange={e => setAdminNotes(e.target.value)}
                     rows={2}
                   />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Pattern Category:</span>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select heuristic category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General Scam</SelectItem>
+                        <SelectItem value="finance">Finance / Crypto</SelectItem>
+                        <SelectItem value="gift_card">Gift Card</SelectItem>
+                        <SelectItem value="command">Instruction / Command</SelectItem>
+                        <SelectItem value="urgency">Urgency / Threat</SelectItem>
+                        <SelectItem value="authority_pressure">Authority Pressure</SelectItem>
+                        <SelectItem value="vague_lure">Vague Lure</SelectItem>
+                        <SelectItem value="securityKeywords">Security Alert</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="flex flex-col gap-2">
                     <Button 
                        className="w-full bg-red-600 hover:bg-red-700 text-white" 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ interface UserStats {
   totalUsers: number;
   recentSignups: number;
   adminCount: number;
+  pendingReports: number;
 }
 
 interface UserInfo {
@@ -21,28 +22,46 @@ interface UserInfo {
 
 export default function AdminOverview() {
   const { toast } = useToast();
-  const [stats, setStats] = useState<UserStats>({ totalUsers: 0, recentSignups: 0, adminCount: 0 });
+  const [stats, setStats] = useState<UserStats>({ 
+    totalUsers: 0, 
+    recentSignups: 0, 
+    adminCount: 0,
+    pendingReports: 0
+  });
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: rolesData, error } = await supabase
-        .from("az_user_roles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      
+      const [rolesResponse, reportsResponse] = await Promise.all([
+        supabase
+          .from("az_user_roles")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("sa_user_reports" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("review_status", "pending")
+      ]);
 
-      if (error) throw error;
+      if (rolesResponse.error) throw rolesResponse.error;
+      if (reportsResponse.error) throw reportsResponse.error;
 
-      const roles = (rolesData as unknown as Array<{ id: string; user_id: string; role: string; created_at: string }>) || [];
+      const roles = (rolesResponse.data as unknown as Array<{ id: string; user_id: string; role: string; created_at: string }>) || [];
       const totalUsers = roles.length;
       const adminCount = roles.filter((r) => r.role === "admin").length;
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentSignups = roles.filter((r) => new Date(r.created_at) > weekAgo).length;
 
-      setStats({ totalUsers, recentSignups, adminCount });
+      setStats({ 
+        totalUsers, 
+        recentSignups, 
+        adminCount,
+        pendingReports: reportsResponse.count || 0
+      });
       setUsers(
         roles.map((r) => ({
           id: r.user_id,
@@ -57,9 +76,9 @@ export default function AdminOverview() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -80,7 +99,7 @@ export default function AdminOverview() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card className="elevated">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -99,6 +118,16 @@ export default function AdminOverview() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.recentSignups}</div>
             <p className="text-xs text-muted-foreground">Last 7 days</p>
+          </CardContent>
+        </Card>
+        <Card className="elevated ring-2 ring-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Reports</CardTitle>
+            <Mail className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{stats.pendingReports}</div>
+            <p className="text-xs text-muted-foreground">Hydra Guard submissions</p>
           </CardContent>
         </Card>
         <Card className="elevated">

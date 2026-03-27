@@ -1,13 +1,48 @@
+import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
-import { LogOut, User, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { LogOut, User, Shield, Bell } from "lucide-react";
 
 const Header = () => {
   const { user, signOut, loading } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
+
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchPending = async () => {
+        const { count } = await supabase
+          .from('sa_user_reports' as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('review_status', 'pending');
+        setPendingCount(count || 0);
+      };
+      
+      fetchPending();
+
+      // Real-time listener for new reports
+      const channel = supabase
+        .channel('header-reports-check')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'sa_user_reports' },
+          () => fetchPending()
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'sa_user_reports' },
+          () => fetchPending()
+        )
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [isAdmin]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -32,9 +67,12 @@ const Header = () => {
                 <div className="flex items-center gap-3">
                   {isAdmin && (
                     <NavLink to="/admin" className={({ isActive }) => isActive ? "text-foreground story-link" : "text-muted-foreground hover:text-foreground story-link"}>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5 relative">
                         <Shield className="h-4 w-4" />
                         Admin
+                        {pendingCount > 0 && (
+                          <span className="flex h-2 w-2 rounded-full bg-red-500 absolute -top-0.5 -right-2 animate-pulse" />
+                        )}
                       </span>
                     </NavLink>
                   )}
