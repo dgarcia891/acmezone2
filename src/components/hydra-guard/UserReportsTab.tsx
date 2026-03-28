@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,8 @@ const UserReportsTab = () => {
   const [selected, setSelected] = useState<UserReport | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
+  // Leading-edge debounce: collapse burst inserts into at most 2 fetches per 5s window
+  const reportsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchStats = useCallback(async () => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -95,12 +97,25 @@ const UserReportsTab = () => {
         { event: 'INSERT', schema: 'public', table: 'sa_user_reports' },
         () => {
           toast({ title: 'New User Report', description: 'A new scam report was submitted.' });
-          fetchData();
-          fetchStats();
+          // Leading-edge debounce: fire fetchData+fetchStats immediately on first event,
+          // suppress subsequent ones for 5s to avoid query storms from bulk submissions.
+          if (!reportsDebounceRef.current) {
+            fetchData();
+            fetchStats();
+          }
+          if (reportsDebounceRef.current) clearTimeout(reportsDebounceRef.current);
+          reportsDebounceRef.current = setTimeout(() => {
+            reportsDebounceRef.current = null;
+            fetchData();
+            fetchStats();
+          }, 5000);
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+      if (reportsDebounceRef.current) clearTimeout(reportsDebounceRef.current);
+    };
   }, [toast, fetchData, fetchStats]);
 
   const updateStatus = async (id: string, status: string) => {

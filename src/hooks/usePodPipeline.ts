@@ -21,13 +21,34 @@ export function usePodIdeas() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("az_pod_ideas" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select([
+          "id",
+          "idea_text",
+          "status",
+          "product_type",
+          "sticker_design_url",
+          "tshirt_design_url",
+          "sticker_design_prompt",
+          "tshirt_design_prompt",
+          "sticker_raw_url",
+          "tshirt_raw_url",
+          "image_url",
+          "analysis",
+          "priority",
+          "notes",
+          "reject_reason",
+          "created_at",
+          "updated_at",
+        ].join(", "))
+        .order("created_at", { ascending: false })
+        .limit(50); // Prevent unbounded row growth in payload
       if (error) throw error;
       return data as any[];
     },
+    staleTime: 1000 * 10, // 10s — slightly faster than global for active board use
   });
 }
+
 
 export function usePodAnalyze() {
   const qc = useQueryClient();

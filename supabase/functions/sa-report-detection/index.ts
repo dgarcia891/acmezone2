@@ -19,6 +19,10 @@ function json(body: unknown, status = 200) {
 let activeRequests = 0;
 const MAX_CONCURRENT = 10;
 
+// Cache for maintenance mode to reduce DB queries on warm starts
+let maintenanceCache = { value: false, expires: 0 };
+const CACHE_TTL_MS = 60_000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -44,14 +48,20 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Maintenance mode
-    const { data: mConfig } = await supabase
-      .from("sa_app_config")
-      .select("value")
-      .eq("key", "maintenance_mode")
-      .single();
+    // Maintenance mode (Cached)
+    let isMaintenance = maintenanceCache.value;
+    if (Date.now() > maintenanceCache.expires) {
+      const { data: mConfig } = await supabase
+        .from("sa_app_config")
+        .select("value")
+        .eq("key", "maintenance_mode")
+        .single();
+      
+      isMaintenance = mConfig?.value === true;
+      maintenanceCache = { value: isMaintenance, expires: Date.now() + CACHE_TTL_MS };
+    }
 
-    if (mConfig?.value === true) {
+    if (isMaintenance) {
       return json(
         { error: "MAINTENANCE", message: "Scam Alert is temporarily under maintenance." },
         503
@@ -70,6 +80,11 @@ serve(async (req) => {
     }
     if (!severity || typeof severity !== "string") {
       return json({ error: "INVALID_BODY", message: "severity is required and must be a string (SAFE|LOW|MEDIUM|HIGH|CRITICAL)." }, 400);
+    }
+
+    // Early exit for SAFE severity to prevent DB connection exhaustion
+    if (severity === "SAFE") {
+      return json({ ok: true, ignored: true });
     }
 
     const { data, error } = await supabase

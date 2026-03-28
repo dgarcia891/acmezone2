@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil } from "lucide-react";
 import ProductEditor from "@/components/admin/ProductEditor";
+import { WaitlistForm } from "@/components/ui/WaitlistForm";
 import {
   Carousel,
   CarouselContent,
@@ -38,7 +39,7 @@ const ProductDetail = () => {
       setLoading(false);
     };
     loadProduct();
-  }, [slug]);
+  }, [slug, getProductBySlug]);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -245,15 +246,23 @@ const ProductDetail = () => {
                 </p>
               </div>
             )}
-            <div className="mt-8 flex gap-3">
-              {product.link && (
-                <Button asChild>
-                  <a href={product.link} target="_blank" rel="noopener noreferrer">Get the Extension</a>
-                </Button>
+            <div className="mt-8 flex gap-3 flex-col sm:flex-row sm:items-start">
+              {product.price_label === 'Early Access' ? (
+                <div className="w-full sm:w-auto">
+                  <WaitlistForm productName={product.name} />
+                </div>
+              ) : (
+                product.link && (
+                  <Button asChild>
+                    <a href={product.link} target="_blank" rel="noopener noreferrer">Get the Extension</a>
+                  </Button>
+                )
               )}
-              <Button variant="outline" asChild>
-                <Link to="/products">Back to Products</Link>
-              </Button>
+              <div className="mt-2 sm:mt-0">
+                <Button variant="outline" asChild>
+                  <Link to="/products">Back to Products</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </article>

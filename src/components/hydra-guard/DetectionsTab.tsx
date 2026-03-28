@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,10 @@ const DetectionsTab = () => {
   const [selected, setSelected] = useState<Detection | null>(null);
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
   const [promoteForm, setPromoteForm] = useState({ phrase: '', category: 'urgency', severity_weight: 5 });
+  // Leading-edge debounce ref: fetchStats fires immediately on first Realtime event,
+  // then is suppressed for 5s to prevent query storms from bulk extension detections.
+  const statsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const extractSignals = (signals: any) => {
     const list: string[] = [];
@@ -136,12 +140,10 @@ const DetectionsTab = () => {
 
           // Check if it matches current severity filter
           const matchesSeverity = severityFilter === 'all' || newDetection.severity === severityFilter;
-          // Check date range (new inserts are always recent)
-          const matchesDate = true;
           // Check search
           const matchesSearch = !search || newDetection.url_hash?.toLowerCase().includes(search.toLowerCase());
 
-          if (matchesSeverity && matchesDate && matchesSearch) {
+          if (matchesSeverity && matchesSearch) {
             setDetections(prev => [newDetection, ...prev].slice(0, PAGE_SIZE));
             setTotalCount(prev => prev + 1);
           }
@@ -151,13 +153,26 @@ const DetectionsTab = () => {
             description: `${newDetection.severity} threat detected`,
           });
 
-          fetchStats();
+          // Leading-edge debounce on fetchStats: fire immediately on first event in a burst,
+          // then suppress for 5s to avoid query storms from bulk extension reports.
+          if (!statsDebounceRef.current) {
+            fetchStats();
+          }
+          if (statsDebounceRef.current) clearTimeout(statsDebounceRef.current);
+          statsDebounceRef.current = setTimeout(() => {
+            statsDebounceRef.current = null;
+            fetchStats(); // trailing call to capture any burst-end state
+          }, 5000);
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+      if (statsDebounceRef.current) clearTimeout(statsDebounceRef.current);
+    };
   }, [severityFilter, search, dateRange, toast, fetchStats]);
+
 
   const clearFilters = () => {
     setSeverityFilter('all');

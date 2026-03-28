@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Check, X } from "lucide-react";
+import { WaitlistForm } from "@/components/ui/WaitlistForm";
 import {
   Carousel,
   CarouselContent,
@@ -48,14 +49,7 @@ const PERFECT_FOR = [
   { title: "Anyone", desc: "Stop tab-switching and copy-pasting. Build a knowledge base in Trello without breaking your flow." },
 ];
 
-const PRICING_ROWS = [
-  { label: "Price", free: "$0", pro: "$5/month" },
-  { label: "Searches per day", free: "10", pro: "Unlimited" },
-  { label: "Card creations per day", free: "10", pro: "Unlimited" },
-  { label: "Screenshots per day", free: "1", pro: "Unlimited" },
-  { label: "File attachments per day", free: "1", pro: "Unlimited" },
-  { label: "All other features", free: true, pro: true },
-];
+
 
 const TrelloBridge = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -156,20 +150,13 @@ const TrelloBridge = () => {
                   </p>
                 </div>
 
-                <div className="flex gap-3 pt-4">
-                  <Button asChild>
-                    <a 
-                      href="https://chrome.google.com/webstore" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      onClick={() => trackEvent('get_extension', { product: 'trellobridge' })}
-                    >
-                      Get the Extension
-                    </a>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link to="/products">Back to Products</Link>
-                  </Button>
+                <div className="flex flex-col gap-4 pt-4">
+                  <WaitlistForm productName="TrelloBridge" />
+                  <div className="flex items-center">
+                    <Button variant="outline" asChild>
+                      <Link to="/products">Back to Products</Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -221,47 +208,7 @@ const TrelloBridge = () => {
           </div>
         </section>
 
-        {/* Pricing Table */}
-        <section className="py-16">
-          <div className="container mx-auto px-4 max-w-2xl">
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-10">Pricing</h2>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="text-left p-4 font-medium" />
-                    <th className="p-4 font-semibold text-center">Free</th>
-                    <th className="p-4 font-semibold text-center bg-primary/5">Pro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PRICING_ROWS.map((row) => (
-                    <tr key={row.label} className="border-t">
-                      <td className="p-4 font-medium">{row.label}</td>
-                      <td className="p-4 text-center">
-                        {typeof row.free === "boolean" ? (
-                          row.free ? <Check className="mx-auto h-4 w-4 text-primary" /> : <X className="mx-auto h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          row.free
-                        )}
-                      </td>
-                      <td className="p-4 text-center bg-primary/5">
-                        {typeof row.pro === "boolean" ? (
-                          row.pro ? <Check className="mx-auto h-4 w-4 text-primary" /> : <X className="mx-auto h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <span className="font-medium">{row.pro}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-sm text-muted-foreground text-center mt-4">
-              Upgrade directly in the extension — secure checkout powered by Stripe.
-            </p>
-          </div>
-        </section>
+
       </main>
 
       <Footer />

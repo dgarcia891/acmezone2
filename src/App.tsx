@@ -38,7 +38,16 @@ import HeicToJpg from "./pages/HeicToJpg";
 import ResuFill from "./pages/ResuFill";
 import ScrollToTop from "./components/ScrollToTop";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30,        // 30s — data stays fresh, reducing redundant fetches
+      gcTime: 1000 * 60 * 5,       // 5min garbage collection window
+      refetchOnWindowFocus: false,  // stop re-fetching all queries on every tab switch
+      retry: 1,                     // reduce retry storms under high load
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
