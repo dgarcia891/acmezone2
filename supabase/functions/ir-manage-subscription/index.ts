@@ -54,7 +54,7 @@ serve(async (req) => {
       });
     }
 
-    const email = data.claims.email as string;
+    const email = data.user.email as string;
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
