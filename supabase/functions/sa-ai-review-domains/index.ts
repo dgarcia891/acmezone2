@@ -36,7 +36,7 @@ serve(async (req: Request) => {
     const now = new Date().toISOString();
     const { data: domains, error: fetchErr } = await supabase
        .from('sa_domain_reputation')
-       .select('id, domain, total_score, report_count, external_flagged, external_source')
+       .select('id, domain, total_score, report_count, external_flagged, external_source, status')
        .or(`ai_next_review.lte.${now},and(ai_reviewed_at.is.null,total_score.gte.15),and(external_flagged.eq.true,ai_reviewed_at.is.null)`)
        .limit(10);
 

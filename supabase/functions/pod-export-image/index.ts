@@ -126,10 +126,10 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error processing image:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to process image" }),
+      JSON.stringify({ error: (error as Error).message || "Failed to process image" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

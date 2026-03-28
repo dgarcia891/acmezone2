@@ -116,8 +116,8 @@ Do NOT wrap in markdown code blocks. Return raw JSON only.`;
     const suggestions = Array.isArray(parsed) ? parsed : (parsed.suggestions || [parsed]);
 
     return json({ suggestions });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-suggest-idea error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

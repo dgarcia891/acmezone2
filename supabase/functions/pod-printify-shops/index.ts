@@ -75,8 +75,8 @@ Deno.serve(async (req) => {
     }));
 
     return json({ shops: simplified });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-printify-shops error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

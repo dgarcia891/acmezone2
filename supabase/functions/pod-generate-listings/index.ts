@@ -169,8 +169,8 @@ Deno.serve(async (req) => {
       try {
         printifyDefaults = await discoverPrintifyDefaults(settings.printify_api_key);
         console.log("Discovered Printify defaults:", JSON.stringify(printifyDefaults));
-      } catch (e) {
-        console.warn("Could not auto-discover Printify catalog:", e.message);
+      } catch (e: unknown) {
+        console.warn("Could not auto-discover Printify catalog:", (e as Error).message);
       }
     }
 
@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
       .eq("id", idea_id);
 
     return json({ listings });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-generate-listings error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

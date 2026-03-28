@@ -99,7 +99,7 @@ serve(async (req) => {
        if (!externalFlagged) {
            // Scam Archive is just an example API. Usually you'd check GSB Server-to-Server here.
            // To keep this performant, we'll mock the external check delay.
-           const scamArchiveRes = await checkScamArchive(domain);
+           const scamArchiveRes = await checkScamArchive(domain!);
            if (scamArchiveRes.flagged) {
                externalFlagged = true;
                externalSource = 'scamarchive';

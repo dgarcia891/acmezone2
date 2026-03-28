@@ -169,8 +169,8 @@ The commercial_viability_score MUST be an integer from 1-10.`;
     if (insertError) throw insertError;
 
     return json({ idea });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-analyze error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

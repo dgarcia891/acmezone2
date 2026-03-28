@@ -223,7 +223,7 @@ Respond ONLY with valid JSON, no markdown:
       Array.isArray(aiResult.suggested_patterns) &&
       aiResult.suggested_patterns.length > 0
     ) {
-      for (const phrase of aiResult.suggested_patterns) {
+      for (const phrase of (aiResult.suggested_patterns as string[])) {
         if (typeof phrase === "string" && phrase.trim()) {
           await supabase.from("sa_patterns").upsert(
             {
