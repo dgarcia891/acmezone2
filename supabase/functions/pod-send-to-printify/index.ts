@@ -674,7 +674,7 @@ Deno.serve(async (req) => {
             shop_id: shop.shop_id,
             marketplace: shop.marketplace,
             shop_label: shop.label,
-            error: `Failed to create on ${shop.label}: ${shopError.message}`,
+            error: `Failed to create on ${shop.label}: ${(shopError as Error).message}`,
           });
         }
       }
@@ -701,8 +701,8 @@ Deno.serve(async (req) => {
       .eq("id", idea_id);
 
     return json({ products: results, printify_public_url: publicUrl });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-send-to-printify error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

@@ -71,8 +71,8 @@ serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(`Webhook Error: ${err.message}`, {
+  } catch (err: unknown) {
+    return new Response(`Webhook Error: ${(err as Error).message}`, {
       status: 400,
       headers: corsHeaders,
     });

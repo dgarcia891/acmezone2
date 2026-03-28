@@ -46,15 +46,15 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data, error: authErr } = await supabase.auth.getClaims(token);
-    if (authErr || !data?.claims) {
+    const { data, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !data?.user) {
       return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const email = data.claims.email as string;
+    const email = data.user.email as string;
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {

@@ -46,9 +46,9 @@ serve(async (req) => {
         'Access-Control-Allow-Origin': '*' 
       },
     })
-  } catch (err) {
-    console.error("STRIPE ERROR:", err.message)
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    console.error("STRIPE ERROR:", (err as Error).message)
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 400,
       headers: { 
         'Content-Type': 'application/json',

@@ -58,8 +58,8 @@ Deno.serve(async (req) => {
     }
 
     return json({ success: true, board_name: data.name });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-test-trello error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

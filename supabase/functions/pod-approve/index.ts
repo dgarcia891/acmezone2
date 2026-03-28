@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
     if (updateError) throw updateError;
 
     return json({ idea: updatedIdea });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-approve error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });

@@ -205,8 +205,8 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: "Method not allowed" }, 405);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("pod-settings error:", error);
-    return json({ error: error.message }, 500);
+    return json({ error: (error as Error).message }, 500);
   }
 });
