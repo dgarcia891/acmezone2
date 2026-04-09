@@ -32,9 +32,11 @@ interface Pattern {
 
 interface Stats { totalActive: number; recent7d: number; categories: Record<string, number>; }
 
-const CATEGORIES = ['urgency', 'coercion', 'impersonation', 'financial', 'credential', 'typosquat', 'other'];
+// Canonical category list — must match sa-report-user AI prompt + getMergedEmailKeywords() + sa-sync-patterns
+const CATEGORIES = ['gift_card', 'command', 'finance', 'vague_lure', 'authority_pressure', 'urgency', 'securityKeywords', 'general'];
 
-const defaultForm = { phrase: '', category: 'urgency', severity_weight: 5, source: 'manual' };
+
+const defaultForm = { phrase: '', category: 'general', severity_weight: 5, source: 'manual' };
 
 const PatternsTab = () => {
   const { toast } = useToast();
@@ -173,10 +175,10 @@ const PatternsTab = () => {
           </SelectContent>
         </Select>
         <Select value={sourceFilter} onValueChange={v => { setSourceFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sources</SelectItem>
-            {['manual', 'ai_promoted', 'community'].map(s => <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>)}
+            {['manual', 'ai_auto_promotion', 'user_report_promotion', 'community_promotion'].map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={activeFilter} onValueChange={v => { setActiveFilter(v as 'all' | 'active' | 'inactive'); setPage(0); }}>
@@ -289,7 +291,7 @@ const PatternsTab = () => {
               <Select value={form.source} onValueChange={v => setForm(f => ({ ...f, source: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['manual', 'ai_promoted', 'community'].map(s => <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>)}
+                  {['manual', 'ai_auto_promotion', 'community_promotion'].map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

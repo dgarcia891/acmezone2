@@ -61,6 +61,7 @@ serve(async (req) => {
     const {
       url,
       report_type,
+      report_direction = "scam", // 'scam' | 'false_positive'
       description,
       sender_email,
       subject,
@@ -92,8 +93,64 @@ serve(async (req) => {
       return json({ error: "INVALID_BODY", message: "indicators must be an array." }, 400);
     }
 
+    // ========================================================================
+    // FALSE POSITIVE path — only update FP counter, no report insert needed
+    // ========================================================================
+    if (report_direction === "false_positive") {
+      if (!url || typeof url !== "string" || url.trim().length === 0) {
+        return json({ error: "INVALID_BODY", message: "url is required." }, 400);
+      }
+      try {
+        const { parse } = await import("https://esm.sh/tldts@6.1.1");
+        const parsed = parse(url);
+        const domain = parsed.domain || new URL(url).hostname.replace(/^www\./, "");
+
+        // SELECT + UPDATE (non-atomic but acceptable for low-volume FP signals)
+        const { data: rep } = await supabase
+          .from("sa_domain_reputation")
+          .select("id, false_positive_count")
+          .eq("domain", domain)
+          .single();
+        if (rep) {
+          await supabase
+            .from("sa_domain_reputation")
+            .update({ false_positive_count: (rep.false_positive_count ?? 0) + 1 })
+            .eq("id", rep.id);
+        }
+        // If domain doesn't exist yet in reputation table, silently skip —
+        // FP signal before any scam report means there's nothing to decrement
+      } catch (fpErr) {
+        console.warn("FP counter update failed (non-fatal):", fpErr);
+      }
+      return json({ ok: true, direction: "false_positive" });
+    }
+
+    // ========================================================================
+    // SCAM path — validate, insert report, run AI, apply promotion tiers
+    // ========================================================================
+
     let aiAnalysis = null;
     const geminiKey = Deno.env.get("SA_GEMINI_KEY");
+
+    // Load configurable promotion thresholds from sa_app_config
+    let aiAutoPromoteThreshold = 85;
+    let minReportsForAutoPromote = 1;
+    let minConsensusRatio = 0.70;
+    try {
+      const { data: configs } = await supabase
+        .from("sa_app_config")
+        .select("key, value")
+        .in("key", ["ai_auto_promote_threshold", "min_reports_for_auto_promote", "min_consensus_ratio"]);
+      if (configs) {
+        for (const c of configs) {
+          if (c.key === "ai_auto_promote_threshold") aiAutoPromoteThreshold = Number(c.value) || 85;
+          if (c.key === "min_reports_for_auto_promote") minReportsForAutoPromote = Number(c.value) || 1;
+          if (c.key === "min_consensus_ratio") minConsensusRatio = Number(c.value) || 0.70;
+        }
+      }
+    } catch (cfgErr) {
+      console.warn("Could not load promotion config, using defaults:", cfgErr);
+    }
 
     if (geminiKey) {
       const { data: configRow } = await supabase
@@ -103,6 +160,7 @@ serve(async (req) => {
         .single();
         
       if (configRow?.value === true) {
+
          let reputationInfo = "Not checked";
          
          if (sender_email) {
@@ -258,9 +316,10 @@ Respond ONLY with valid JSON, no markdown:
       return json({ error: "INSERT_ERROR", message: error.message }, 500);
     }
 
-    // AUTONOMOUS AI PROMOTION LOOP
-    // If AI is highly confident it's a scam, push patterns immediately
-    if (aiAnalysis && aiAnalysis.verdict === 'SCAM' && aiAnalysis.confidence >= 90 && Array.isArray(aiAnalysis.suggested_patterns)) {
+    // ========================================================================
+    // TIER 1: AI Auto-promote (confidence >= configurable threshold)
+    // ========================================================================
+    if (aiAnalysis && aiAnalysis.verdict === 'SCAM' && aiAnalysis.confidence >= aiAutoPromoteThreshold && Array.isArray(aiAnalysis.suggested_patterns)) {
       try {
         const patternsToInsert = aiAnalysis.suggested_patterns.map((p: any) => ({
            phrase: p.phrase,
@@ -277,17 +336,64 @@ Respond ONLY with valid JSON, no markdown:
               
             if (promoErr) console.error("sa-report-user auto-promotion error:", promoErr);
             else {
-               // Update the report to show it was promoted
+               // Update the report to show it was auto-promoted (Tier 1)
                await supabase.from('sa_user_reports').update({
                    review_status: 'reviewed',
-                   admin_notes: 'Autonomously promoted by AI Heuristic Engine.',
+                   admin_notes: `[Tier 1] Autonomously promoted by AI Heuristic Engine (confidence: ${aiAnalysis.confidence}%).`,
                    reviewed_at: new Date().toISOString()
                }).eq('id', data.id);
             }
         }
       } catch (promoCatch) {
-         console.error("sa-report-user auto-promotion caught error:", promoCatch);
+         console.error("sa-report-user Tier 1 auto-promotion caught error:", promoCatch);
       }
+    }
+
+    // ========================================================================
+    // TIER 3: Community threshold formula
+    // Promote when district_reporters >= min AND consensus >= ratio
+    // Tier 2 (admin queue) is the default — reports sit pending until admin acts
+    // ========================================================================
+    try {
+      const { parse } = await import("https://esm.sh/tldts@6.1.1");
+      const parsedForTier3 = parse(url);
+      const domainForTier3 = parsedForTier3.domain || new URL(url).hostname.replace(/^www\./, '');
+
+      const { data: repData } = await supabase
+        .from('sa_domain_reputation')
+        .select('id, report_count, distinct_reporters, false_positive_count, auto_promoted_at')
+        .eq('domain', domainForTier3)
+        .single();
+
+      if (repData && !repData.auto_promoted_at) {
+        const totalVotes = (repData.report_count ?? 0) + (repData.false_positive_count ?? 0);
+        const scamVotes = repData.report_count ?? 0;
+        const consensusRatio = totalVotes > 0 ? scamVotes / totalVotes : 0;
+        const distinctReporters = repData.distinct_reporters ?? 0;
+
+        if (distinctReporters >= minReportsForAutoPromote && consensusRatio >= minConsensusRatio) {
+          // Threshold met — extract domain as a blocklist entry
+          try {
+            await supabase.from('sa_blocklist').insert({
+              url: domainForTier3,
+              source: 'community_promotion',
+              active: true
+            } as never);
+          } catch (blErr) {
+            console.warn('Blocklist insert failed (already exists?):', blErr);
+          }
+
+          // Mark domain as auto-promoted
+          await supabase
+            .from('sa_domain_reputation')
+            .update({ auto_promoted_at: new Date().toISOString() })
+            .eq('id', repData.id);
+
+          console.log(`[sa-report-user] Tier 3 community promotion: ${domainForTier3} (${scamVotes}/${totalVotes} votes, ${distinctReporters} reporters)`);
+        }
+      }
+    } catch (tier3Err) {
+      console.warn("Tier 3 community promotion check failed (non-fatal):", tier3Err);
     }
 
     return json({ ok: true, id: data.id });

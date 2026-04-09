@@ -42,6 +42,7 @@ export default function AdminSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingSuggestionsCount, setPendingSuggestionsCount] = useState(0);
 
   useEffect(() => {
     const fetchPending = async () => {
@@ -52,11 +53,21 @@ export default function AdminSidebar() {
       setPendingCount(count || 0);
     };
     
+    const fetchPendingSuggestions = async () => {
+      const { count } = await supabase
+        .from('sa_phrase_suggestions' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      setPendingSuggestionsCount(count || 0);
+    };
+    
     fetchPending();
+    fetchPendingSuggestions();
 
     const channel = supabase
       .channel('sidebar-reports-check')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sa_user_reports' }, () => fetchPending())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sa_phrase_suggestions' }, () => fetchPendingSuggestions())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -66,6 +77,12 @@ export default function AdminSidebar() {
     { title: "Detections", url: "/admin/security/detections", icon: Eye },
     { title: "Corrections", url: "/admin/security/corrections", icon: MessageSquare },
     { title: "Patterns", url: "/admin/security/patterns", icon: Database },
+    { 
+      title: "Suggestions", 
+      url: "/admin/security/suggestions", 
+      icon: ShieldAlert,
+      badge: pendingSuggestionsCount > 0 ? pendingSuggestionsCount : undefined
+    },
     { 
       title: "User Reports", 
       url: "/admin/security/reports", 

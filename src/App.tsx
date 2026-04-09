@@ -37,6 +37,8 @@ import BackgroundRemover from "./pages/BackgroundRemover";
 import HeicToJpg from "./pages/HeicToJpg";
 import ResuFill from "./pages/ResuFill";
 import ScrollToTop from "./components/ScrollToTop";
+import ScamPhraseLibrary from "./pages/ScamPhraseLibrary";
+import AdminPhraseSuggestions from "./pages/admin/AdminPhraseSuggestions";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +83,7 @@ const App = () => (
                   <Route path="security/corrections" element={<AdminCorrections />} />
                   <Route path="security/patterns" element={<AdminPatterns />} />
                   <Route path="security/reports" element={<AdminUserReports />} />
+                  <Route path="security/suggestions" element={<AdminPhraseSuggestions />} />
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
                 <Route path="/payment-success" element={
@@ -88,6 +91,7 @@ const App = () => (
                     <PaymentSuccess />
                   </ProtectedRoute>
                 } />
+                <Route path="/scam-library" element={<ScamPhraseLibrary />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/pre-apply-ai" element={<PreApplyAI />} />
                 <Route path="/products/chrome-extension-image-editor" element={<ChromeExtensionImageEditor />} />
